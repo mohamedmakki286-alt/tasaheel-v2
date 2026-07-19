@@ -36,7 +36,8 @@ spring:
 
   sql:
     init:
-      mode: never
+      # Seed the trial catalog when the empty Supabase trial database starts.
+      mode: always
 
   autoconfigure:
     exclude:
