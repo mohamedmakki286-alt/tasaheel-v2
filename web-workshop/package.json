@@ -20,7 +20,7 @@
     "@capacitor/core": "8.4.2",
     "@capacitor/haptics": "8.0.2",
     "@capacitor/local-notifications": "8.2.0",
-    "@capacitor/push-notifications": "^6.0.5",
+    "@capacitor/push-notifications": "^8.1.2",
     "@react-oauth/google": "^0.13.5",
     "@sentry/react": "^10.57.0",
     "@stomp/stompjs": "^7.3.0",
