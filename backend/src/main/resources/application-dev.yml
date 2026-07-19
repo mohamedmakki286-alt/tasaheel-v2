@@ -1,0 +1,74 @@
+﻿server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/salaba
+    username: salaba
+    password: salaba
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  sql:
+    init:
+      mode: never
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: UTC
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+application:
+  name: Tasaheel
+  jwt:
+    secret: dGFzYWhlZWwtc2VjcmV0LWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tYW5kLXZhbGlkYXRpb24tZm9yLXRhc2FoZWVsLXBsYXRmb3JtLTIwMjQ=
+    expiration: 604800000
+  upload:
+    dir: ${user.home}/tasaheel/uploads
+  moyasar:
+    secret-key: moyasar_dev_key
+    base-url: https://api.moyasar.com/v1
+  google:
+    maps:
+      api-key: local-dev-key
+  firebase:
+    config-path: classpath:firebase-service-account.json
+  ai:
+    gemini:
+      api-key: ""
+      model: gemini-1.5-flash
+    provider: gemini
+  sendgrid:
+    api-key: ${SENDGRID_API_KEY:}
+
+logging:
+  level:
+    com.tasaheel: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: WARN

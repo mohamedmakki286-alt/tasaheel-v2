@@ -1,0 +1,13 @@
+.vercel
+*.err
+*.log
+hs_err_pid*.log
+node_modules/
+target/
+data/
+run-supabase.bat
+pinggy.log
+stderr.log
+tunnel.log
+/package.json
+/package-lock.json

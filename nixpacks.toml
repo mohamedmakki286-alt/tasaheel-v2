@@ -1,0 +1,8 @@
+name = "tasaheel-backend"
+description = "Tasaheel Platform Backend API"
+
+pkgs = ["openjdk17"]
+providers = []
+
+[start]
+cmd = "java -jar -Xmx256m -XX:+UseSerialGC -Xss256k -XX:MaxMetaspaceSize=64m -XX:ReservedCodeCacheSize=32m backend/bin/app"

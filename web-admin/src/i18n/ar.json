@@ -1,0 +1,978 @@
+﻿{
+    "common":  {
+                   "appName":  "تساهيل",
+                   "appSubtitle":  "منصة صيانة السيارات",
+                   "version":  "الإصدار 1.0.0",
+                   "loading":  "جاري التحميل...",
+                   "save":  "حفظ",
+                   "cancel":  "إلغاء",
+                   "confirm":  "تأكيد",
+                   "delete":  "حذف",
+                   "edit":  "تعديل",
+                   "add":  "إضافة",
+                   "search":  "بحث",
+                   "filter":  "تصفية",
+                   "export":  "تصدير",
+                   "print":  "طباعة",
+                   "view":  "عرض",
+                   "back":  "عودة",
+                   "noData":  "لا توجد بيانات",
+                   "noDataAvailable":  "لا توجد بيانات متاحة",
+                   "total":  "إجمالي",
+                   "selected":  "تم تحديد",
+                   "page":  "الصفحة",
+                   "of":  "من",
+                   "prev":  "السابق",
+                   "next":  "التالي",
+                   "status":  "الحالة",
+                   "actions":  "الإجراءات",
+                   "date":  "التاريخ",
+                   "name":  "الاسم",
+                   "phone":  "الجوال",
+                   "email":  "البريد الإلكتروني",
+                   "city":  "المدينة",
+                   "password":  "كلمة المرور",
+                   "address":  "العنوان",
+                   "active":  "نشط",
+                   "inactive":  "غير نشط",
+                   "approved":  "معتمد",
+                   "rejected":  "مرفوض",
+                   "pending":  "قيد الانتظار",
+                   "completed":  "مكتمل",
+                   "cancelled":  "ملغي",
+                   "allStatuses":  "كل الحالات",
+                   "backToHome":  "الرئيسية",
+                   "workshop":  "ورشة"
+               },
+    "layout":  {
+                   "sidebar":  {
+                                   "dashboard":  "لوحة الإحصائيات",
+                                   "customers":  "العملاء",
+                                   "workshops":  "ورش الصيانة",
+                                   "drivers":  "السائقين",
+                                   "technicians":  "الفنيين",
+                                   "requests":  "طلبات الصيانة",
+                                   "financial":  "لوحة الوضع المالي",
+                                   "payments":  "المدفوعات",
+                                   "settlements":  "مستحقات الورش",
+                                   "accounts":  "شجرة الحسابات",
+                                   "journalEntries":  "قيود اليومية",
+                                   "services":  "الخدمات",
+                                   "reports":  "التقارير",
+                                   "settings":  "الإعدادات"
+                               },
+                   "header":  {
+                                  "quickSearch":  "بحث سريع...",
+                                  "notifications":  "الإشعارات",
+                                  "unread":  "غير مقروء",
+                                  "viewAll":  "عرض كل الإشعارات",
+                                  "systemAdmin":  "مدير النظام",
+                                  "settings":  "الإعدادات",
+                                  "logout":  "تسجيل الخروج"
+                              },
+                   "breadcrumbs":  {
+                                       "home":  "الرئيسية"
+                                   },
+                   "footer":  {
+                                  "copyright":  "تساهيل © {{year}} - جميع الحقوق محفوظة"
+                              },
+                   "notifications":  {
+                                         "newRequest":  "طلب صيانة جديد من أحمد محمد",
+                                         "newWorkshop":  "تم تسجيل ورشة جديدة: ورشة الإتقان",
+                                         "paymentCompleted":  "تم إتمام عملية دفع بقيمة 1,500 ريال",
+                                         "requestCompleted":  "تم إكمال طلب #245",
+                                         "newDriver":  "سائق جديد انضم للمنصة",
+                                         "timeAgo":  {
+                                                         "5min":  "منذ 5 دقائق",
+                                                         "15min":  "منذ 15 دقيقة",
+                                                         "1hour":  "منذ ساعة",
+                                                         "2hours":  "منذ ساعتين",
+                                                         "3hours":  "منذ 3 ساعات"
+                                                     }
+                                     },
+                   "userMenu":  {
+                                    "systemAdmin":  "مدير النظام"
+                                }
+               },
+    "components":  {
+                       "dataTable":  {
+                                         "emptyMessage":  "لا توجد بيانات",
+                                         "searchPlaceholder":  "بحث...",
+                                         "total":  "إجمالي:",
+                                         "selected":  "تم تحديد {{count}}"
+                                     },
+                       "confirmDialog":  {
+                                             "confirm":  "تأكيد",
+                                             "cancel":  "إلغاء"
+                                         },
+                       "aiAssistant":  {
+                                           "title":  "سالم - المساعد الذكي",
+                                           "subtitle":  "خبير إدارة المنصة",
+                                           "aiName":  "سالم",
+                                           "quickQuestions":  "أسئلة سريعة",
+                                           "inputPlaceholder":  "اسأل سالم عن أي شيء...",
+                                           "welcome":  "مرحباً! أنا سالم، مساعد الصيانة الذكي. يمكنني مساعدتك في إدارة المنصة، عرض الإحصائيات، والإجابة على استفساراتك.",
+                                           "errorMessage":  "عذراً، حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.",
+                                           "suggestions":  {
+                                                               "workshopsCount":  "كم عدد الورش المسجلة؟",
+                                                               "topRequest":  "أعلى طلب صيانة هذا الشهر",
+                                                               "performanceReports":  "تقارير الأداء",
+                                                               "tips":  "نصائح لإدارة المنصة"
+                                                           }
+                                       },
+                       "oauthButtons":  {
+                                            "googleLogin":  "تسجيل الدخول بحساب Google"
+                                        }
+                   },
+    "constants":  {
+                      "workshopTypes":  {
+                                            "stationary":  "ورشة ثابتة",
+                                            "mobile":  "ورشة متنقلة",
+                                            "both":  "ثابتة ومتنقلة"
+                                        },
+                      "statusLabels":  {
+                                           "pending":  "قيد الانتظار",
+                                           "assigned":  "تم التخصيص",
+                                           "inspected":  "تم الفحص",
+                                           "in_progress":  "قيد التنفيذ",
+                                           "completed":  "مكتمل",
+                                           "delivered":  "تم التوصيل",
+                                           "cancelled":  "ملغي",
+                                           "approved":  "معتمد",
+                                           "rejected":  "مرفوض",
+                                           "active":  "نشط",
+                                           "inactive":  "غير نشط",
+                                           "online":  "متصل",
+                                           "offline":  "غير متصل",
+                                           "paid":  "مدفوع",
+                                           "refunded":  "مسترجع",
+                                           "failed":  "فشل",
+                                           "cash":  "نقدي",
+                                           "card":  "بطاقة ائتمان",
+                                           "wallet":  "محفظة",
+                                           "bank_transfer":  "تحويل بنكي",
+                                           "good":  "جيد",
+                                           "needs_repair":  "بحاجة إصلاح",
+                                           "needs_replacement":  "بحاجة استبدال"
+                                       },
+                      "roles":  {
+                                    "admin":  "مدير",
+                                    "super_admin":  "مدير عام",
+                                    "customer":  "عميل",
+                                    "workshop":  "ورشة",
+                                    "driver":  "سائق"
+                                },
+                      "paymentMethods":  {
+                                             "cash":  "نقدي",
+                                             "card":  "بطاقة ائتمان",
+                                             "wallet":  "محفظة",
+                                             "bank_transfer":  "تحويل بنكي"
+                                         },
+                      "navItems":  {
+                                       "dashboard":  "لوحة الإحصائيات",
+                                       "customers":  "العملاء",
+                                       "workshops":  "ورش الصيانة",
+                                       "drivers":  "السائقين",
+                                       "requests":  "طلبات الصيانة",
+                                       "payments":  "المدفوعات",
+                                       "services":  "الخدمات",
+                                       "reports":  "التقارير",
+                                       "settings":  "الإعدادات"
+                                   }
+                  },
+    "pages":  {
+                  "login":  {
+                                "title":  "تساهيل",
+                                "subtitle":  "منصة صيانة السيارات المتكاملة",
+                                "mobileSubtitle":  "تسجيل الدخول إلى لوحة الإدارة",
+                                "welcome":  "مرحباً بعودتك",
+                                "welcomeSubtitle":  "سجل دخولك لإدارة المنصة",
+                                "emailLabel":  "البريد الإلكتروني",
+                                "emailPlaceholder":  "admin@example.com",
+                                "passwordLabel":  "كلمة المرور",
+                                "passwordPlaceholder":  "••••••••",
+                                "forgotPassword":  "نسيت كلمة المرور؟",
+                                "loginButton":  "تسجيل الدخول",
+                                "orDivider":  "أو",
+                                "googleLogin":  "تسجيل الدخول بحساب Google",
+                                "forgotPasswordTitle":  "استعادة كلمة المرور",
+                                "forgotStep1":  "أدخل بريدك الإلكتروني",
+                                "forgotStep2":  "أدخل الرمز من البريد وكلمة المرور",
+                                "emailPlaceholder2":  "example@email.com",
+                                "loading":  "جاري...",
+                                "sendResetLink":  "إرسال رابط الاستعادة",
+                                "tokenPlaceholder":  "رمز التحقق",
+                                "newPasswordPlaceholder":  "كلمة مرور جديدة",
+                                "changePassword":  "تغيير كلمة المرور",
+                                "backToLogin":  "العودة لتسجيل الدخول",
+                                "copyright":  "تساهيل ©",
+                                "features":  {
+                                                 "customerManagement":  "إدارة العملاء",
+                                                 "customerManagementDesc":  "تابع جميع عملائك بسهولة",
+                                                 "workshopManagement":  "ورش الصيانة",
+                                                 "workshopManagementDesc":  "إدارة الورش المعتمدة",
+                                                 "requestTracking":  "طلبات الصيانة",
+                                                 "requestTrackingDesc":  "متابعة الطلبات لحظة بلحظة"
+                                             },
+                                "feature1Desc":  "تابع جميع عملائك بسهولة",
+                                "feature1Title":  "إدارة العملاء",
+                                "feature2Desc":  "إدارة الورش المعتمدة",
+                                "feature2Title":  "ورش الصيانة",
+                                "feature3Desc":  "متابعة الطلبات لحظة بلحظة",
+                                "feature3Title":  "طلبات الصيانة"
+                            },
+                  "dashboard":  {
+                                    "title":  "لوحة الإحصائيات",
+                                    "welcome":  "مرحباً بك في لوحة التحكم",
+                                    "welcomeSubtitle":  "نظرة عامة على أداء المنصة وإحصائياتها",
+                                    "viewRequests":  "عرض الطلبات",
+                                    "reports":  "التقارير",
+                                    "stats":  {
+                                                  "totalCustomers":  "إجمالي العملاء",
+                                                  "totalWorkshops":  "إجمالي الورش",
+                                                  "totalDrivers":  "إجمالي السائقين",
+                                                  "totalRequests":  "إجمالي الطلبات",
+                                                  "monthlyRevenue":  "إيرادات هذا الشهر"
+                                              },
+                                    "charts":  {
+                                                   "dailyRequests":  "الطلبات اليومية",
+                                                   "last7Days":  "آخر 7 أيام",
+                                                   "last30Days":  "آخر 30 يوم",
+                                                   "topWorkshops":  "أفضل الورش",
+                                                   "requestCount":  "عدد الطلبات",
+                                                   "revenue":  "الإيرادات",
+                                                   "requestStatus":  "حالة الطلبات"
+                                               },
+                                    "recentActivity":  "النشاطات الأخيرة",
+                                    "viewAll":  "عرض الكل",
+                                    "latestRequests":  "آخر الطلبات",
+                                    "noData":  "لا توجد بيانات إحصائية متاحة",
+                                    "noDataSubtitle":  "تأكد من اتصال الخادم أو حاول تسجيل الدخول مرة أخرى",
+                                    "requestFrom":  "طلب جديد من",
+                                    "completedRequest":  "تم إكمال طلب #",
+                                    "inProgressRequest":  "طلب قيد التنفيذ -",
+                                    "request":  "طلب",
+                                    "table":  {
+                                                  "id":  "#",
+                                                  "customer":  "العميل",
+                                                  "service":  "الخدمة",
+                                                  "status":  "الحالة",
+                                                  "date":  "التاريخ",
+                                                  "actions":  "الإجراءات",
+                                                  "view":  "عرض"
+                                              },
+                                    "statCards":  {
+                                                      "revenueThisMonth":  "إيرادات هذا الشهر",
+                                                      "totalCustomers":  "إجمالي العملاء",
+                                                      "totalDrivers":  "إجمالي السائقين",
+                                                      "totalRequests":  "إجمالي الطلبات",
+                                                      "totalWorkshops":  "إجمالي الورش"
+                                                  }
+                                },
+                  "customers":  {
+                                    "title":  "العملاء",
+                                    "subtitle":  "إدارة وعرض جميع عملاء المنصة",
+                                    "addCustomer":  "إضافة عميل",
+                                    "deleteTitle":  "حذف عميل",
+                                    "deleteMessage":  "هل أنت متأكد من حذف هذا العميل؟ لا يمكن التراجع عن هذا الإجراء.",
+                                    "table":  {
+                                                  "id":  "#",
+                                                  "name":  "الاسم",
+                                                  "phone":  "الجوال",
+                                                  "city":  "المدينة",
+                                                  "cars":  "عدد السيارات",
+                                                  "requests":  "عدد الطلبات",
+                                                  "registerDate":  "تاريخ التسجيل",
+                                                  "status":  "الحالة",
+                                                  "actions":  "الإجراءات"
+                                              },
+                                    "customerDetail":  {
+                                                           "notFound":  "العميل غير موجود",
+                                                           "backToCustomers":  "العودة للعملاء",
+                                                           "customerSince":  "عميل منذ",
+                                                           "contactInfo":  "معلومات الاتصال",
+                                                           "phone":  "رقم الجوال",
+                                                           "email":  "البريد الإلكتروني",
+                                                           "city":  "المدينة",
+                                                           "registerDate":  "تاريخ التسجيل",
+                                                           "statistics":  "الإحصائيات",
+                                                           "cars":  "سيارة مسجلة",
+                                                           "requests":  "طلب صيانة"
+                                                       }
+                                },
+                  "workshops":  {
+                                    "title":  "ورش الصيانة",
+                                    "subtitle":  "إدارة وعرض جميع ورش الصيانة المعتمدة",
+                                    "addWorkshop":  "إضافة ورشة",
+                                    "approve":  "اعتماد",
+                                    "reject":  "رفض",
+                                    "disable":  "تعطيل",
+                                    "enable":  "تفعيل",
+                                    "deleteTitle":  "حذف ورشة",
+                                    "deleteMessage":  "هل أنت متأكد من حذف هذه الورشة؟ لا يمكن التراجع عن هذا الإجراء.",
+                                    "filterStatuses":  {
+                                                           "all":  "كل الحالات",
+                                                           "approved":  "معتمد",
+                                                           "pending":  "قيد الانتظار",
+                                                           "rejected":  "مرفوض"
+                                                       },
+                                    "filterTypes":  {
+                                                        "all":  "كل الأنواع"
+                                                    },
+                                    "table":  {
+                                                  "id":  "#",
+                                                  "name":  "الاسم",
+                                                  "phone":  "الجوال",
+                                                  "city":  "المدينة",
+                                                  "type":  "نوع الورشة",
+                                                  "rating":  "التقييم",
+                                                  "services":  "الخدمات",
+                                                  "status":  "الحالة",
+                                                  "actions":  "الإجراءات"
+                                              },
+                                    "addModal":  {
+                                                     "title":  "إضافة ورشة جديدة",
+                                                     "workshopName":  "اسم الورشة",
+                                                     "workshopNamePlaceholder":  "مثال: ورشة السلامة",
+                                                     "ownerName":  "اسم المالك",
+                                                     "ownerNamePlaceholder":  "مثال: محمد أحمد",
+                                                     "phonePlaceholder":  "0560000000",
+                                                     "emailPlaceholder":  "workshop@example.com",
+                                                     "passwordPlaceholder":  "******",
+                                                     "cityPlaceholder":  "مثال: الرياض",
+                                                     "workshopType":  "نوع الورشة",
+                                                     "addressPlaceholder":  "مثال: شارع الملك فهد",
+                                                     "servicesLabel":  "الخدمات (مفصولة بفاصلة)",
+                                                     "servicesPlaceholder":  "مثال: ميكانيكا, كهرباء, سمكرة",
+                                                     "submit":  "إضافة الورشة"
+                                                 },
+                                    "rejectModal":  {
+                                                        "title":  "رفض الورشة",
+                                                        "message":  "هل أنت متأكد من رفض هذه الورشة؟",
+                                                        "reasonPlaceholder":  "ذكر سبب الرفض (اختياري)",
+                                                        "defaultReason":  "لم يتم استيفاء المتطلبات",
+                                                        "confirm":  "تأكيد الرفض"
+                                                    },
+                                    "detail":  {
+                                                   "notFound":  "الورشة غير موجودة",
+                                                   "workshopSubtitle":  "ورشة صيانة",
+                                                   "rejectionReason":  "سبب الرفض:",
+                                                   "info":  "معلومات الورشة",
+                                                   "phone":  "الجوال",
+                                                   "email":  "البريد الإلكتروني",
+                                                   "address":  "العنوان",
+                                                   "registerDate":  "تاريخ التسجيل",
+                                                   "owner":  "المالك",
+                                                   "statistics":  "الإحصائيات",
+                                                   "rating":  "التقييم",
+                                                   "servicesCount":  "خدمة مقدمة",
+                                                   "type":  "نوع الورشة",
+                                                   "typeStationary":  "الورشة في موقع ثابت",
+                                                   "typeMobile":  "الورشة تنتقل لموقع العميل",
+                                                   "typeBoth":  "خدمات في الموقع وورشة ثابتة",
+                                                   "servicesOffered":  "الخدمات المقدمة",
+                                                   "documents":  "المستندات الرسمية",
+                                                   "commercialRecord":  "السجل التجاري",
+                                                   "viewDocument":  "عرض المستند",
+                                                   "notUploaded":  "لم يتم الرفع",
+                                                   "municipalityLicense":  "رخصة البلدية",
+                                                   "rejectModalTitle":  "رفض الورشة",
+                                                   "rejectReasonRequired":  "ذكر سبب الرفض (إلزامي)"
+                                               }
+                                },
+                  "drivers":  {
+                                  "title":  "السائقين",
+                                  "subtitle":  "إدارة وعرض جميع السائقين المسجلين",
+                                  "addDriver":  "إضافة سائق",
+                                  "approve":  "اعتماد",
+                                  "deleteTitle":  "حذف سائق",
+                                  "deleteMessage":  "هل أنت متأكد من حذف هذا السائق؟ لا يمكن التراجع عن هذا الإجراء.",
+                                  "table":  {
+                                                "id":  "#",
+                                                "name":  "الاسم",
+                                                "phone":  "الجوال",
+                                                "city":  "المدينة",
+                                                "vehicle":  "نوع المركبة",
+                                                "connectionStatus":  "حالة الاتصال",
+                                                "approved":  "معتمد",
+                                                "actions":  "الإجراءات"
+                                            },
+                                  "addModal":  {
+                                                   "title":  "إضافة سائق جديد",
+                                                   "driverName":  "اسم السائق",
+                                                   "driverNamePlaceholder":  "مثال: محمد أحمد",
+                                                   "phonePlaceholder":  "0560000000",
+                                                   "emailPlaceholder":  "driver@example.com",
+                                                   "passwordPlaceholder":  "******",
+                                                   "cityPlaceholder":  "مثال: الرياض",
+                                                   "vehicleType":  "نوع المركبة",
+                                                   "vehicleTypePlaceholder":  "مثال: فورد",
+                                                   "plateNumber":  "رقم اللوحة",
+                                                   "plateNumberPlaceholder":  "ABC 1234",
+                                                   "submit":  "إضافة السائق"
+                                               },
+                                  "detail":  {
+                                                 "notFound":  "السائق غير موجود",
+                                                 "backToDrivers":  "العودة للسائقين",
+                                                 "contactInfo":  "معلومات الاتصال",
+                                                 "phone":  "رقم الجوال",
+                                                 "email":  "البريد الإلكتروني",
+                                                 "city":  "المدينة",
+                                                 "registerDate":  "تاريخ التسجيل",
+                                                 "vehicleInfo":  "معلومات المركبة",
+                                                 "vehicleType":  "نوع المركبة",
+                                                 "plateNumber":  "رقم اللوحة",
+                                                 "status":  "الحالة",
+                                                 "connectionStatus":  "حالة الاتصال",
+                                                 "approvalStatus":  "حالة الاعتماد"
+                                             }
+                              },
+                  "technicians":  {
+                                      "title":  "الفنيين",
+                                      "subtitle":  "إدارة وعرض جميع الفنيين المسجلين في الورش",
+                                      "deleteTitle":  "حذف فني",
+                                      "deleteMessage":  "هل أنت متأكد من حذف هذا الفني؟ لا يمكن التراجع عن هذا الإجراء.",
+                                      "workshopIdPlaceholder":  "ورشة ID",
+                                      "table":  {
+                                                    "id":  "#",
+                                                    "name":  "الاسم",
+                                                    "phone":  "الجوال",
+                                                    "specialty":  "التخصص",
+                                                    "workshop":  "الورشة",
+                                                    "connectionStatus":  "حالة الاتصال",
+                                                    "status":  "الحالة",
+                                                    "actions":  "الإجراءات"
+                                                }
+                                  },
+                  "requests":  {
+                                   "title":  "طلبات الصيانة",
+                                   "subtitle":  "إدارة وعرض جميع طلبات الصيانة",
+                                   "deleteTitle":  "حذف طلب",
+                                   "deleteMessage":  "هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.",
+                                   "table":  {
+                                                 "id":  "#",
+                                                 "customer":  "العميل",
+                                                 "car":  "السيارة",
+                                                 "service":  "الخدمة",
+                                                 "workshop":  "الورشة",
+                                                 "status":  "الحالة",
+                                                 "city":  "المدينة",
+                                                 "createdAt":  "تاريخ الإنشاء",
+                                                 "actions":  "الإجراءات"
+                                             },
+                                   "detail":  {
+                                                  "notFound":  "الطلب غير موجود",
+                                                  "backToRequests":  "العودة للطلبات",
+                                                  "requestNumber":  "طلب #",
+                                                  "customer":  "العميل",
+                                                  "car":  "السيارة",
+                                                  "serviceAndWorkshop":  "الخدمة والورشة",
+                                                  "requestStatus":  "حالة الطلب",
+                                                  "currentStatus":  "الحالية",
+                                                  "problemDescription":  "وصف المشكلة",
+                                                  "tabs":  {
+                                                               "quotes":  "عروض الأسعار",
+                                                               "inspection":  "تقرير الفحص",
+                                                               "invoice":  "الفاتورة",
+                                                               "chat":  "المحادثة"
+                                                           },
+                                                  "inspection":  {
+                                                                     "heading":  "تقرير فحص -",
+                                                                     "approved":  "معتمد",
+                                                                     "rejected":  "مرفوض",
+                                                                     "pendingApproval":  "بانتظار الاعتماد",
+                                                                     "rejectionReason":  "سبب الرفض:",
+                                                                     "notes":  "ملاحظات الفحص",
+                                                                     "parts":  "قطع الغيار",
+                                                                     "partName":  "اسم القطعة",
+                                                                     "quantity":  "العدد",
+                                                                     "unitPrice":  "سعر الوحدة",
+                                                                     "total":  "الإجمالي",
+                                                                     "labor":  "العمالة",
+                                                                     "description":  "البيان",
+                                                                     "hours":  "الساعات",
+                                                                     "hourlyRate":  "سعر الساعة",
+                                                                     "subtotal":  "المجموع",
+                                                                     "tax":  "الضريبة",
+                                                                     "noReport":  "لا يوجد تقرير فحص لهذا الطلب",
+                                                                     "rejectReport":  "رفض التقرير",
+                                                                     "approveReport":  "اعتماد التقرير"
+                                                                 },
+                                                  "invoice":  {
+                                                                  "companyName":  "تساهيل",
+                                                                  "subtitle":  "فاتورة خدمات صيانة",
+                                                                  "invoiceNumber":  "رقم الفاتورة",
+                                                                  "date":  "التاريخ",
+                                                                  "customer":  "العميل",
+                                                                  "workshop":  "الورشة",
+                                                                  "description":  "البيان",
+                                                                  "quantity":  "العدد",
+                                                                  "price":  "السعر",
+                                                                  "total":  "الإجمالي",
+                                                                  "subtotal":  "المجموع",
+                                                                  "tax":  "الضريبة (15%)",
+                                                                  "confirmPayment":  "تأكيد الدفع",
+                                                                  "demoItem1":  "صيانة عامة",
+                                                                  "demoItem2":  "زيت محرك",
+                                                                  "demoItem3":  "فلتر زيت"
+                                                              },
+                                                  "chat":  {
+                                                               "you":  "أنت",
+                                                               "admin":  "مدير",
+                                                               "customer":  "عميل",
+                                                               "inputPlaceholder":  "اكتب رسالة...",
+                                                               "send":  "إرسال",
+                                                               "demoCustomerName":  "أحمد محمد",
+                                                               "demoMsg1":  "السلام عليكم، متى سيكون جاهزاً؟",
+                                                               "demoTime1":  "10:30 ص",
+                                                               "demoMsg2":  "وعليكم السلام، سيتم الانتهاء خلال ساعتين إن شاء الله",
+                                                               "demoTime2":  "10:32 ص",
+                                                               "demoMsg3":  "شكراً جزيلاً",
+                                                               "demoTime3":  "10:33 ص"
+                                                           },
+                                                  "rejectInspection":  {
+                                                                           "title":  "رفض تقرير الفحص",
+                                                                           "message":  "هل أنت متأكد من رفض تقرير الفحص؟",
+                                                                           "reasonPlaceholder":  "ذكر سبب الرفض (إلزامي)",
+                                                                           "defaultReason":  "لم يتم الموافقة"
+                                                                       },
+                                                  "quotes":  {
+                                                                 "accepted":  "مقبول",
+                                                                 "underReview":  "قيد المراجعة",
+                                                                 "rejected":  "مرفوض",
+                                                                 "accept":  "قبول",
+                                                                 "demoWorkshopName":  "ورشة الصيانة السريعة",
+                                                                 "demoQuoteDesc":  "عرض سعر شامل للصيانة"
+                                                             }
+                                              }
+                               },
+                  "financial":  {
+                                    "title":  "لوحة الوضع المالي",
+                                    "subtitle":  "نظرة شاملة على الوضع المالي للمنصة",
+                                    "autoRefresh":  "تحديث تلقائي كل 30 ثانية",
+                                    "summary":  {
+                                                    "totalRevenue":  "إجمالي الإيرادات",
+                                                    "totalCommission":  "إجمالي العمولات",
+                                                    "netWorkshopDue":  "صافي مستحقات الورش",
+                                                    "unsettledAmount":  "مستحقات غير مسواة",
+                                                    "netToWorkshops":  "صافي مستحقات الورش",
+                                                    "pendingSettlement":  "مستحقات غير مسواة"
+                                                },
+                                    "monthlyRevenue":  "الإيرادات الشهرية",
+                                    "net":  "صافي:",
+                                    "commission":  "عمولة:",
+                                    "tax":  "ضريبة:",
+                                    "noRevenueData":  "لا توجد بيانات إيرادات بعد",
+                                    "recentTransactions":  "آخر الحركات",
+                                    "noRecentTransactions":  "لا توجد حركات حديثة",
+                                    "workshopPerformance":  "أداء الورش المالي",
+                                    "table":  {
+                                                  "workshop":  "الورشة",
+                                                  "invoices":  "الفواتير",
+                                                  "total":  "الإجمالي",
+                                                  "commission":  "العمولة",
+                                                  "percentage":  "النسبة",
+                                                  "net":  "الصافي",
+                                                  "status":  "الحالة",
+                                                  "notSettled":  "غير مسواة",
+                                                  "rate":  "النسبة",
+                                                  "settled":  "مسواة",
+                                                  "tax":  "ضريبة"
+                                              },
+                                    "settled":  "مسواة",
+                                    "unsettled":  "غير مسواة",
+                                    "noWorkshopData":  "لا توجد بيانات أداء للورش",
+                                    "trendSuffix":  "عن الشهر الماضي",
+                                    "noPerformanceData":  "لا توجد بيانات أداء",
+                                    "vsLastMonth":  "عن الشهر الماضي"
+                                },
+                  "payments":  {
+                                   "title":  "المدفوعات",
+                                   "subtitle":  "إدارة وتتبع جميع المدفوعات والمعاملات المالية",
+                                   "summary":  {
+                                                   "totalRevenue":  "إجمالي الإيرادات",
+                                                   "pending":  "قيد الانتظار",
+                                                   "completed":  "مكتملة",
+                                                   "refunded":  "مسترجعة",
+                                                   "sar":  "ريال"
+                                               },
+                                   "table":  {
+                                                 "id":  "#",
+                                                 "requestId":  "رقم الطلب",
+                                                 "customer":  "العميل",
+                                                 "amount":  "المبلغ",
+                                                 "method":  "طريقة الدفع",
+                                                 "status":  "الحالة",
+                                                 "date":  "التاريخ",
+                                                 "actions":  "الإجراءات"
+                                             },
+                                   "exportReport":  "تصدير تقرير",
+                                   "refundTitle":  "استرجاع مبلغ",
+                                   "refundMessage":  "هل أنت متأكد من استرجاع هذا المبلغ؟",
+                                   "refund":  "استرجاع",
+                                   "filterStatuses":  {
+                                                          "all":  "كل الحالات",
+                                                          "paid":  "مدفوع",
+                                                          "pending":  "قيد الانتظار",
+                                                          "failed":  "فشل",
+                                                          "refunded":  "مسترجع"
+                                                      }
+                               },
+                  "settlements":  {
+                                      "title":  "مستحقات الورش",
+                                      "subtitle":  "إدارة تسوية مستحقات ورش الصيانة",
+                                      "tabs":  {
+                                                   "pending":  "المستحقات غير المسواة",
+                                                   "history":  "سجل التسويات"
+                                               },
+                                      "summary":  {
+                                                      "totalDue":  "إجمالي المستحقات",
+                                                      "workshopsDue":  "الورش المستحقة",
+                                                      "avgCommission":  "متوسط العمولة",
+                                                      "averageCommission":  "متوسط العمولة",
+                                                      "pendingWorkshops":  "الورش المستحقة",
+                                                      "totalPending":  "إجمالي المستحقات"
+                                                  },
+                                      "allSettled":  "جميع المستحقات مسواة ✓",
+                                      "table":  {
+                                                    "workshop":  "الورشة",
+                                                    "invoiceCount":  "عدد الفواتير",
+                                                    "total":  "الإجمالي",
+                                                    "settle":  "تسوية"
+                                                },
+                                      "historyTable":  {
+                                                           "settlementNo":  "رقم التسوية",
+                                                           "workshop":  "الورشة",
+                                                           "invoices":  "الفواتير",
+                                                           "total":  "الإجمالي",
+                                                           "commission":  "العمولة",
+                                                           "net":  "الصافي",
+                                                           "status":  "الحالة",
+                                                           "id":  "الرقم",
+                                                           "noData":  "لا توجد بيانات"
+                                                       },
+                                      "status":  {
+                                                     "settled":  "مكتملة",
+                                                     "pending":  "قيد الانتظار",
+                                                     "cancelled":  "ملغية"
+                                                 },
+                                      "noSettlements":  "لا توجد تسويات",
+                                      "settleModal":  {
+                                                          "title":  "تسوية مستحقات -",
+                                                          "instruction":  "حدد نسبة العمولة لكل فاتورة",
+                                                          "applyAll":  "تطبيق 10% على الكل",
+                                                          "invoiceNo":  "رقم الفاتورة",
+                                                          "total":  "الإجمالي",
+                                                          "commissionPercent":  "العمولة %",
+                                                          "commissionAmount":  "قيمة العمولة",
+                                                          "net":  "الصافي",
+                                                          "grandTotal":  "المجموع",
+                                                          "notes":  "ملاحظات (اختياري)",
+                                                          "confirm":  "تأكيد التسوية",
+                                                          "commissionValue":  "قيمة العمولة",
+                                                          "invoiceNumber":  "رقم الفاتورة",
+                                                          "selectCommission":  "حدد نسبة العمولة لكل فاتورة",
+                                                          "totalLabel":  "المجموع"
+                                                      },
+                                      "confirmTitle":  "تأكيد التسوية",
+                                      "confirmMessage":  "هل أنت متأكد من تأكيد هذه التسوية؟ سيتم إنشاء القيد المحاسبي.",
+                                      "cancel":  "إلغاء",
+                                      "confirmSettlement":  "تأكيد التسوية",
+                                      "next":  "التالي",
+                                      "previous":  "السابق",
+                                      "settle":  "تسوية",
+                                      "confirmDialog":  {
+                                                            "message":  "هل أنت متأكد من تأكيد هذه التسوية؟ سيتم إنشاء القيد المحاسبي.",
+                                                            "title":  "تأكيد التسوية"
+                                                        }
+                                  },
+                  "accounts":  {
+                                   "title":  "شجرة الحسابات",
+                                   "subtitle":  "دليل الحسابات المحاسبي للمنصة",
+                                   "treeView":  "عرض شجرة الحسابات",
+                                   "trialBalance":  "ميزان المراجعة",
+                                   "searchPlaceholder":  "بحث عن حساب...",
+                                   "table":  {
+                                                 "account":  "الحساب",
+                                                 "type":  "النوع",
+                                                 "balance":  "الرصيد",
+                                                 "code":  "الكود",
+                                                 "credit":  "دائن",
+                                                 "debit":  "مدين"
+                                             },
+                                   "systemAccount":  "نظامي",
+                                   "noAccounts":  "لا توجد حسابات",
+                                   "trialBalanceTable":  {
+                                                             "title":  "ميزان المراجعة",
+                                                             "lastUpdate":  "آخر تحديث: الآن",
+                                                             "code":  "الكود",
+                                                             "account":  "الحساب",
+                                                             "type":  "النوع",
+                                                             "debit":  "مدين",
+                                                             "credit":  "دائن"
+                                                         },
+                                   "types":  {
+                                                 "ASSET":  "أصل",
+                                                 "LIABILITY":  "خصم",
+                                                 "REVENUE":  "إيراد",
+                                                 "EXPENSE":  "مصروف"
+                                             },
+                                   "lastUpdate":  "آخر تحديث: الآن",
+                                   "showChart":  "عرض المخطط",
+                                   "system":  "نظامي"
+                               },
+                  "journalEntries":  {
+                                         "title":  "قيود اليومية",
+                                         "subtitle":  "سجل جميع القيود المحاسبية",
+                                         "table":  {
+                                                       "entryNo":  "رقم القيد",
+                                                       "date":  "التاريخ",
+                                                       "description":  "البيان",
+                                                       "reference":  "المرجع",
+                                                       "status":  "الحالة",
+                                                       "entryNumber":  "رقم القيد"
+                                                   },
+                                         "status":  {
+                                                        "POSTED":  "مرحّل",
+                                                        "REVERSED":  "ملغي",
+                                                        "DRAFT":  "مسودة"
+                                                    },
+                                         "noEntries":  "لا توجد قيود",
+                                         "modalTitle":  "قيد رقم:",
+                                         "detail":  {
+                                                        "date":  "التاريخ: ",
+                                                        "status":  "الحالة: ",
+                                                        "description":  "البيان: ",
+                                                        "reference":  "المرجع: ",
+                                                        "account":  "الحساب",
+                                                        "credit":  "دائن",
+                                                        "debit":  "مدين",
+                                                        "total":  "المجموع"
+                                                    },
+                                         "linesTable":  {
+                                                            "account":  "الحساب",
+                                                            "description":  "البيان",
+                                                            "debit":  "مدين",
+                                                            "credit":  "دائن",
+                                                            "total":  "المجموع"
+                                                        },
+                                         "referenceLabels":  {
+                                                                 "COMMISSION":  "عمولة",
+                                                                 "INVOICE_APPROVAL":  "موافقة فاتورة",
+                                                                 "INVOICE_REVERSAL":  "إلغاء فاتورة",
+                                                                 "PAYMENT":  "دفع",
+                                                                 "SETTLEMENT":  "تسوية"
+                                                             },
+                                         "next":  "التالي",
+                                         "noData":  "لا توجد بيانات",
+                                         "previous":  "السابق",
+                                         "references":  {
+                                                            "INVOICE_APPROVAL":  "موافقة فاتورة",
+                                                            "INVOICE_REVERSAL":  "إلغاء فاتورة",
+                                                            "PAYMENT":  "دفع",
+                                                            "COMMISSION":  "عمولة",
+                                                            "SETTLEMENT":  "تسوية"
+                                                        }
+                                     },
+                  "services":  {
+                                   "title":  "الخدمات",
+                                   "subtitle":  "إدارة الخدمات المقدمة عبر المنصة",
+                                   "addService":  "إضافة خدمة",
+                                   "addTitle":  "إضافة خدمة جديدة",
+                                   "editTitle":  "تعديل خدمة",
+                                   "deleteTitle":  "حذف خدمة",
+                                   "deleteMessage":  "هل أنت متأكد من حذف هذه الخدمة؟",
+                                   "form":  {
+                                                "nameAr":  "الاسم (عربي) *",
+                                                "nameEn":  "الاسم (إنجليزي) *",
+                                                "icon":  "أيقونة الخدمة",
+                                                "description":  "الوصف",
+                                                "category":  "التصنيف",
+                                                "selectCategory":  "اختر التصنيف"
+                                            },
+                                   "submitAdd":  "إضافة",
+                                   "submitUpdate":  "تحديث"
+                               },
+                  "reports":  {
+                                  "title":  "التقارير",
+                                  "subtitle":  "تحليل البيانات والإحصائيات الشاملة للمنصة",
+                                  "noData":  "لا توجد تقارير متاحة",
+                                  "noDataSubtitle":  "تأكد من اتصال الخادم أو حاول تسجيل الدخول مرة أخرى",
+                                  "periods":  {
+                                                  "daily":  "يومي",
+                                                  "weekly":  "أسبوعي",
+                                                  "monthly":  "شهري"
+                                              },
+                                  "summary":  {
+                                                  "totalRequests":  "إجمالي الطلبات",
+                                                  "monthlyRevenue":  "إيرادات الشهر",
+                                                  "activeWorkshops":  "الورش النشطة",
+                                                  "customers":  "العملاء"
+                                              },
+                                  "charts":  {
+                                                 "monthlyRevenue":  "الإيرادات الشهرية",
+                                                 "revenue":  "الإيرادات",
+                                                 "dailyRequests":  "الطلبات اليومية",
+                                                 "requestCount":  "عدد الطلبات",
+                                                 "topWorkshops":  "أفضل الورش"
+                                             },
+                                  "workshopTable":  {
+                                                        "title":  "أفضل الورش - جدول مفصل",
+                                                        "id":  "#",
+                                                        "workshop":  "الورشة",
+                                                        "requests":  "عدد الطلبات",
+                                                        "revenue":  "الإيرادات"
+                                                    }
+                              },
+                  "settings":  {
+                                   "title":  "الإعدادات",
+                                   "subtitle":  "إدارة إعدادات حسابك وتفضيلات المنصة",
+                                   "tabs":  {
+                                                "profile":  "الملف الشخصي",
+                                                "notifications":  "الإشعارات",
+                                                "accounting":  "الإعدادات المحاسبية",
+                                                "security":  "الأمان",
+                                                "appearance":  "المظهر"
+                                            },
+                                   "profile":  {
+                                                   "systemAdmin":  "مدير النظام",
+                                                   "changePhoto":  "تغيير الصورة",
+                                                   "name":  "الاسم",
+                                                   "email":  "البريد الإلكتروني",
+                                                   "phone":  "رقم الجوال",
+                                                   "save":  "حفظ التغييرات",
+                                                   "defaultName":  "المدير",
+                                                   "role":  "الدور"
+                                               },
+                                   "notifications":  {
+                                                         "newRequest":  "إشعارات الطلبات الجديدة",
+                                                         "newRequestDesc":  "عند إنشاء طلب صيانة جديد",
+                                                         "payments":  "إشعارات المدفوعات",
+                                                         "paymentsDesc":  "عند إتمام عملية دفع",
+                                                         "workshopRegistration":  "إشعارات تسجيل الورش",
+                                                         "workshopRegistrationDesc":  "عند تسجيل ورشة جديدة",
+                                                         "reports":  "إشعارات التقارير",
+                                                         "reportsDesc":  "استلام التقارير الدورية",
+                                                         "newOrders":  "إشعارات الطلبات الجديدة",
+                                                         "newOrdersDesc":  "عند إنشاء طلب صيانة جديد"
+                                                     },
+                                   "accounting":  {
+                                                      "title":  "الإعدادات المحاسبية",
+                                                      "subtitle":  "تحديد النسب والإعدادات الافتراضية للنظام المحاسبي",
+                                                      "defaultCommission":  "نسبة العمولة الافتراضية",
+                                                      "defaultCommissionDesc":  "تُطبق تلقائياً على كل فاتورة عند إنشاء تسوية. يمكن تعديلها لكل فاتورة يدوياً.",
+                                                      "percentage":  "النسبة (%)",
+                                                      "save":  "حفظ",
+                                                      "howItWorks":  "كيف تعمل العمولة؟",
+                                                      "howItWorks1":  "عند إنشاء تسوية لورشة، تُطبق النسبة الافتراضية على كل فاتورة تلقائياً",
+                                                      "howItWorks2":  "يمكنك تعديل النسبة لكل فاتورة يدوياً قبل تأكيد التسوية",
+                                                      "howItWorks3":  "مثال: فاتورة بقيمة 1,000 ريال وعمولة 10% → 100 ريال للمنصة، 900 ريال للورشة",
+                                                      "defaultCommissionDescLong":  "نسبة العمولة الافتراضية على الفواتير (%)",
+                                                      "commissionDesc":  "نسبة العمولة الافتراضية على الفواتير",
+                                                      "commissionDescription":  "تُطبق تلقائياً على كل فاتورة عند إنشاء تسوية. يمكن تعديلها لكل فاتورة يدوياً.",
+                                                      "commissionPercent":  "النسبة (%)"
+                                                  },
+                                   "security":  {
+                                                    "currentPassword":  "كلمة المرور الحالية",
+                                                    "newPassword":  "كلمة المرور الجديدة",
+                                                    "confirmPassword":  "تأكيد كلمة المرور",
+                                                    "changePassword":  "تغيير كلمة المرور"
+                                                },
+                                   "appearance":  {
+                                                      "language":  "اللغة",
+                                                      "arabic":  "العربية",
+                                                      "english":  "English",
+                                                      "mode":  "الوضع",
+                                                      "light":  "فاتح",
+                                                      "dark":  "داكن",
+                                                      "theme":  "السمة"
+                                                  }
+                               }
+              },
+    "toast":  {
+                  "success":  {
+                                  "statusChanged":  "تم تغيير الحالة بنجاح",
+                                  "customerDeleted":  "تم حذف العميل بنجاح",
+                                  "workshopApproved":  "تم اعتماد الورشة بنجاح",
+                                  "workshopRejected":  "تم رفض الورشة",
+                                  "workshopDeleted":  "تم حذف الورشة بنجاح",
+                                  "workshopAdded":  "تم إضافة الورشة بنجاح",
+                                  "driverApproved":  "تم اعتماد السائق بنجاح",
+                                  "driverDeleted":  "تم حذف السائق بنجاح",
+                                  "driverAdded":  "تم إضافة السائق بنجاح",
+                                  "technicianDeleted":  "تم حذف الفني بنجاح",
+                                  "technicianStatusChanged":  "تم تغيير الحالة بنجاح",
+                                  "requestDeleted":  "تم حذف الطلب بنجاح",
+                                  "inspectionApproved":  "تم اعتماد تقرير الفحص",
+                                  "inspectionRejected":  "تم رفض تقرير الفحص",
+                                  "paymentRefunded":  "تم استرجاع المبلغ بنجاح",
+                                  "settlementCreated":  "تم إنشاء التسوية بنجاح",
+                                  "settlementConfirmed":  "تم تأكيد التسوية",
+                                  "settlementCancelled":  "تم إلغاء التسوية",
+                                  "commissionApplied":  "تم تطبيق 10% على الكل",
+                                  "serviceAdded":  "تم إضافة الخدمة بنجاح",
+                                  "serviceUpdated":  "تم تحديث الخدمة بنجاح",
+                                  "serviceDeleted":  "تم حذف الخدمة بنجاح",
+                                  "serviceStatusChanged":  "تم تحديث الحالة بنجاح",
+                                  "accountingSaved":  "تم حفظ الإعدادات المحاسبية",
+                                  "settingsSaved":  "تم حفظ الإعدادات بنجاح",
+                                  "passwordChanged":  "تم تغيير كلمة المرور بنجاح",
+                                  "exportSuccess":  "تم تصدير البيانات بنجاح",
+                                  "reportsExported":  "تم تصدير التقارير بنجاح",
+                                  "forgotPasswordSent":  "تم إرسال رابط استعادة كلمة المرور",
+                                  "forgotPasswordChanged":  "تم تغيير كلمة المرور",
+                                  "googleLoginSuccess":  "تم تسجيل الدخول بحساب Google",
+                                  "login":  "مرحباً بعودتك، {{name}}",
+                                  "logout":  "تم تسجيل الخروج",
+                                  "googleLogin":  "تم تسجيل الدخول بحساب Google",
+                                  "resetLinkSent":  "تم إرسال رابط استعادة كلمة المرور"
+                              },
+                  "error":  {
+                                "statusChangeFailed":  "فشل تغيير الحالة",
+                                "customerDeleteFailed":  "فشل حذف العميل",
+                                "workshopApproveFailed":  "فشل اعتماد الورشة",
+                                "workshopRejectFailed":  "فشل رفض الورشة",
+                                "workshopDeleteFailed":  "فشل حذف الورشة",
+                                "workshopAddFailed":  "فشل إضافة الورشة",
+                                "driverApproveFailed":  "فشل اعتماد السائق",
+                                "driverDeleteFailed":  "فشل حذف السائق",
+                                "driverAddFailed":  "فشل إضافة السائق",
+                                "technicianDeleteFailed":  "فشل حذف الفني",
+                                "technicianStatusFailed":  "فشل تغيير الحالة",
+                                "requestDeleteFailed":  "فشل حذف الطلب",
+                                "inspectionApproveFailed":  "فشل اعتماد التقرير",
+                                "inspectionRejectFailed":  "فشل رفض التقرير",
+                                "paymentRefundFailed":  "فشل استرجاع المبلغ",
+                                "settlementCreateFailed":  "فشل إنشاء التسوية",
+                                "settlementConfirmFailed":  "فشل تأكيد التسوية",
+                                "settlementCancelFailed":  "فشل إلغاء التسوية",
+                                "noExportData":  "لا توجد بيانات للتصدير",
+                                "serviceAddFailed":  "فشل إضافة الخدمة",
+                                "serviceUpdateFailed":  "فشل تحديث الخدمة",
+                                "serviceDeleteFailed":  "فشل حذف الخدمة",
+                                "serviceStatusFailed":  "فشل تحديث الحالة",
+                                "requiredFields":  "يرجى تعبئة الحقول المطلوبة",
+                                "accountingSaveFailed":  "فشل حفظ الإعدادات",
+                                "passwordMismatch":  "كلمة المرور غير متطابقة",
+                                "invalidEmail":  "البريد الإلكتروني غير صحيح",
+                                "emailNotRegistered":  "البريد غير مسجل",
+                                "forgotSendFailed":  "فشل الإرسال",
+                                "missingToken":  "أدخل رمز التحقق",
+                                "shortPassword":  "كلمة المرور 6 أحرف على الأقل",
+                                "forgotFailed":  "فشل",
+                                "connectionFailed":  "فشل الاتصال",
+                                "googleInfoFailed":  "فشل الحصول على معلومات Google",
+                                "googleLoginFailed":  "فشل تسجيل الدخول بحساب Google",
+                                "adminOnly":  "هذه البوابة مخصصة للمشرفين",
+                                "noTokenInResponse":  "استجابة الخادم لا تحتوي على رمز التحقق",
+                                "loginFailed":  "فشل تسجيل الدخول. تحقق من بياناتك.",
+                                "adminsOnly":  "هذه البوابة مخصصة للمشرفين فقط",
+                                "enterToken":  "يرجى إدخال رمز التحقق",
+                                "failed":  "فشلت العملية",
+                                "passwordChangeFailed":  "فشل تغيير كلمة المرور",
+                                "passwordMinLength":  "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+                                "sendFailed":  "فشل الإرسال",
+                                "settingsSaveFailed":  "فشل حفظ الإعدادات"
+                            }
+              }
+}

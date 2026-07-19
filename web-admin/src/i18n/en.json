@@ -1,0 +1,978 @@
+﻿{
+    "common":  {
+                   "appName":  "Tasaheel",
+                   "appSubtitle":  "Car Maintenance Platform",
+                   "version":  "Version 1.0.0",
+                   "loading":  "Loading...",
+                   "save":  "Save",
+                   "cancel":  "Cancel",
+                   "confirm":  "Confirm",
+                   "delete":  "Delete",
+                   "edit":  "Edit",
+                   "add":  "Add",
+                   "search":  "Search",
+                   "filter":  "Filter",
+                   "export":  "Export",
+                   "print":  "Print",
+                   "view":  "View",
+                   "back":  "Back",
+                   "noData":  "No data",
+                   "noDataAvailable":  "No data available",
+                   "total":  "Total",
+                   "selected":  "Selected {{count}}",
+                   "page":  "Page",
+                   "of":  "of",
+                   "prev":  "Previous",
+                   "next":  "Next",
+                   "status":  "Status",
+                   "actions":  "Actions",
+                   "date":  "Date",
+                   "name":  "Name",
+                   "phone":  "Phone",
+                   "email":  "Email",
+                   "city":  "City",
+                   "password":  "Password",
+                   "address":  "Address",
+                   "active":  "Active",
+                   "inactive":  "Inactive",
+                   "approved":  "Approved",
+                   "rejected":  "Rejected",
+                   "pending":  "Pending",
+                   "completed":  "Completed",
+                   "cancelled":  "Cancelled",
+                   "allStatuses":  "All Statuses",
+                   "backToHome":  "Home",
+                   "workshop":  "Workshop"
+               },
+    "layout":  {
+                   "sidebar":  {
+                                   "dashboard":  "Dashboard",
+                                   "customers":  "Customers",
+                                   "workshops":  "Workshops",
+                                   "drivers":  "Drivers",
+                                   "technicians":  "Technicians",
+                                   "requests":  "Requests",
+                                   "financial":  "Financial Dashboard",
+                                   "payments":  "Payments",
+                                   "settlements":  "Settlements",
+                                   "accounts":  "Chart of Accounts",
+                                   "journalEntries":  "Journal Entries",
+                                   "services":  "Services",
+                                   "reports":  "Reports",
+                                   "settings":  "Settings"
+                               },
+                   "header":  {
+                                  "quickSearch":  "Quick search...",
+                                  "notifications":  "Notifications",
+                                  "unread":  "unread",
+                                  "viewAll":  "View all notifications",
+                                  "systemAdmin":  "System Admin",
+                                  "settings":  "Settings",
+                                  "logout":  "Logout"
+                              },
+                   "breadcrumbs":  {
+                                       "home":  "Home"
+                                   },
+                   "footer":  {
+                                  "copyright":  "Tasaheel © {{year}} - All rights reserved"
+                              },
+                   "notifications":  {
+                                         "newRequest":  "New maintenance request from Ahmed Mohammed",
+                                         "newWorkshop":  "New workshop registered: Al-Itqan Workshop",
+                                         "paymentCompleted":  "Payment completed for 1,500 SAR",
+                                         "requestCompleted":  "Request #245 completed",
+                                         "newDriver":  "New driver joined the platform",
+                                         "timeAgo":  {
+                                                         "5min":  "5 minutes ago",
+                                                         "15min":  "15 minutes ago",
+                                                         "1hour":  "1 hour ago",
+                                                         "2hours":  "2 hours ago",
+                                                         "3hours":  "3 hours ago"
+                                                     }
+                                     },
+                   "userMenu":  {
+                                    "systemAdmin":  "System Admin"
+                                }
+               },
+    "components":  {
+                       "dataTable":  {
+                                         "emptyMessage":  "No data found",
+                                         "searchPlaceholder":  "Search...",
+                                         "total":  "Total:",
+                                         "selected":  "{{count}} selected"
+                                     },
+                       "confirmDialog":  {
+                                             "confirm":  "Confirm",
+                                             "cancel":  "Cancel"
+                                         },
+                       "aiAssistant":  {
+                                           "title":  "Salem - AI Assistant",
+                                           "subtitle":  "Platform Management Expert",
+                                           "aiName":  "Salem",
+                                           "quickQuestions":  "Quick Questions",
+                                           "inputPlaceholder":  "Ask Salem anything...",
+                                           "welcome":  "Hello! I\u0027m Salem, your smart maintenance assistant. I can help you manage the platform, view statistics, and answer your questions.",
+                                           "errorMessage":  "Sorry, a connection error occurred. Please try again.",
+                                           "suggestions":  {
+                                                               "workshopsCount":  "How many workshops are registered?",
+                                                               "topRequest":  "Top maintenance request this month",
+                                                               "performanceReports":  "Performance reports",
+                                                               "tips":  "Platform management tips"
+                                                           }
+                                       },
+                       "oauthButtons":  {
+                                            "googleLogin":  "Sign in with Google"
+                                        }
+                   },
+    "constants":  {
+                      "workshopTypes":  {
+                                            "stationary":  "Stationary Workshop",
+                                            "mobile":  "Mobile Workshop",
+                                            "both":  "Stationary \u0026 Mobile"
+                                        },
+                      "statusLabels":  {
+                                           "pending":  "Pending",
+                                           "assigned":  "Assigned",
+                                           "inspected":  "Inspected",
+                                           "in_progress":  "In Progress",
+                                           "completed":  "Completed",
+                                           "delivered":  "Delivered",
+                                           "cancelled":  "Cancelled",
+                                           "approved":  "Approved",
+                                           "rejected":  "Rejected",
+                                           "active":  "Active",
+                                           "inactive":  "Inactive",
+                                           "online":  "Online",
+                                           "offline":  "Offline",
+                                           "paid":  "Paid",
+                                           "refunded":  "Refunded",
+                                           "failed":  "Failed",
+                                           "cash":  "Cash",
+                                           "card":  "Credit Card",
+                                           "wallet":  "Wallet",
+                                           "bank_transfer":  "Bank Transfer",
+                                           "good":  "Good",
+                                           "needs_repair":  "Needs Repair",
+                                           "needs_replacement":  "Needs Replacement"
+                                       },
+                      "roles":  {
+                                    "admin":  "Admin",
+                                    "super_admin":  "Super Admin",
+                                    "customer":  "Customer",
+                                    "workshop":  "Workshop",
+                                    "driver":  "Driver"
+                                },
+                      "paymentMethods":  {
+                                             "cash":  "Cash",
+                                             "card":  "Credit Card",
+                                             "wallet":  "Wallet",
+                                             "bank_transfer":  "Bank Transfer"
+                                         },
+                      "navItems":  {
+                                       "dashboard":  "Dashboard",
+                                       "customers":  "Customers",
+                                       "workshops":  "Workshops",
+                                       "drivers":  "Drivers",
+                                       "requests":  "Requests",
+                                       "payments":  "Payments",
+                                       "services":  "Services",
+                                       "reports":  "Reports",
+                                       "settings":  "Settings"
+                                   }
+                  },
+    "pages":  {
+                  "login":  {
+                                "title":  "Tasaheel",
+                                "subtitle":  "Integrated Car Maintenance Platform",
+                                "mobileSubtitle":  "Login to Admin Dashboard",
+                                "welcome":  "Welcome Back",
+                                "welcomeSubtitle":  "Sign in to manage the platform",
+                                "emailLabel":  "Email",
+                                "emailPlaceholder":  "admin@example.com",
+                                "passwordLabel":  "Password",
+                                "passwordPlaceholder":  "••••••••",
+                                "forgotPassword":  "Forgot password?",
+                                "loginButton":  "Sign In",
+                                "orDivider":  "or",
+                                "googleLogin":  "Sign in with Google",
+                                "forgotPasswordTitle":  "Reset Password",
+                                "forgotStep1":  "Enter your email",
+                                "forgotStep2":  "Enter the code from your email and new password",
+                                "emailPlaceholder2":  "example@email.com",
+                                "loading":  "Loading...",
+                                "sendResetLink":  "Send Reset Link",
+                                "tokenPlaceholder":  "Verification Code",
+                                "newPasswordPlaceholder":  "New Password",
+                                "changePassword":  "Change Password",
+                                "backToLogin":  "Back to Login",
+                                "copyright":  "Tasaheel ©",
+                                "features":  {
+                                                 "customerManagement":  "Customer Management",
+                                                 "customerManagementDesc":  "Track all your customers easily",
+                                                 "workshopManagement":  "Workshops",
+                                                 "workshopManagementDesc":  "Manage approved workshops",
+                                                 "requestTracking":  "Maintenance Requests",
+                                                 "requestTrackingDesc":  "Track requests in real-time"
+                                             },
+                                "feature1Desc":  "Track all your customers easily",
+                                "feature1Title":  "Customer Management",
+                                "feature2Desc":  "Manage approved workshops",
+                                "feature2Title":  "Workshops",
+                                "feature3Desc":  "Track requests in real-time",
+                                "feature3Title":  "Maintenance Requests"
+                            },
+                  "dashboard":  {
+                                    "title":  "Dashboard",
+                                    "welcome":  "Welcome to the Dashboard",
+                                    "welcomeSubtitle":  "Platform performance and statistics overview",
+                                    "viewRequests":  "View Requests",
+                                    "reports":  "Reports",
+                                    "stats":  {
+                                                  "totalCustomers":  "Total Customers",
+                                                  "totalWorkshops":  "Total Workshops",
+                                                  "totalDrivers":  "Total Drivers",
+                                                  "totalRequests":  "Total Requests",
+                                                  "monthlyRevenue":  "Monthly Revenue"
+                                              },
+                                    "charts":  {
+                                                   "dailyRequests":  "Daily Requests",
+                                                   "last7Days":  "Last 7 Days",
+                                                   "last30Days":  "Last 30 Days",
+                                                   "topWorkshops":  "Top Workshops",
+                                                   "requestCount":  "Request Count",
+                                                   "revenue":  "Revenue",
+                                                   "requestStatus":  "Request Status"
+                                               },
+                                    "recentActivity":  "Recent Activity",
+                                    "viewAll":  "View All",
+                                    "latestRequests":  "Latest Requests",
+                                    "noData":  "No statistics data available",
+                                    "noDataSubtitle":  "Check server connection or try logging in again",
+                                    "requestFrom":  "New request from",
+                                    "completedRequest":  "Request # completed",
+                                    "inProgressRequest":  "Request in progress -",
+                                    "request":  "Request",
+                                    "table":  {
+                                                  "id":  "#",
+                                                  "customer":  "Customer",
+                                                  "service":  "Service",
+                                                  "status":  "Status",
+                                                  "date":  "Date",
+                                                  "actions":  "Actions",
+                                                  "view":  "View"
+                                              },
+                                    "statCards":  {
+                                                      "revenueThisMonth":  "Revenue This Month",
+                                                      "totalCustomers":  "Total Customers",
+                                                      "totalDrivers":  "Total Drivers",
+                                                      "totalRequests":  "Total Requests",
+                                                      "totalWorkshops":  "Total Workshops"
+                                                  }
+                                },
+                  "customers":  {
+                                    "title":  "Customers",
+                                    "subtitle":  "Manage and view all platform customers",
+                                    "addCustomer":  "Add Customer",
+                                    "deleteTitle":  "Delete Customer",
+                                    "deleteMessage":  "Are you sure you want to delete this customer? This action cannot be undone.",
+                                    "table":  {
+                                                  "id":  "#",
+                                                  "name":  "Name",
+                                                  "phone":  "Phone",
+                                                  "city":  "City",
+                                                  "cars":  "Cars",
+                                                  "requests":  "Requests",
+                                                  "registerDate":  "Registration Date",
+                                                  "status":  "Status",
+                                                  "actions":  "Actions"
+                                              },
+                                    "customerDetail":  {
+                                                           "notFound":  "Customer not found",
+                                                           "backToCustomers":  "Back to Customers",
+                                                           "customerSince":  "Customer since",
+                                                           "contactInfo":  "Contact Information",
+                                                           "phone":  "Phone",
+                                                           "email":  "Email",
+                                                           "city":  "City",
+                                                           "registerDate":  "Registration Date",
+                                                           "statistics":  "Statistics",
+                                                           "cars":  "Registered Car",
+                                                           "requests":  "Maintenance Request"
+                                                       }
+                                },
+                  "workshops":  {
+                                    "title":  "Workshops",
+                                    "subtitle":  "Manage and view all approved workshops",
+                                    "addWorkshop":  "Add Workshop",
+                                    "approve":  "Approve",
+                                    "reject":  "Reject",
+                                    "disable":  "Disable",
+                                    "enable":  "Enable",
+                                    "deleteTitle":  "Delete Workshop",
+                                    "deleteMessage":  "Are you sure you want to delete this workshop? This action cannot be undone.",
+                                    "filterStatuses":  {
+                                                           "all":  "All Statuses",
+                                                           "approved":  "Approved",
+                                                           "pending":  "Pending",
+                                                           "rejected":  "Rejected"
+                                                       },
+                                    "filterTypes":  {
+                                                        "all":  "All Types"
+                                                    },
+                                    "table":  {
+                                                  "id":  "#",
+                                                  "name":  "Name",
+                                                  "phone":  "Phone",
+                                                  "city":  "City",
+                                                  "type":  "Type",
+                                                  "rating":  "Rating",
+                                                  "services":  "Services",
+                                                  "status":  "Status",
+                                                  "actions":  "Actions"
+                                              },
+                                    "addModal":  {
+                                                     "title":  "Add New Workshop",
+                                                     "workshopName":  "Workshop Name",
+                                                     "workshopNamePlaceholder":  "e.g. Al-Salamah Workshop",
+                                                     "ownerName":  "Owner Name",
+                                                     "ownerNamePlaceholder":  "e.g. Mohammed Ahmed",
+                                                     "phonePlaceholder":  "0560000000",
+                                                     "emailPlaceholder":  "workshop@example.com",
+                                                     "passwordPlaceholder":  "******",
+                                                     "cityPlaceholder":  "e.g. Riyadh",
+                                                     "workshopType":  "Workshop Type",
+                                                     "addressPlaceholder":  "e.g. King Fahd Street",
+                                                     "servicesLabel":  "Services (comma separated)",
+                                                     "servicesPlaceholder":  "e.g. Mechanics, Electrical, Bodywork",
+                                                     "submit":  "Add Workshop"
+                                                 },
+                                    "rejectModal":  {
+                                                        "title":  "Reject Workshop",
+                                                        "message":  "Are you sure you want to reject this workshop?",
+                                                        "reasonPlaceholder":  "Enter rejection reason (optional)",
+                                                        "defaultReason":  "Requirements not met",
+                                                        "confirm":  "Confirm Rejection"
+                                                    },
+                                    "detail":  {
+                                                   "notFound":  "Workshop not found",
+                                                   "workshopSubtitle":  "Maintenance Workshop",
+                                                   "rejectionReason":  "Rejection reason:",
+                                                   "info":  "Workshop Information",
+                                                   "phone":  "Phone",
+                                                   "email":  "Email",
+                                                   "address":  "Address",
+                                                   "registerDate":  "Registration Date",
+                                                   "owner":  "Owner",
+                                                   "statistics":  "Statistics",
+                                                   "rating":  "Rating",
+                                                   "servicesCount":  "Service Offered",
+                                                   "type":  "Workshop Type",
+                                                   "typeStationary":  "Workshop at fixed location",
+                                                   "typeMobile":  "Workshop moves to customer location",
+                                                   "typeBoth":  "Mobile services and stationary workshop",
+                                                   "servicesOffered":  "Services Offered",
+                                                   "documents":  "Official Documents",
+                                                   "commercialRecord":  "Commercial Record",
+                                                   "viewDocument":  "View Document",
+                                                   "notUploaded":  "Not Uploaded",
+                                                   "municipalityLicense":  "Municipality License",
+                                                   "rejectModalTitle":  "Reject Workshop",
+                                                   "rejectReasonRequired":  "Enter rejection reason (required)"
+                                               }
+                                },
+                  "drivers":  {
+                                  "title":  "Drivers",
+                                  "subtitle":  "Manage and view all registered drivers",
+                                  "addDriver":  "Add Driver",
+                                  "approve":  "Approve",
+                                  "deleteTitle":  "Delete Driver",
+                                  "deleteMessage":  "Are you sure you want to delete this driver? This action cannot be undone.",
+                                  "table":  {
+                                                "id":  "#",
+                                                "name":  "Name",
+                                                "phone":  "Phone",
+                                                "city":  "City",
+                                                "vehicle":  "Vehicle Type",
+                                                "connectionStatus":  "Connection Status",
+                                                "approved":  "Approved",
+                                                "actions":  "Actions"
+                                            },
+                                  "addModal":  {
+                                                   "title":  "Add New Driver",
+                                                   "driverName":  "Driver Name",
+                                                   "driverNamePlaceholder":  "e.g. Mohammed Ahmed",
+                                                   "phonePlaceholder":  "0560000000",
+                                                   "emailPlaceholder":  "driver@example.com",
+                                                   "passwordPlaceholder":  "******",
+                                                   "cityPlaceholder":  "e.g. Riyadh",
+                                                   "vehicleType":  "Vehicle Type",
+                                                   "vehicleTypePlaceholder":  "e.g. Ford",
+                                                   "plateNumber":  "Plate Number",
+                                                   "plateNumberPlaceholder":  "ABC 1234",
+                                                   "submit":  "Add Driver"
+                                               },
+                                  "detail":  {
+                                                 "notFound":  "Driver not found",
+                                                 "backToDrivers":  "Back to Drivers",
+                                                 "contactInfo":  "Contact Information",
+                                                 "phone":  "Phone",
+                                                 "email":  "Email",
+                                                 "city":  "City",
+                                                 "registerDate":  "Registration Date",
+                                                 "vehicleInfo":  "Vehicle Information",
+                                                 "vehicleType":  "Vehicle Type",
+                                                 "plateNumber":  "Plate Number",
+                                                 "status":  "Status",
+                                                 "connectionStatus":  "Connection Status",
+                                                 "approvalStatus":  "Approval Status"
+                                             }
+                              },
+                  "technicians":  {
+                                      "title":  "Technicians",
+                                      "subtitle":  "Manage and view all technicians registered in workshops",
+                                      "deleteTitle":  "Delete Technician",
+                                      "deleteMessage":  "Are you sure you want to delete this technician? This action cannot be undone.",
+                                      "workshopIdPlaceholder":  "Workshop ID",
+                                      "table":  {
+                                                    "id":  "#",
+                                                    "name":  "Name",
+                                                    "phone":  "Phone",
+                                                    "specialty":  "Specialty",
+                                                    "workshop":  "Workshop",
+                                                    "connectionStatus":  "Connection Status",
+                                                    "status":  "Status",
+                                                    "actions":  "Actions"
+                                                }
+                                  },
+                  "requests":  {
+                                   "title":  "Maintenance Requests",
+                                   "subtitle":  "Manage and view all maintenance requests",
+                                   "deleteTitle":  "Delete Request",
+                                   "deleteMessage":  "Are you sure you want to delete this request? This action cannot be undone.",
+                                   "table":  {
+                                                 "id":  "#",
+                                                 "customer":  "Customer",
+                                                 "car":  "Car",
+                                                 "service":  "Service",
+                                                 "workshop":  "Workshop",
+                                                 "status":  "Status",
+                                                 "city":  "City",
+                                                 "createdAt":  "Created At",
+                                                 "actions":  "Actions"
+                                             },
+                                   "detail":  {
+                                                  "notFound":  "Request not found",
+                                                  "backToRequests":  "Back to Requests",
+                                                  "requestNumber":  "Request #",
+                                                  "customer":  "Customer",
+                                                  "car":  "Car",
+                                                  "serviceAndWorkshop":  "Service \u0026 Workshop",
+                                                  "requestStatus":  "Request Status",
+                                                  "currentStatus":  "Current",
+                                                  "problemDescription":  "Problem Description",
+                                                  "tabs":  {
+                                                               "quotes":  "Quotes",
+                                                               "inspection":  "Inspection Report",
+                                                               "invoice":  "Invoice",
+                                                               "chat":  "Chat"
+                                                           },
+                                                  "inspection":  {
+                                                                     "heading":  "Inspection Report -",
+                                                                     "approved":  "Approved",
+                                                                     "rejected":  "Rejected",
+                                                                     "pendingApproval":  "Pending Approval",
+                                                                     "rejectionReason":  "Rejection Reason:",
+                                                                     "notes":  "Inspection Notes",
+                                                                     "parts":  "Spare Parts",
+                                                                     "partName":  "Part Name",
+                                                                     "quantity":  "Qty",
+                                                                     "unitPrice":  "Unit Price",
+                                                                     "total":  "Total",
+                                                                     "labor":  "Labor",
+                                                                     "description":  "Description",
+                                                                     "hours":  "Hours",
+                                                                     "hourlyRate":  "Hourly Rate",
+                                                                     "subtotal":  "Subtotal",
+                                                                     "tax":  "Tax",
+                                                                     "noReport":  "No inspection report for this request",
+                                                                     "rejectReport":  "Reject Report",
+                                                                     "approveReport":  "Approve Report"
+                                                                 },
+                                                  "invoice":  {
+                                                                  "companyName":  "Tasaheel",
+                                                                  "subtitle":  "Maintenance Services Invoice",
+                                                                  "invoiceNumber":  "Invoice No.",
+                                                                  "date":  "Date",
+                                                                  "customer":  "Customer",
+                                                                  "workshop":  "Workshop",
+                                                                  "description":  "Description",
+                                                                  "quantity":  "Qty",
+                                                                  "price":  "Price",
+                                                                  "total":  "Total",
+                                                                  "subtotal":  "Subtotal",
+                                                                  "tax":  "Tax (15%)",
+                                                                  "confirmPayment":  "Confirm Payment",
+                                                                  "demoItem1":  "General Maintenance",
+                                                                  "demoItem2":  "Engine Oil",
+                                                                  "demoItem3":  "Oil Filter"
+                                                              },
+                                                  "chat":  {
+                                                               "you":  "You",
+                                                               "admin":  "Admin",
+                                                               "customer":  "Customer",
+                                                               "inputPlaceholder":  "Type a message...",
+                                                               "send":  "Send",
+                                                               "demoCustomerName":  "Ahmed Mohammed",
+                                                               "demoMsg1":  "Hello, when will it be ready?",
+                                                               "demoTime1":  "10:30 AM",
+                                                               "demoMsg2":  "It will be finished within two hours, God willing",
+                                                               "demoTime2":  "10:32 AM",
+                                                               "demoMsg3":  "Thank you very much",
+                                                               "demoTime3":  "10:33 AM"
+                                                           },
+                                                  "rejectInspection":  {
+                                                                           "title":  "Reject Inspection Report",
+                                                                           "message":  "Are you sure you want to reject the inspection report?",
+                                                                           "reasonPlaceholder":  "Enter rejection reason (required)",
+                                                                           "defaultReason":  "Not approved"
+                                                                       },
+                                                  "quotes":  {
+                                                                 "accepted":  "Accepted",
+                                                                 "underReview":  "Under Review",
+                                                                 "rejected":  "Rejected",
+                                                                 "accept":  "Accept",
+                                                                 "demoWorkshopName":  "Quick Maintenance Workshop",
+                                                                 "demoQuoteDesc":  "Comprehensive maintenance quote"
+                                                             }
+                                              }
+                               },
+                  "financial":  {
+                                    "title":  "Financial Dashboard",
+                                    "subtitle":  "Comprehensive platform financial overview",
+                                    "autoRefresh":  "Auto-refresh every 30 seconds",
+                                    "summary":  {
+                                                    "totalRevenue":  "Total Revenue",
+                                                    "totalCommission":  "Total Commission",
+                                                    "netWorkshopDue":  "Net Workshop Dues",
+                                                    "unsettledAmount":  "Unsettled Amount",
+                                                    "netToWorkshops":  "Net Workshop Dues",
+                                                    "pendingSettlement":  "Pending Settlement"
+                                                },
+                                    "monthlyRevenue":  "Monthly Revenue",
+                                    "net":  "Net:",
+                                    "commission":  "Commission:",
+                                    "tax":  "Tax:",
+                                    "noRevenueData":  "No revenue data yet",
+                                    "recentTransactions":  "Recent Transactions",
+                                    "noRecentTransactions":  "No recent transactions",
+                                    "workshopPerformance":  "Workshop Financial Performance",
+                                    "table":  {
+                                                  "workshop":  "Workshop",
+                                                  "invoices":  "Invoices",
+                                                  "total":  "Total",
+                                                  "commission":  "Commission",
+                                                  "percentage":  "Rate",
+                                                  "net":  "Net",
+                                                  "status":  "Status",
+                                                  "notSettled":  "Not Settled",
+                                                  "rate":  "Rate",
+                                                  "settled":  "Settled",
+                                                  "tax":  "Tax"
+                                              },
+                                    "settled":  "Settled",
+                                    "unsettled":  "Unsettled",
+                                    "noWorkshopData":  "No workshop performance data",
+                                    "trendSuffix":  "vs last month",
+                                    "noPerformanceData":  "No performance data",
+                                    "vsLastMonth":  "vs last month"
+                                },
+                  "payments":  {
+                                   "title":  "Payments",
+                                   "subtitle":  "Manage and track all payments and financial transactions",
+                                   "summary":  {
+                                                   "totalRevenue":  "Total Revenue",
+                                                   "pending":  "Pending",
+                                                   "completed":  "Completed",
+                                                   "refunded":  "Refunded",
+                                                   "sar":  "SAR"
+                                               },
+                                   "table":  {
+                                                 "id":  "#",
+                                                 "requestId":  "Request ID",
+                                                 "customer":  "Customer",
+                                                 "amount":  "Amount",
+                                                 "method":  "Payment Method",
+                                                 "status":  "Status",
+                                                 "date":  "Date",
+                                                 "actions":  "Actions"
+                                             },
+                                   "exportReport":  "Export Report",
+                                   "refundTitle":  "Refund Amount",
+                                   "refundMessage":  "Are you sure you want to refund this amount?",
+                                   "refund":  "Refund",
+                                   "filterStatuses":  {
+                                                          "all":  "All Statuses",
+                                                          "paid":  "Paid",
+                                                          "pending":  "Pending",
+                                                          "failed":  "Failed",
+                                                          "refunded":  "Refunded"
+                                                      }
+                               },
+                  "settlements":  {
+                                      "title":  "Workshop Settlements",
+                                      "subtitle":  "Manage workshop settlement dues",
+                                      "tabs":  {
+                                                   "pending":  "Unsettled Dues",
+                                                   "history":  "Settlement History"
+                                               },
+                                      "summary":  {
+                                                      "totalDue":  "Total Dues",
+                                                      "workshopsDue":  "Workshops Due",
+                                                      "avgCommission":  "Average Commission",
+                                                      "averageCommission":  "Average Commission",
+                                                      "pendingWorkshops":  "Pending Workshops",
+                                                      "totalPending":  "Total Pending"
+                                                  },
+                                      "allSettled":  "All dues are settled ✓",
+                                      "table":  {
+                                                    "workshop":  "Workshop",
+                                                    "invoiceCount":  "Invoices",
+                                                    "total":  "Total",
+                                                    "settle":  "Settle"
+                                                },
+                                      "historyTable":  {
+                                                           "settlementNo":  "Settlement No.",
+                                                           "workshop":  "Workshop",
+                                                           "invoices":  "Invoices",
+                                                           "total":  "Total",
+                                                           "commission":  "Commission",
+                                                           "net":  "Net",
+                                                           "status":  "Status",
+                                                           "id":  "ID",
+                                                           "noData":  "No data"
+                                                       },
+                                      "status":  {
+                                                     "settled":  "Completed",
+                                                     "pending":  "Pending",
+                                                     "cancelled":  "Cancelled"
+                                                 },
+                                      "noSettlements":  "No settlements found",
+                                      "settleModal":  {
+                                                          "title":  "Settlement -",
+                                                          "instruction":  "Set commission percentage for each invoice",
+                                                          "applyAll":  "Apply 10% to All",
+                                                          "invoiceNo":  "Invoice No.",
+                                                          "total":  "Total",
+                                                          "commissionPercent":  "Commission %",
+                                                          "commissionAmount":  "Commission Amount",
+                                                          "net":  "Net",
+                                                          "grandTotal":  "Grand Total",
+                                                          "notes":  "Notes (optional)",
+                                                          "confirm":  "Confirm Settlement",
+                                                          "commissionValue":  "Commission Value",
+                                                          "invoiceNumber":  "Invoice No.",
+                                                          "selectCommission":  "Set commission percentage for each invoice",
+                                                          "totalLabel":  "Total"
+                                                      },
+                                      "confirmTitle":  "Confirm Settlement",
+                                      "confirmMessage":  "Are you sure you want to confirm this settlement? A journal entry will be created.",
+                                      "cancel":  "Cancel",
+                                      "confirmSettlement":  "Confirm Settlement",
+                                      "next":  "Next",
+                                      "previous":  "Previous",
+                                      "settle":  "Settle",
+                                      "confirmDialog":  {
+                                                            "message":  "Are you sure you want to confirm this settlement? A journal entry will be created.",
+                                                            "title":  "Confirm Settlement"
+                                                        }
+                                  },
+                  "accounts":  {
+                                   "title":  "Chart of Accounts",
+                                   "subtitle":  "Platform accounting chart of accounts",
+                                   "treeView":  "Tree View",
+                                   "trialBalance":  "Trial Balance",
+                                   "searchPlaceholder":  "Search account...",
+                                   "table":  {
+                                                 "account":  "Account",
+                                                 "type":  "Type",
+                                                 "balance":  "Balance",
+                                                 "code":  "Code",
+                                                 "credit":  "Credit",
+                                                 "debit":  "Debit"
+                                             },
+                                   "systemAccount":  "System",
+                                   "noAccounts":  "No accounts found",
+                                   "trialBalanceTable":  {
+                                                             "title":  "Trial Balance",
+                                                             "lastUpdate":  "Last update: now",
+                                                             "code":  "Code",
+                                                             "account":  "Account",
+                                                             "type":  "Type",
+                                                             "debit":  "Debit",
+                                                             "credit":  "Credit"
+                                                         },
+                                   "types":  {
+                                                 "ASSET":  "Asset",
+                                                 "LIABILITY":  "Liability",
+                                                 "REVENUE":  "Revenue",
+                                                 "EXPENSE":  "Expense"
+                                             },
+                                   "lastUpdate":  "Last update: now",
+                                   "showChart":  "Show Chart",
+                                   "system":  "System"
+                               },
+                  "journalEntries":  {
+                                         "title":  "Journal Entries",
+                                         "subtitle":  "All accounting journal entries",
+                                         "table":  {
+                                                       "entryNo":  "Entry No.",
+                                                       "date":  "Date",
+                                                       "description":  "Description",
+                                                       "reference":  "Reference",
+                                                       "status":  "Status",
+                                                       "entryNumber":  "Entry No."
+                                                   },
+                                         "status":  {
+                                                        "POSTED":  "Posted",
+                                                        "REVERSED":  "Reversed",
+                                                        "DRAFT":  "Draft"
+                                                    },
+                                         "noEntries":  "No entries found",
+                                         "modalTitle":  "Entry No:",
+                                         "detail":  {
+                                                        "date":  "Date: ",
+                                                        "status":  "Status: ",
+                                                        "description":  "Description: ",
+                                                        "reference":  "Reference: ",
+                                                        "account":  "Account",
+                                                        "credit":  "Credit",
+                                                        "debit":  "Debit",
+                                                        "total":  "Total"
+                                                    },
+                                         "linesTable":  {
+                                                            "account":  "Account",
+                                                            "description":  "Description",
+                                                            "debit":  "Debit",
+                                                            "credit":  "Credit",
+                                                            "total":  "Total"
+                                                        },
+                                         "referenceLabels":  {
+                                                                 "COMMISSION":  "Commission",
+                                                                 "INVOICE_APPROVAL":  "Invoice Approval",
+                                                                 "INVOICE_REVERSAL":  "Invoice Reversal",
+                                                                 "PAYMENT":  "Payment",
+                                                                 "SETTLEMENT":  "Settlement"
+                                                             },
+                                         "next":  "Next",
+                                         "noData":  "No data",
+                                         "previous":  "Previous",
+                                         "references":  {
+                                                            "INVOICE_APPROVAL":  "Invoice Approval",
+                                                            "INVOICE_REVERSAL":  "Invoice Reversal",
+                                                            "PAYMENT":  "Payment",
+                                                            "COMMISSION":  "Commission",
+                                                            "SETTLEMENT":  "Settlement"
+                                                        }
+                                     },
+                  "services":  {
+                                   "title":  "Services",
+                                   "subtitle":  "Manage platform services",
+                                   "addService":  "Add Service",
+                                   "addTitle":  "Add New Service",
+                                   "editTitle":  "Edit Service",
+                                   "deleteTitle":  "Delete Service",
+                                   "deleteMessage":  "Are you sure you want to delete this service?",
+                                   "form":  {
+                                                "nameAr":  "Name (Arabic) *",
+                                                "nameEn":  "Name (English) *",
+                                                "icon":  "Service Icon",
+                                                "description":  "Description",
+                                                "category":  "Category",
+                                                "selectCategory":  "Select Category"
+                                            },
+                                   "submitAdd":  "Add",
+                                   "submitUpdate":  "Update"
+                               },
+                  "reports":  {
+                                  "title":  "Reports",
+                                  "subtitle":  "Comprehensive data analysis and statistics",
+                                  "noData":  "No reports available",
+                                  "noDataSubtitle":  "Check server connection or try logging in again",
+                                  "periods":  {
+                                                  "daily":  "Daily",
+                                                  "weekly":  "Weekly",
+                                                  "monthly":  "Monthly"
+                                              },
+                                  "summary":  {
+                                                  "totalRequests":  "Total Requests",
+                                                  "monthlyRevenue":  "Monthly Revenue",
+                                                  "activeWorkshops":  "Active Workshops",
+                                                  "customers":  "Customers"
+                                              },
+                                  "charts":  {
+                                                 "monthlyRevenue":  "Monthly Revenue",
+                                                 "revenue":  "Revenue",
+                                                 "dailyRequests":  "Daily Requests",
+                                                 "requestCount":  "Request Count",
+                                                 "topWorkshops":  "Top Workshops"
+                                             },
+                                  "workshopTable":  {
+                                                        "title":  "Top Workshops - Detailed Table",
+                                                        "id":  "#",
+                                                        "workshop":  "Workshop",
+                                                        "requests":  "Requests",
+                                                        "revenue":  "Revenue"
+                                                    }
+                              },
+                  "settings":  {
+                                   "title":  "Settings",
+                                   "subtitle":  "Manage your account settings and platform preferences",
+                                   "tabs":  {
+                                                "profile":  "Profile",
+                                                "notifications":  "Notifications",
+                                                "accounting":  "Accounting Settings",
+                                                "security":  "Security",
+                                                "appearance":  "Appearance"
+                                            },
+                                   "profile":  {
+                                                   "systemAdmin":  "System Admin",
+                                                   "changePhoto":  "Change Photo",
+                                                   "name":  "Name",
+                                                   "email":  "Email",
+                                                   "phone":  "Phone",
+                                                   "save":  "Save Changes",
+                                                   "defaultName":  "Admin",
+                                                   "role":  "Role"
+                                               },
+                                   "notifications":  {
+                                                         "newRequest":  "New Request Notifications",
+                                                         "newRequestDesc":  "When a new maintenance request is created",
+                                                         "payments":  "Payment Notifications",
+                                                         "paymentsDesc":  "When a payment is completed",
+                                                         "workshopRegistration":  "Workshop Registration Notifications",
+                                                         "workshopRegistrationDesc":  "When a new workshop registers",
+                                                         "reports":  "Report Notifications",
+                                                         "reportsDesc":  "Receive periodic reports",
+                                                         "newOrders":  "New Order Notifications",
+                                                         "newOrdersDesc":  "When a new maintenance request is created"
+                                                     },
+                                   "accounting":  {
+                                                      "title":  "Accounting Settings",
+                                                      "subtitle":  "Set default rates and settings for the accounting system",
+                                                      "defaultCommission":  "Default Commission Rate",
+                                                      "defaultCommissionDesc":  "Automatically applied to each invoice when creating a settlement. Can be edited per invoice manually.",
+                                                      "percentage":  "Rate (%)",
+                                                      "save":  "Save",
+                                                      "howItWorks":  "How does commission work?",
+                                                      "howItWorks1":  "When creating a settlement for a workshop, the default rate is automatically applied to each invoice",
+                                                      "howItWorks2":  "You can manually adjust the rate per invoice before confirming the settlement",
+                                                      "howItWorks3":  "Example: 1,000 SAR invoice with 10% commission → 100 SAR for platform, 900 SAR for workshop",
+                                                      "defaultCommissionDescLong":  "Default commission rate on invoices (%)",
+                                                      "commissionDesc":  "Default commission rate on invoices",
+                                                      "commissionDescription":  "Automatically applied to each invoice when creating a settlement. Can be edited per invoice manually.",
+                                                      "commissionPercent":  "Rate (%)"
+                                                  },
+                                   "security":  {
+                                                    "currentPassword":  "Current Password",
+                                                    "newPassword":  "New Password",
+                                                    "confirmPassword":  "Confirm Password",
+                                                    "changePassword":  "Change Password"
+                                                },
+                                   "appearance":  {
+                                                      "language":  "Language",
+                                                      "arabic":  "العربية",
+                                                      "english":  "English",
+                                                      "mode":  "Mode",
+                                                      "light":  "Light",
+                                                      "dark":  "Dark",
+                                                      "theme":  "Theme"
+                                                  }
+                               }
+              },
+    "toast":  {
+                  "success":  {
+                                  "statusChanged":  "Status changed successfully",
+                                  "customerDeleted":  "Customer deleted successfully",
+                                  "workshopApproved":  "Workshop approved successfully",
+                                  "workshopRejected":  "Workshop rejected",
+                                  "workshopDeleted":  "Workshop deleted successfully",
+                                  "workshopAdded":  "Workshop added successfully",
+                                  "driverApproved":  "Driver approved successfully",
+                                  "driverDeleted":  "Driver deleted successfully",
+                                  "driverAdded":  "Driver added successfully",
+                                  "technicianDeleted":  "Technician deleted successfully",
+                                  "technicianStatusChanged":  "Status changed successfully",
+                                  "requestDeleted":  "Request deleted successfully",
+                                  "inspectionApproved":  "Inspection report approved",
+                                  "inspectionRejected":  "Inspection report rejected",
+                                  "paymentRefunded":  "Payment refunded successfully",
+                                  "settlementCreated":  "Settlement created successfully",
+                                  "settlementConfirmed":  "Settlement confirmed",
+                                  "settlementCancelled":  "Settlement cancelled",
+                                  "commissionApplied":  "Applied 10% to all",
+                                  "serviceAdded":  "Service added successfully",
+                                  "serviceUpdated":  "Service updated successfully",
+                                  "serviceDeleted":  "Service deleted successfully",
+                                  "serviceStatusChanged":  "Status updated successfully",
+                                  "accountingSaved":  "Accounting settings saved",
+                                  "settingsSaved":  "Settings saved successfully",
+                                  "passwordChanged":  "Password changed successfully",
+                                  "exportSuccess":  "Data exported successfully",
+                                  "reportsExported":  "Reports exported successfully",
+                                  "forgotPasswordSent":  "Password reset link sent",
+                                  "forgotPasswordChanged":  "Password changed",
+                                  "googleLoginSuccess":  "Logged in with Google",
+                                  "login":  "Welcome back, {{name}}",
+                                  "logout":  "Logged out",
+                                  "googleLogin":  "Logged in with Google",
+                                  "resetLinkSent":  "Password reset link sent"
+                              },
+                  "error":  {
+                                "statusChangeFailed":  "Failed to change status",
+                                "customerDeleteFailed":  "Failed to delete customer",
+                                "workshopApproveFailed":  "Failed to approve workshop",
+                                "workshopRejectFailed":  "Failed to reject workshop",
+                                "workshopDeleteFailed":  "Failed to delete workshop",
+                                "workshopAddFailed":  "Failed to add workshop",
+                                "driverApproveFailed":  "Failed to approve driver",
+                                "driverDeleteFailed":  "Failed to delete driver",
+                                "driverAddFailed":  "Failed to add driver",
+                                "technicianDeleteFailed":  "Failed to delete technician",
+                                "technicianStatusFailed":  "Failed to change status",
+                                "requestDeleteFailed":  "Failed to delete request",
+                                "inspectionApproveFailed":  "Failed to approve report",
+                                "inspectionRejectFailed":  "Failed to reject report",
+                                "paymentRefundFailed":  "Failed to refund amount",
+                                "settlementCreateFailed":  "Failed to create settlement",
+                                "settlementConfirmFailed":  "Failed to confirm settlement",
+                                "settlementCancelFailed":  "Failed to cancel settlement",
+                                "noExportData":  "No data to export",
+                                "serviceAddFailed":  "Failed to add service",
+                                "serviceUpdateFailed":  "Failed to update service",
+                                "serviceDeleteFailed":  "Failed to delete service",
+                                "serviceStatusFailed":  "Failed to update status",
+                                "requiredFields":  "Please fill in required fields",
+                                "accountingSaveFailed":  "Failed to save settings",
+                                "passwordMismatch":  "Passwords do not match",
+                                "invalidEmail":  "Invalid email",
+                                "emailNotRegistered":  "Email not registered",
+                                "forgotSendFailed":  "Failed to send",
+                                "missingToken":  "Enter verification code",
+                                "shortPassword":  "Password must be at least 6 characters",
+                                "forgotFailed":  "Failed",
+                                "connectionFailed":  "Connection failed",
+                                "googleInfoFailed":  "Failed to get Google info",
+                                "googleLoginFailed":  "Failed to login with Google",
+                                "adminOnly":  "This portal is for admins only",
+                                "noTokenInResponse":  "Server response does not contain a verification token",
+                                "loginFailed":  "Login failed. Check your credentials.",
+                                "adminsOnly":  "This portal is for admins only",
+                                "enterToken":  "Please enter the verification code",
+                                "failed":  "Operation failed",
+                                "passwordChangeFailed":  "Failed to change password",
+                                "passwordMinLength":  "Password must be at least 6 characters",
+                                "sendFailed":  "Failed to send",
+                                "settingsSaveFailed":  "Failed to save settings"
+                            }
+              }
+}

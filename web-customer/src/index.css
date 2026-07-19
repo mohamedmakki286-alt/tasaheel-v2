@@ -1,0 +1,140 @@
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('/fonts/cairo.woff2') format('woff2');
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: 'Cairo', 'Segoe UI', 'Traditional Arabic', 'Noto Naskh Arabic', 'Arabic Typesetting', 'Times New Roman', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  /* Light theme (default) */
+  .light body, html:not(.dark) body {
+    @apply bg-white text-surface-900;
+  }
+  /* Dark theme */
+  .dark body {
+    @apply bg-surface-950 text-white;
+  }
+  :root {
+    --leaflet-tile-filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+  }
+}
+
+@layer components {
+  /* Light theme cards and inputs */
+  .card {
+    @apply rounded-2xl p-4 transition-colors duration-300;
+  }
+  .light .card, html:not(.dark) .card {
+    @apply bg-surface-50 border border-surface-200/60;
+  }
+  .dark .card {
+    @apply bg-surface-800/80 backdrop-blur-sm border border-surface-700/50;
+  }
+
+  .input-field {
+    @apply rounded-xl px-4 py-3 transition-all duration-200 w-full;
+  }
+  .light .input-field, html:not(.dark) .input-field {
+    @apply bg-surface-50 border border-surface-200 text-surface-900 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-accent-500/30 focus:border-accent-500;
+  }
+  .dark .input-field {
+    @apply bg-surface-800 border border-surface-600 text-white placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500;
+  }
+
+  .dark select option { @apply bg-surface-900 text-white; }
+
+  .btn-primary {
+    @apply bg-accent-500 hover:bg-accent-600 text-white font-semibold px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-outline {
+    @apply border font-semibold px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95;
+  }
+  .light .btn-outline, html:not(.dark) .btn-outline {
+    @apply border-surface-300 hover:bg-surface-100 text-surface-700;
+  }
+  .dark .btn-outline {
+    @apply border-surface-500 hover:bg-surface-800 text-white;
+  }
+  .btn-secondary {
+    @apply font-semibold px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95;
+  }
+  .light .btn-secondary, html:not(.dark) .btn-secondary {
+    @apply bg-surface-100 hover:bg-surface-200 text-surface-700 border border-surface-200;
+  }
+  .dark .btn-secondary {
+    @apply bg-surface-800 hover:bg-surface-700 text-white border border-surface-600;
+  }
+  .btn-danger {
+    @apply bg-danger-600 hover:bg-danger-700 text-white font-semibold px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95;
+  }
+  .status-badge {
+    @apply px-3 py-1 rounded-full text-xs font-medium;
+  }
+  .status-pending { @apply bg-accent-500/20 text-accent-500; }
+  .status-quoted { @apply bg-blue-500/20 text-blue-500; }
+  .status-customer_approved { @apply bg-success-500/20 text-success-500; }
+  .status-in_progress { @apply bg-accent-500/20 text-accent-500; }
+  .status-inspection_report { @apply bg-purple-500/20 text-purple-500; }
+  .status-completed { @apply bg-success-500/20 text-success-500; }
+  .status-cancelled { @apply bg-danger-500/20 text-danger-500; }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: 1rem;
+}
+
+/* Page transition */
+.page-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.brand-splash { position:fixed; inset:0; z-index:9999; display:grid; place-items:center; overflow:hidden; color:#fff; background:radial-gradient(circle at 25% 20%,#ef4444 0,transparent 28%),linear-gradient(145deg,#18181b 0%,#09090b 58%,#3b0709 100%); }
+.brand-splash__content { position:relative; z-index:2; width:min(88vw,390px); text-align:center; }
+.brand-splash__mark { position:relative; width:148px; height:132px; margin:auto; display:grid; place-items:center; overflow:hidden; color:#fff; border:2px solid rgba(255,255,255,.9); border-radius:38px; background:linear-gradient(145deg,#ef2b32,#b40f15); box-shadow:0 24px 70px rgba(215,25,32,.42),inset 0 1px 0 rgba(255,255,255,.35); animation:brand-pop .75s cubic-bezier(.22,1.4,.5,1) both; }
+.brand-splash__gear { position:absolute; top:9px; right:9px; opacity:.28; animation:brand-spin 7s linear infinite; }.brand-splash__hero-car { position:relative; z-index:2; filter:drop-shadow(0 7px 10px rgba(60,0,0,.25)); }
+.brand-splash__mark img { width:100%; height:100%; object-fit:cover; border-radius:30px; box-shadow:0 24px 70px rgba(215,25,32,.38); animation:brand-pop .75s cubic-bezier(.22,1.4,.5,1) both; }
+.brand-splash__tool { position:absolute; left:9px; bottom:9px; display:grid; place-items:center; width:43px; height:43px; border-radius:15px; color:#18181b; background:#fbbf24; box-shadow:0 10px 30px rgba(251,191,36,.35); animation:brand-tool 2.2s ease-in-out infinite; }
+.brand-splash h1 { margin:22px 0 4px; font-size:38px; font-weight:900; letter-spacing:-1px; }
+.brand-splash p { margin:0; color:rgba(255,255,255,.7); font-weight:600; }
+.brand-splash__road { position:relative; height:64px; margin-top:30px; overflow:hidden; }
+.brand-splash__line { position:absolute; left:0; right:0; bottom:10px; height:2px; background:repeating-linear-gradient(90deg,rgba(255,255,255,.65) 0 24px,transparent 24px 40px); }
+.brand-splash__car { position:absolute; z-index:2; bottom:14px; left:-42px; display:grid; place-items:center; width:48px; height:38px; border-radius:15px 15px 9px 9px; color:#fff; background:#d71920; box-shadow:0 8px 22px rgba(215,25,32,.45); animation:brand-drive 2.6s cubic-bezier(.45,.02,.2,1) infinite; }
+.brand-splash__glow { position:absolute; width:260px; height:260px; border-radius:999px; filter:blur(10px); opacity:.14; }
+.brand-splash__glow--one { top:-80px; right:-70px; background:#fbbf24; animation:brand-float 5s ease-in-out infinite; }.brand-splash__glow--two { bottom:-100px; left:-80px; background:#ef4444; animation:brand-float 6s ease-in-out infinite reverse; }
+@keyframes brand-pop { from { opacity:0; transform:scale(.55) rotate(-8deg) } to { opacity:1; transform:scale(1) rotate(0) } } @keyframes brand-tool { 0%,100% { transform:rotate(-15deg) } 50% { transform:rotate(18deg) scale(1.08) } } @keyframes brand-drive { 0% { left:-48px } 100% { left:calc(100% + 8px) } } @keyframes brand-float { 0%,100% { transform:translate(0,0) } 50% { transform:translate(25px,18px) } }
+@keyframes brand-spin { to { transform:rotate(360deg) } }
+@media (prefers-reduced-motion:reduce) { .brand-splash * { animation-duration:.01ms !important; animation-iteration-count:1 !important; } }
+.brand-tagline{display:flex;justify-content:center;gap:.32em;direction:rtl;min-height:28px}.brand-tagline span{display:inline-block;opacity:0;transform:translateY(12px);animation:brand-tagline-word .38s cubic-bezier(.2,.85,.3,1) calc(1.35s + var(--word-index)*.16s) forwards}@keyframes brand-tagline-word{0%{opacity:0;transform:translateY(12px);filter:blur(4px)}100%{opacity:1;transform:translateY(0);filter:blur(0)}}
+.brand-svg-logo{position:relative;width:min(90vw,380px);margin:auto}.brand-svg-logo svg{display:block;width:100%;overflow:visible}.brand-svg-logo__gear{transform-box:fill-box;transform-origin:center;animation:brand-svg-spin 1.7s cubic-bezier(.25,.75,.35,1) both}.brand-svg-logo__car{animation:brand-svg-drive .75s cubic-bezier(.2,.9,.25,1) .15s both}.brand-svg-logo__wrench{stroke-dasharray:190;stroke-dashoffset:190;animation:brand-svg-draw .65s ease-out .75s forwards}.brand-svg-logo__word{direction:rtl;margin-top:-28px;font-size:52px;font-weight:900;line-height:1;letter-spacing:-3px;opacity:0;transform:translateY(10px);animation:brand-svg-word .45s ease-out 1s forwards}.brand-svg-logo__word span{color:#fff}.brand-svg-logo__word strong{color:#e51b23}.brand-svg-logo+p{margin-top:13px;opacity:0;animation:brand-svg-word .35s ease-out 1.25s forwards}@keyframes brand-svg-spin{from{opacity:0;transform:rotate(-130deg) scale(.7)}to{opacity:1;transform:rotate(0) scale(1)}}@keyframes brand-svg-drive{from{opacity:0;transform:translateX(-120px)}to{opacity:1;transform:translateX(0)}}@keyframes brand-svg-draw{to{stroke-dashoffset:0}}@keyframes brand-svg-word{to{opacity:1;transform:translateY(0)}}
+.brand-logo-clean{position:relative;width:min(88vw,350px);margin:0 auto 10px;animation:brand-clean-in .7s cubic-bezier(.2,.85,.3,1) both}.brand-logo-clean img{position:relative;z-index:2;display:block;width:100%;height:auto;object-fit:contain;filter:drop-shadow(0 20px 32px rgba(0,0,0,.48))}.brand-logo-clean__gear{position:absolute;z-index:1;top:5%;left:2%;color:rgba(255,255,255,.12);animation:brand-clean-gear 8s linear infinite}@keyframes brand-clean-in{from{opacity:0;transform:translateY(10px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes brand-clean-gear{to{transform:rotate(360deg)}}
+.brand-logo-motion{position:relative;width:min(82vw,330px);aspect-ratio:540/350;margin:0 auto 12px;filter:drop-shadow(0 20px 35px rgba(0,0,0,.5));animation:brand-logo-in .6s ease-out both}.brand-logo-motion img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.brand-logo-motion__base{clip-path:polygon(0 48%,100% 48%,100% 100%,0 100%);animation:brand-copy-in .65s .25s both}.brand-logo-motion__gear{clip-path:polygon(0 0,43% 0,43% 58%,0 58%);transform-origin:25% 29%;animation:brand-real-gear 4s linear infinite}.brand-logo-motion__car{clip-path:polygon(18% 5%,100% 5%,100% 59%,18% 59%);animation:brand-real-car .8s cubic-bezier(.2,.85,.3,1) both}@keyframes brand-logo-in{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}@keyframes brand-copy-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes brand-real-gear{to{transform:rotate(360deg)}}@keyframes brand-real-car{from{opacity:0;transform:translateX(-115%)}to{opacity:1;transform:translateX(0)}}
