@@ -829,18 +829,18 @@ create index if not exists idx_workshop_settlements_journal_entry_id on workshop
 create index if not exists idx_workshop_settlements_workshop_id on workshop_settlements(workshop_id);
 
 -- Unique constraints on email columns for user tables
-alter table if exists customers add constraint if not exists uk_customers_email unique (email);
-alter table if exists workshops add constraint if not exists uk_workshops_email unique (email);
-alter table if exists drivers add constraint if not exists uk_drivers_email unique (email);
-alter table if exists technicians add constraint if not exists uk_technicians_email unique (email);
+alter table if exists customers add constraint uk_customers_email unique (email);
+alter table if exists workshops add constraint uk_workshops_email unique (email);
+alter table if exists drivers add constraint uk_drivers_email unique (email);
+alter table if exists technicians add constraint uk_technicians_email unique (email);
 
 -- Unique constraint on request_service_types to prevent duplicate service type assignments
-alter table if exists request_service_types add constraint if not exists uk_request_service_types unique (request_id, service_type_id);
+alter table if exists request_service_types add constraint uk_request_service_types unique (request_id, service_type_id);
 
 -- CHECK constraints for data integrity
-alter table if exists workshops add constraint if not exists chk_workshops_rating check (rating >= 0 and rating <= 5);
-alter table if exists customer_cars add constraint if not exists chk_customer_cars_year check (car_year >= 1900 and car_year <= 2100);
-alter table if exists invoice_items add constraint if not exists chk_invoice_items_quantity check (quantity > 0);
-alter table if exists reviews add constraint if not exists chk_reviews_rating check (rating >= 1 and rating <= 5);
-alter table if exists workshop_settlements add constraint if not exists chk_settlements_invoice_count check (invoice_count >= 0);
-alter table if exists accounts add constraint if not exists chk_accounts_level check (level >= 0);
+alter table if exists workshops add constraint chk_workshops_rating check (rating >= 0 and rating <= 5);
+alter table if exists customer_cars add constraint chk_customer_cars_year check (car_year >= 1900 and car_year <= 2100);
+alter table if exists invoice_items add constraint chk_invoice_items_quantity check (quantity > 0);
+alter table if exists reviews add constraint chk_reviews_rating check (rating >= 1 and rating <= 5);
+alter table if exists workshop_settlements add constraint chk_settlements_invoice_count check (invoice_count >= 0);
+alter table if exists accounts add constraint chk_accounts_level check (level >= 0);
