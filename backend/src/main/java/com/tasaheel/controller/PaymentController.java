@@ -25,12 +25,6 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final MessageSource msg;
 
-    @PostMapping("/demo/{requestId}")
-    public ResponseEntity<ApiResponse<PaymentDTO>> completeDemoPayment(
-            @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long requestId) {
-        return ResponseEntity.ok(ApiResponse.success(paymentService.completeDemoPayment(requestId, user.getUserId())));
-    }
-
     @PostMapping("/initiate")
     public ResponseEntity<ApiResponse<PaymentDTO>> initiatePayment(
             @AuthenticationPrincipal UserDetailsImpl user,

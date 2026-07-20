@@ -7,3 +7,8 @@ target/
 node_modules/
 .idea/
 .vscode/
+deploy/
+docker-compose.yml
+Dockerfile
+.git/
+backend.err

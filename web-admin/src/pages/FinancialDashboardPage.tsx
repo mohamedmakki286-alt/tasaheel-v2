@@ -39,11 +39,6 @@ export default function FinancialDashboardPage() {
         <div className="flex flex-wrap gap-2"><Link to="/settlements" className="btn-primary text-sm px-4 py-2 rounded-xl">مستحقات وتحويلات الورش</Link><Link to="/payments" className="btn-secondary text-sm px-4 py-2 rounded-xl">سجل التحصيلات</Link></div>
       </div>
 
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <div><p className="font-bold text-amber-900">الوضع المالي التجريبي مفعل</p><p className="text-sm text-amber-700 mt-1">تابي وتمارا وبوابات الدفع مخفية حالياً. التحصيلات الظاهرة للاختبار فقط ولا تمثل أموالاً حقيقية.</p></div>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           title={t('pages.financial.summary.totalRevenue')}

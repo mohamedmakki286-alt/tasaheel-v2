@@ -178,7 +178,7 @@ export interface Payment {
   requestId: number;
   customerName: string;
   amount: number;
-  method: 'demo' | 'cash' | 'card' | 'wallet' | 'bank_transfer';
+  method: 'cash' | 'card' | 'wallet' | 'bank_transfer' | 'moyasar' | 'tamara';
   status: 'completed' | 'pending' | 'failed' | 'refunded';
   transactionId?: string;
   createdAt: string;

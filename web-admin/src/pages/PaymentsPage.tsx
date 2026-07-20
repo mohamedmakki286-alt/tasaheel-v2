@@ -15,19 +15,19 @@ import { exportDataToPDF } from '../utils/exportPdf';
 import type { Payment } from '../types';
 
 const methodIcons: Record<string, React.ReactNode> = {
-  demo: <Wallet className="w-4 h-4" />,
   cash: <Banknote className="w-4 h-4" />,
   card: <CreditCard className="w-4 h-4" />,
   wallet: <Wallet className="w-4 h-4" />,
   bank_transfer: <Smartphone className="w-4 h-4" />,
+  moyasar: <CreditCard className="w-4 h-4" />,
 };
 
 const methodBg: Record<string, string> = {
-  demo: 'bg-amber-50 text-amber-700',
   cash: 'bg-emerald-50 text-emerald-600',
   card: 'bg-blue-50 text-blue-600',
   wallet: 'bg-purple-50 text-purple-600',
   bank_transfer: 'bg-cyan-50 text-cyan-600',
+  moyasar: 'bg-blue-50 text-blue-600',
 };
 
 export default function PaymentsPage() {
@@ -76,7 +76,7 @@ export default function PaymentsPage() {
       render: (p) => (
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${methodBg[p.method] || 'bg-gray-100 text-gray-600'}`}>
           {methodIcons[p.method]}
-          {p.method === 'demo' ? 'دفع تجريبي' : <StatusBadge status={p.method} dot={false} />}
+          <StatusBadge status={p.method} dot={false} />
         </span>
       ),
     },
@@ -86,7 +86,7 @@ export default function PaymentsPage() {
       key: 'actions', label: t('pages.payments.table.actions'),
       render: (p) => (
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          {p.status === 'completed' && p.method !== 'demo' && (
+          {p.status === 'completed' && (
             <Button variant="ghost" size="sm" icon={<ArrowLeftRight className="w-4 h-4 text-orange-500" />} onClick={() => setRefundId(p.id)} />
           )}
         </div>
@@ -113,8 +113,6 @@ export default function PaymentsPage() {
           }}>{t('pages.payments.exportReport')}</Button>
         </div>
       </div>
-
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">جميع العمليات الحالية تجريبية. لن تظهر تابي أو تمارا أو أي بوابة أخرى حتى يتم الاشتراك وتفعيلها.</div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger">
         {summaryCards.map((card) => (

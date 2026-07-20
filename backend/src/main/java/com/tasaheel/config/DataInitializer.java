@@ -429,7 +429,7 @@ public class DataInitializer implements CommandLineRunner {
         Customer customer = Customer.builder()
             .name("أحمد العميل")
             .phone("0500000000")
-            .email("ahmed@test.com")
+            .email("ahmed@tasaheel.sa")
             .password(password)
             .city("الرياض")
             .isActive(true)
@@ -441,7 +441,7 @@ public class DataInitializer implements CommandLineRunner {
     private void seedWorkshops(String password) {
         Workshop w1 = Workshop.builder()
             .name("ورشة الخبراء").ownerName("أحمد محمد")
-            .phone("0501111111")            .email("workshop@test.com")
+            .phone("0501111111")            .email("workshop@tasaheel.sa")
             .password(password)
             .address("الرياض - حي النهضة").city("الرياض")
             .services("صيانة دورية,مكينة,قير,كهرباء")
@@ -455,7 +455,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Workshop w2 = Workshop.builder()
             .name("ورشة التقنية").ownerName("خالد عبدالله")
-            .phone("0502222222").email("tech@workshop.com")
+            .phone("0502222222").email("tech@tasaheel.sa")
             .password(password)
             .address("جدة - حي السلامة").city("جدة")
             .services("سمكرة,دهان,تكييف,كهرباء")
@@ -469,7 +469,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Workshop w3 = Workshop.builder()
             .name("ورشة المتقن").ownerName("سامي علي")
-            .phone("0503333333").email("master@workshop.com")
+            .phone("0503333333").email("master@tasaheel.sa")
             .password(password)
             .address("الدمام - حي العدامة").city("الدمام")
             .services("صيانة دورية,مكينة,قير")
@@ -484,7 +484,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Workshop w4 = Workshop.builder()
             .name("ورشة الصيانة السريعة").ownerName("فهد عمر")
-            .phone("0504444444").email("quick@workshop.com")
+            .phone("0504444444").email("quick@tasaheel.sa")
             .password(password)
             .address("مكة - حي العزيزية").city("مكة")
             .services("صيانة دورية,كهرباء,تكييف")
@@ -498,7 +498,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Workshop w5 = Workshop.builder()
             .name("ورشة الإتقان").ownerName("ناصر حسن")
-            .phone("0505555555").email("itqan@workshop.com")
+            .phone("0505555555").email("itqan@tasaheel.sa")
             .password(password)
             .address("المدينة - حي العوالي").city("المدينة المنورة")
             .services("سمكرة,دهان,ونش سحاب")

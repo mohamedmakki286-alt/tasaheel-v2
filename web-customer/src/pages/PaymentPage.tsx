@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { ArrowLeft, CreditCard, FlaskConical, Wallet } from 'lucide-react';
+import { ArrowLeft, CreditCard, Wallet, ShieldCheck } from 'lucide-react';
 import { invoicesApi } from '../api/invoices.api';
 import { paymentsApi } from '../api/payments.api';
 import type { Invoice } from '../types';
@@ -26,11 +26,15 @@ export function PaymentPage() {
     if (!invoice || !requestId) return;
     setPaying(true);
     try {
-      await paymentsApi.demo(requestId);
-      toast.success('تم تسجيل الدفع التجريبي بنجاح');
+      await paymentsApi.initiate({
+        requestId,
+        amount: invoice.grandTotal,
+        method: 'moyasar',
+      });
+      toast.success('تم تأكيد الدفع بنجاح');
       navigate(`/orders/${requestId}`);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'تعذر إكمال الدفع التجريبي');
+      toast.error(err.response?.data?.message || 'تعذر إكمال الدفع');
     } finally { setPaying(false); }
   };
 
@@ -48,9 +52,9 @@ export function PaymentPage() {
         <div className="flex justify-between font-bold text-lg"><span>الإجمالي</span><span className="text-accent-400">{invoice.grandTotal.toLocaleString()} {t('constants.currency')}</span></div>
       </div>
     </div>
-    <div className="card border-amber-400/30 bg-amber-400/10 flex items-start gap-3"><FlaskConical className="h-6 w-6 text-amber-500 shrink-0"/><div><h3 className="font-bold">وضع الدفع التجريبي</h3><p className="text-sm text-surface-500 mt-1">لن يُخصم أي مبلغ حقيقي. تابي وتمارا وبقية البوابات مخفية حتى الاشتراك وتفعيلها من الإدارة.</p></div></div>
+    <div className="card border-emerald-400/30 bg-emerald-400/10 flex items-start gap-3"><ShieldCheck className="h-6 w-6 text-emerald-500 shrink-0"/><div><h3 className="font-bold">الدفع الآمن</h3><p className="text-sm text-surface-500 mt-1">يتم الدفع عبر بوابة الدفع الآمنة. جميع المعاملات مشفرة ومؤمنة.</p></div></div>
     <button onClick={handlePay} disabled={paying || invoice.status !== 'approved'} className="btn-primary w-full py-4 flex items-center justify-center gap-2 text-lg disabled:opacity-50">
-      {paying ? <div className="h-5 w-5 border-2 border-black border-t-transparent rounded-full animate-spin"/> : <><Wallet className="h-5 w-5"/> تأكيد الدفع التجريبي — {invoice.grandTotal.toLocaleString()} {t('constants.currency')}</>}
+      {paying ? <div className="h-5 w-5 border-2 border-black border-t-transparent rounded-full animate-spin"/> : <><Wallet className="h-5 w-5"/> تأكيد الدفع — {invoice.grandTotal.toLocaleString()} {t('constants.currency')}</>}
     </button>
     {invoice.status !== 'approved' && <p className="text-center text-sm text-amber-500">يجب اعتماد الفاتورة أولاً قبل الدفع.</p>}
   </div>;

@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
-import { setupWorkshopDemoInterceptor, getDemoMode } from '../stores/demoMode';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -24,7 +23,6 @@ let failedQueue: Array<{ resolve: (t: string) => void; reject: (e: any) => void 
 
 apiClient.interceptors.response.use(
   (response) => {
-    console.log("RAW RESPONSE", response);
     const d = response.data;
     if (d && 'success' in d && 'data' in d) {
       response.data = d.data;
@@ -84,7 +82,5 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-setupWorkshopDemoInterceptor(apiClient);
 
 export default apiClient;

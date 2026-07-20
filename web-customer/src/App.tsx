@@ -40,11 +40,6 @@ function AuthInit({ children }: { children: React.ReactNode }) {
   const isLoading = useAuthStore((s) => s.isLoading);
   const setLoading = useAuthStore((s) => s.setLoading);
   useEffect(() => {
-    if (import.meta.env.VITE_DEMO_APP === 'true') {
-      const store = useAuthStore.getState();
-      store.setAuth({ token: 'demo-customer', role: 'customer', customer: { id: 'demo-customer', name: 'أحمد التجريبي', phone: '0500000000', email: 'demo@tasaheel.sa', city: 'الرياض', isActive: true } });
-      store.setDemoMode(true);
-    }
     setLoading(false);
   }, [setLoading]);
   useEffect(() => {

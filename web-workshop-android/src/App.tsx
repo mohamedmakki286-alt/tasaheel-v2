@@ -2,7 +2,6 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
-import { setDemoMode } from './stores/demoMode';
 import WorkshopLayout from './layouts/WorkshopLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingScreen from './components/guards/LoadingScreen';
@@ -40,22 +39,9 @@ function AuthInit({ children }: { children: React.ReactNode }) {
   const [showOpening, setShowOpening] = React.useState(true);
   const isLoading = useAuthStore((s) => s.isLoading);
   const setLoading = useAuthStore((s) => s.setLoading);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const isDemoMode = useAuthStore((s) => s.isDemoMode);
-  const setDemoModeState = useAuthStore((s) => s.setDemoMode);
   useEffect(() => {
-    if (!isAuthenticated) {
-      useAuthStore.getState().setAuth({
-        token: 'demo-workshop', role: 'workshop',
-        workshop: { id: 'demo-workshop', name: 'ورشة تساهيل التجريبية', ownerName: 'مالك تجريبي', phone: '0500000000', address: 'الرياض', city: 'الرياض', workshopType: 'stationary', services: ['تغيير زيت', 'غسيل سيارات'], rating: 4.8, reviewsCount: 124, completedJobs: 286, createdAt: '2026-01-01', isApproved: true },
-      });
-      setDemoModeState(true);
-      setDemoMode(true);
-    } else if (isDemoMode) {
-      setDemoMode(true);
-    }
     setLoading(false);
-  }, [setLoading, isDemoMode, isAuthenticated, setDemoModeState]);
+  }, [setLoading]);
   useEffect(() => {
     const openingTimer = window.setTimeout(() => setShowOpening(false), 3000);
     return () => window.clearTimeout(openingTimer);

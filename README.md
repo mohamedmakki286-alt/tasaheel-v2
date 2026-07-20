@@ -70,8 +70,9 @@ cd web-customer && npm run dev   # :5175
 
 ## Test Accounts
 
-| Role | Username | Password |
-|------|----------|----------|
-| Customer | `ahmed@test.com` | `0575903086` |
-| Workshop | `0501111111` | `0575903086` |
-| Admin | `0575903086` | `0575903086` |
+| Role | Email | Password |
+|------|-------|----------|
+| Customer | `ahmed@tasaheel.sa` | `123456` |
+| Workshop | `workshop@tasaheel.sa` | `123456` |
+| Workshop | `tech@tasaheel.sa` | `123456` |
+| Workshop | `master@tasaheel.sa` | `123456` |

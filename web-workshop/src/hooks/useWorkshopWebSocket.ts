@@ -9,12 +9,12 @@ import i18n from '../i18n/i18n';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
 
 export function useWorkshopWebSocket() {
-  const { workshop, isDemoMode } = useAuthStore();
+  const { workshop } = useAuthStore();
   const addNotification = useNotificationStore((s) => s.addNotification);
   const clientRef = useRef<Client | null>(null);
 
   useEffect(() => {
-    if (!workshop || isDemoMode) return;
+    if (!workshop) return;
 
     registerPushNotifications(workshop.id);
 

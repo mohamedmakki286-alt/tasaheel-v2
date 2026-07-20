@@ -37,35 +37,6 @@ public class PaymentService {
     private final PlatformSettingService platformSettingService;
 
     @Transactional
-    public PaymentDTO completeDemoPayment(Long requestId, Long customerId) {
-        MaintenanceRequest request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
-        if (!request.getCustomer().getId().equals(customerId)) throw new BadRequestException("You are not the customer for this request");
-        Invoice invoice = invoiceRepository.findByRequestId(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice for request", requestId));
-        if ("paid".equals(invoice.getStatus())) {
-            return paymentRepository.findFirstByRequestIdAndStatusOrderByCreatedAtDesc(requestId, "completed")
-                    .map(this::toPaymentDTO).orElseThrow(() -> new BadRequestException("Invoice is already paid"));
-        }
-        if (!"approved".equals(invoice.getStatus())) throw new BadRequestException("Invoice must be approved before payment");
-        double amount = invoice.getGrandTotal() != null ? invoice.getGrandTotal() : 0.0;
-        if (amount <= 0) throw new BadRequestException("Invoice amount must be greater than zero");
-        double percentage = invoice.getWorkshop().getCommissionPercentage() != null
-                ? invoice.getWorkshop().getCommissionPercentage() : platformSettingService.getDefaultCommissionRate();
-        double commission = Math.round(amount * percentage) / 100.0;
-        String reference = "DEMO-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        Payment payment = paymentRepository.save(Payment.builder()
-                .request(request).customer(request.getCustomer()).amount(amount).fee(0.0).total(amount)
-                .currency("SAR").method("demo").status("completed").moyasarPaymentId(reference).build());
-        invoice.setStatus("paid"); invoice.setPaymentMethod("demo"); invoice.setPaymentId(reference);
-        invoice.setPaidAt(LocalDateTime.now()); invoice.setCommissionPercentage(percentage);
-        invoice.setCommissionAmount(commission); invoice.setNetAmount(amount - commission);
-        invoiceRepository.save(invoice);
-        requestCompletionService.completeAfterPayment(request, reference);
-        return toPaymentDTO(payment);
-    }
-
-    @Transactional
     public PaymentDTO initiatePayment(Long requestId, Long customerId, Double amount, String method) {
         MaintenanceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));

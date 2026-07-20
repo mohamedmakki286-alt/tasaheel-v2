@@ -65,7 +65,7 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
   if (payload.municipalityLicense) formData.append('municipalityLicense', payload.municipalityLicense);
   const response = await apiClient.post('/auth/register/workshop', formData, { headers: { 'Content-Type': undefined } });
   const resp = response.data;
-  return { token: resp.token, workshop: mapWorkshopData({ ...resp, services: Array.isArray(payload.services) ? payload.services.join(',') : '' }) };
+  return { token: resp.token, refreshToken: resp.refreshToken, workshop: mapWorkshopData({ ...resp, services: Array.isArray(payload.services) ? payload.services.join(',') : '' }) };
 }
 
 export async function getProfile(): Promise<Workshop> {

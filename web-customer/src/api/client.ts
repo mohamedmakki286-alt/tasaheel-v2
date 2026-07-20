@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
-import { setupCustomerDemoInterceptor, getDemoMode } from '../stores/demoMode';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -85,7 +84,5 @@ client.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-setupCustomerDemoInterceptor(client);
 
 export default client;
