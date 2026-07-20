@@ -36,3 +36,5 @@ supabase/.temp/
 
 # Generated Spring Boot layout
 backend/BOOT-INF/
+backend.tar
+backend/compile_errors.txt
