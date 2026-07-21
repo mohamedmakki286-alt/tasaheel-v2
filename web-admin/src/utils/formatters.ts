@@ -15,8 +15,7 @@ export function formatDateTime(date: string | Date): string {
 }
 
 export function formatRelativeTime(date: string | Date): string {
-  const opts: Record<string, unknown> = { addSuffix: true, locale: getLocale() };
-  return formatDistanceToNow(new Date(date), opts as any);
+  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: getLocale() });
 }
 
 export function formatCurrency(amount: number): string {
