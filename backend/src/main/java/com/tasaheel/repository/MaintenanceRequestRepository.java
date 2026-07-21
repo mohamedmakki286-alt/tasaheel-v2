@@ -21,9 +21,9 @@ public interface MaintenanceRequestRepository extends JpaRepository<MaintenanceR
     Page<MaintenanceRequest> findByCustomerId(Long customerId, Pageable pageable);
     long countByStatus(String status);
     List<MaintenanceRequest> findTop10ByOrderByCreatedAtDesc();
-    @Query("SELECT CAST(r.createdAt AS date) as day, COUNT(r) FROM MaintenanceRequest r WHERE r.createdAt >= ?1 GROUP BY CAST(r.createdAt AS date) ORDER BY day")
+    @Query("SELECT FUNCTION('date', r.createdAt) as day, COUNT(r) FROM MaintenanceRequest r WHERE r.createdAt >= ?1 GROUP BY FUNCTION('date', r.createdAt) ORDER BY day")
     List<Object[]> countRequestsPerDaySince(LocalDateTime since);
-    @Query("SELECT q.workshop.id, w.name, COUNT(DISTINCT q.request.id) FROM Quote q JOIN Workshop w ON q.workshop.id = w.id GROUP BY q.workshop.id, w.name ORDER BY COUNT(DISTINCT q.request.id) DESC")
+    @Query("SELECT q.workshop.id, q.workshop.name, COUNT(DISTINCT q.request.id) FROM Quote q GROUP BY q.workshop.id, q.workshop.name ORDER BY COUNT(DISTINCT q.request.id) DESC")
     List<Object[]> countRequestsByWorkshop();
     @Query("SELECT COUNT(r) FROM MaintenanceRequest r JOIN Quote q ON q.request.id = r.id WHERE r.status = ?1 AND q.workshop.id = ?2")
     long countByStatusAndWorkshopId(String status, Long workshopId);

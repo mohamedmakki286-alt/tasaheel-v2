@@ -3,7 +3,9 @@ import { Client } from '@stomp/stompjs';
 import { useAuthStore } from '../stores/authStore';
 import { useCallStore } from '../stores/callStore';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
+import { getWsUrl } from '../utils/ws';
+
+const WS_URL = getWsUrl();
 const STUN_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },

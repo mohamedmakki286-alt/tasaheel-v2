@@ -6,7 +6,9 @@ import { playNotificationSound } from '../services/notificationSound';
 import { registerPushNotifications } from '../services/pushNotifications';
 import i18n from '../i18n/i18n';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
+import { getWsUrl } from '../utils/ws';
+
+const WS_URL = getWsUrl();
 
 export function useCustomerWebSocket() {
   const { customer } = useAuthStore();
