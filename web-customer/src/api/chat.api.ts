@@ -5,7 +5,7 @@ export async function getOrCreateRoom(requestId: number, customerId: number, wor
   const body: Record<string, number> = { requestId, customerId };
   if (workshopId) body.workshopId = workshopId;
   const { data } = await client.post('/chat/room', body);
-  const r = data.data || data;
+  const r = data;
   return {
     id: String(r.id || ''),
     requestId: String(r.requestId || requestId),
@@ -22,7 +22,7 @@ export async function getOrCreateRoom(requestId: number, customerId: number, wor
 export async function getRoomByRequestId(requestId: number): Promise<ChatRoom | null> {
   try {
     const { data } = await client.get(`/chat/room/${requestId}`);
-    const r = data.data || data;
+    const r = data;
     return {
       id: String(r.id || ''),
       requestId: String(r.requestId || requestId),
@@ -41,7 +41,7 @@ export async function getRoomByRequestId(requestId: number): Promise<ChatRoom | 
 
 export async function getMessages(roomId: string): Promise<ChatMessage[]> {
   const { data } = await client.get(`/chat/room/${roomId}/messages`);
-  const list = data.data || data;
+  const list = data;
   const items = Array.isArray(list) ? list : (list?.content || []);
   return items.map((m: any) => ({
     id: String(m.id),
@@ -63,7 +63,7 @@ export async function sendMessage(roomId: string, senderId: string, senderRole: 
     senderRole,
     content,
   });
-  const m = data.data || data;
+  const m = data;
   return {
     id: String(m.id || ''),
     roomId: String(m.roomId || roomId),

@@ -417,9 +417,7 @@ export default function ServicesPage() {
     queryFn: () => serviceListingsApi.getCatalog(),
   });
 
-  console.log("CATEGORY COUNT", catalog?.length);
-  console.log("FIRST CATEGORY", catalog?.[0]);
-
+  
   const { data: services = [], isLoading } = useQuery<ServiceListing[]>({
     queryKey: ['myServiceListings'],
     queryFn: () => serviceListingsApi.getMyServices(),

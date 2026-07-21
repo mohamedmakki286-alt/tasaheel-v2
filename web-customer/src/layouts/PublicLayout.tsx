@@ -139,7 +139,7 @@ export default function PublicLayout() {
                             onClick={() => {
                               markAsRead(n.id);
                               if (n.requestId) {
-                                navigate(`/requests/${n.requestId}`);
+                                navigate(`/orders/${n.requestId}`);
                                 setShowNotifications(false);
                               }
                             }}

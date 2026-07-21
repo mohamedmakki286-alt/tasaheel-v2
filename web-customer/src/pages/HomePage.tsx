@@ -8,6 +8,7 @@ import { Search, MapPin, Bell, Car, Star, ChevronLeft, ChevronRight, Wrench, Zap
 import { useGuestGuard } from '../hooks/useGuestGuard';
 import LoginBottomSheet from '../components/LoginBottomSheet';
 import { offersApi } from '../api/offers.api';
+import { workshopsApi } from '../api/workshops.api';
 
 const PROMO_BANNERS = [
   { id: 1, title: 'خصم 30% على الصيانة الدورية', subtitle: 'العرض ساري هذا الأسبوع', bg: 'from-accent-500 to-accent-600', icon: '🏷️' },
@@ -26,12 +27,6 @@ const QUICK_SERVICES = [
   { icon: '⚡', label: 'كهرباء', category: 'electrical' },
 ];
 
-const MOCK_WORKSHOPS = [
-  { id: 1, name: 'ورشة التقنية', rating: 4.7, distance: '2.3 كم', city: 'الرياض', price: 'من 150 ر.س', type: 'stationary' },
-  { id: 2, name: 'ورشة الإتقان', rating: 4.9, distance: '5.1 كم', city: 'جدة', price: 'من 200 ر.س', type: 'stationary' },
-  { id: 3, name: 'ورشة الصيانة السريعة', rating: 4.5, distance: '3.8 كم', city: 'الرياض', price: 'من 120 ر.س', type: 'mobile' },
-];
-
 const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const } }) };
 
 export function HomePage() {
@@ -41,6 +36,7 @@ export function HomePage() {
   const { showLoginSheet, closeSheet, requireAuth, pendingMessage } = useGuestGuard();
   const [bannerIdx, setBannerIdx] = useState(0);
   const { data: workshopOffers = [] } = useQuery({ queryKey: ['home-offers'], queryFn: offersApi.getAll });
+  const { data: nearbyWorkshops = [] } = useQuery({ queryKey: ['home-workshops'], queryFn: () => workshopsApi.getAll(undefined, undefined, undefined) });
   const banners = workshopOffers.length ? workshopOffers.map((offer, index) => ({ id: offer.id, title: offer.title, subtitle: `${offer.workshopName} · وفر ${offer.discountPercent}%`, bg: ['from-accent-500 to-accent-600', 'from-emerald-500 to-emerald-600', 'from-blue-500 to-blue-600'][index % 3], icon: index === 0 ? '🏷️' : index === 1 ? '❄️' : '🔋', workshopId: offer.workshopId })) : PROMO_BANNERS;
 
   const h = new Date().getHours();
@@ -178,7 +174,7 @@ export function HomePage() {
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-          {MOCK_WORKSHOPS.map((w, i) => (
+          {nearbyWorkshops.map((w, i) => (
             <motion.button key={w.id} custom={i} initial="hidden" animate="visible" variants={fadeUp} onClick={() => navigate(`/workshops/${w.id}`)} className="min-w-[200px] bg-surface-50 dark:bg-surface-800/50 border border-surface-200/60 dark:border-surface-700/30 rounded-2xl p-4 text-right hover:shadow-lg transition-shadow active:scale-[0.98]">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-12 h-12 rounded-xl bg-accent-500/10 flex items-center justify-center">
@@ -190,14 +186,14 @@ export function HomePage() {
                     <Star size={12} className="fill-amber-400 text-amber-400" />
                     <span className="text-xs text-surface-500">{w.rating}</span>
                     <span className="text-surface-300 dark:text-surface-600 mx-0.5">·</span>
-                    <span className="text-xs text-surface-500">{w.distance}</span>
+                    <span className="text-xs text-surface-500">{w.city}</span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-accent-500 font-bold">{w.price}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${w.type === 'mobile' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'}`}>
-                  {w.type === 'mobile' ? 'متنقلة' : 'ثابتة'}
+                <span className="text-xs text-surface-500">{w.services?.split(',')[0] || ''}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${w.workshopType === 'mobile' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'}`}>
+                  {w.workshopType === 'mobile' ? 'متنقلة' : 'ثابتة'}
                 </span>
               </div>
             </motion.button>
