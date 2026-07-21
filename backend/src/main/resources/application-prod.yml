@@ -22,9 +22,7 @@ spring:
 
   jpa:
     hibernate:
-      # Schema changes are applied through the reviewed Supabase migrations.
-      # The Railway runtime account intentionally has no ownership privileges.
-      ddl-auto: none
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:

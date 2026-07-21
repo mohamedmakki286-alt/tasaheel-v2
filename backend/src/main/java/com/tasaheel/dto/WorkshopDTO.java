@@ -1,5 +1,6 @@
 package com.tasaheel.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -61,6 +62,7 @@ public class WorkshopDTO {
     private String snapchatUrl;
     private String facebookUrl;
     private String instagramUrl;
+    @JsonProperty("xUrl")
     private String xUrl;
     private String youtubeUrl;
     private String features;
