@@ -11,6 +11,7 @@ import { useAuthStore } from '../stores/authStore';
 import apiClient from '../api/client';
 import { useNavigate } from 'react-router-dom';
 import { useTechnicianWebSocket } from '../hooks/useTechnicianWebSocket';
+import { useCallStore } from '@shared/call/callStore';
 
 const SPECIALTY_MAP: Record<string, string> = {
   PAINTER: 'فني سمكرة ودهان',
@@ -117,6 +118,7 @@ function RequestCard({
 }) {
   const statusInfo = STATUS_LABELS[request.status] || { label: request.status, color: 'text-gray-700', bg: 'bg-gray-100' };
   const nextAction = TECHNICIAN_NEXT_ACTION[request.status];
+  const requestCall = useCallStore((s) => s.requestCall);
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50">
@@ -139,9 +141,9 @@ function RequestCard({
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <User size={13} className="shrink-0" />
           <span className="truncate">{request.customerName}</span>
-          <a href={`tel:${request.customerPhone}`} className="mr-auto text-[#E31B23] shrink-0 p-1 rounded-lg hover:bg-red-50 transition-colors">
+          <button onClick={() => requestCall(request.customerId, request.customerName, request.id)} className="mr-auto text-[#E31B23] shrink-0 p-1 rounded-lg hover:bg-red-50 transition-colors">
             <Phone size={14} />
-          </a>
+          </button>
         </div>
         {request.carPlateNumber && (
           <div className="flex items-center gap-2 text-xs text-gray-500">

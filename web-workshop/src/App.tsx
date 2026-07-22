@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
 import WorkshopLayout from './layouts/WorkshopLayout';
+import TechnicianLayout from './layouts/TechnicianLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingScreen from './components/guards/LoadingScreen';
 
@@ -64,9 +65,11 @@ function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
-      <Route path="/technician" element={<TechnicianPage />} />
-      <Route path="/technician/account" element={<TechnicianAccountPage />} />
-      <Route path="/technician/requests/:id" element={<TechnicianRequestDetailPage />} />
+      <Route path="/technician" element={<TechnicianLayout />}>
+        <Route index element={<TechnicianPage />} />
+        <Route path="account" element={<TechnicianAccountPage />} />
+        <Route path="requests/:id" element={<TechnicianRequestDetailPage />} />
+      </Route>
       <Route path="/set-password" element={<SetPasswordPage />} />
       <Route path="/reset-password" element={<SetPasswordPage />} />
       <Route path="/register" element={<Navigate to="/login" replace />} />

@@ -5,14 +5,11 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useCustomerWebSocket } from '../hooks/useCustomerWebSocket';
-import { useCallSignaling } from '../hooks/useCallSignaling';
-import { useCallStore } from '../stores/callStore';
 import { useGuestGuard } from '../hooks/useGuestGuard';
 import LoginBottomSheet from '../components/LoginBottomSheet';
 import BottomNav from '../components/BottomNav';
-import CallOverlay from '../components/CallOverlay';
-import IncomingCallDialog from '../components/IncomingCallDialog';
 import SmartAssistantButton from '../components/SmartAssistantButton';
+import UnifiedCallHost from '@shared/call/UnifiedCallHost';
 
 const PAGE_TITLES: Record<string, string> = {
   '/services': 'الخدمات',
@@ -30,8 +27,6 @@ export default function PublicLayout() {
   const notifRef = useRef<HTMLDivElement>(null);
 
   useCustomerWebSocket();
-  const { answerCall, rejectCall, hangUp, toggleMute, toggleSpeaker } = useCallSignaling();
-  const callState = useCallStore();
 
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
@@ -182,25 +177,14 @@ export default function PublicLayout() {
       <LoginBottomSheet isOpen={showLoginSheet} onClose={closeSheet} message={pendingMessage} />
       <SmartAssistantButton />
 
-      <IncomingCallDialog
-        isOpen={callState.status === 'ringing' && !callState.isOutgoing}
-        callerName={callState.peerName}
-        callerRole={callState.peerRole}
-        onAccept={answerCall}
-        onReject={rejectCall}
-      />
-
-      <CallOverlay
-        status={callState.status}
-        peerName={callState.peerName}
-        duration={callState.duration}
-        isOutgoing={callState.isOutgoing}
-        isMuted={false}
-        isSpeakerOn={callState.isSpeakerOn}
-        onHangUp={hangUp}
-        onToggleMute={toggleMute}
-        onToggleSpeaker={toggleSpeaker}
-      />
+      {isAuthenticated && useAuthStore.getState().customer && useAuthStore.getState().token && (
+        <UnifiedCallHost
+          userId={useAuthStore.getState().customer!.id}
+          userName={useAuthStore.getState().customer!.name}
+          userRole="customer"
+          token={useAuthStore.getState().token!}
+        />
+      )}
     </div>
   );
 }
