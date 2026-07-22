@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -37,6 +38,14 @@ public class MediaController {
         Media media = mediaService.uploadFile(file, requestId, request);
         MediaDTO dto = toMediaDTO(media);
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("media.uploaded", null, locale), dto));
+    }
+
+    @PostMapping("/upload-image")
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "prefix", defaultValue = "img") String prefix) {
+        String url = mediaService.storeFile(file, prefix);
+        return ResponseEntity.ok(ApiResponse.success("Uploaded", Map.of("url", url)));
     }
 
     @DeleteMapping("/{id}")

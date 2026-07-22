@@ -48,4 +48,6 @@ public interface MaintenanceRequestRepository extends JpaRepository<MaintenanceR
 
     @Query("SELECT r.status, COUNT(r) FROM MaintenanceRequest r GROUP BY r.status")
     List<Object[]> countByStatusGrouped();
+
+    List<MaintenanceRequest> findByTechnicianIdOrderByCreatedAtDesc(Long technicianId);
 }

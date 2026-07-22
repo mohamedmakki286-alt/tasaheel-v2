@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import { getPlatformSettings, updatePlatformSetting } from '../api/financial.api';
 import { updateProfile, changePassword } from '../api/auth.api';
 import Button from '../components/Button';
+import NumberInput from '../components/NumberInput';
 import Avatar from '../components/Avatar';
 import clsx from 'clsx';
 
@@ -207,18 +208,16 @@ export default function SettingsPage() {
                 <div className="flex items-end gap-4">
                   <div className="flex-1 max-w-xs">
                     <label className="block text-sm font-semibold text-gray-700 dark:text-surface-300 mb-1.5">{t('pages.settings.accounting.commissionPercent')}</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={commissionValue}
-                        onChange={(e) => setCommissionValue(e.target.value)}
-                        className="input-field dark:bg-surface-800 dark:border-surface-700 dark:text-surface-100 pr-3"
-                        min="0"
-                        max="100"
-                        step="0.5"
-                      />
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
-                    </div>
+                    <NumberInput
+                      value={commissionValue}
+                      onValueChange={(v) => setCommissionValue(v)}
+                      mode="decimal"
+                      decimalScale={1}
+                      min={0}
+                      max={100}
+                      placeholder="10"
+                      suffix="%"
+                    />
                   </div>
                   <Button
                     onClick={handleSaveAccounting}

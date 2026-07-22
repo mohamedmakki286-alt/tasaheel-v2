@@ -27,6 +27,7 @@ public class ChatService {
     private final CustomerRepository customerRepository;
     private final WorkshopRepository workshopRepository;
     private final DriverRepository driverRepository;
+    private final TechnicianRepository technicianRepository;
     private final QuoteRepository quoteRepository;
     private final SimpMessageSendingOperations messagingTemplate;
 
@@ -135,7 +136,8 @@ public class ChatService {
         String role = user.getRole().toLowerCase();
         boolean permitted = ("customer".equals(role) && room.getCustomer() != null && room.getCustomer().getId().equals(user.getUserId()))
                 || ("workshop".equals(role) && room.getWorkshop() != null && room.getWorkshop().getId().equals(user.getUserId()))
-                || ("driver".equals(role) && room.getDriver() != null && room.getDriver().getId().equals(user.getUserId()));
+                || ("driver".equals(role) && room.getDriver() != null && room.getDriver().getId().equals(user.getUserId()))
+                || ("technician".equals(role) && room.getTechnician() != null && room.getTechnician().getId().equals(user.getUserId()));
         if (!permitted) throw new BadRequestException("You are not a participant in this conversation");
     }
 
@@ -163,6 +165,8 @@ public class ChatService {
                 .workshopName(room.getWorkshop() != null ? room.getWorkshop().getName() : null)
                 .driverId(room.getDriver() != null ? room.getDriver().getId() : null)
                 .driverName(room.getDriver() != null ? room.getDriver().getName() : null)
+                .technicianId(room.getTechnician() != null ? room.getTechnician().getId() : null)
+                .technicianName(room.getTechnician() != null ? room.getTechnician().getName() : null)
                 .lastMessage(lastMessageDTO)
                 .unreadCount(unreadCount)
                 .createdAt(room.getCreatedAt())
@@ -180,6 +184,9 @@ public class ChatService {
         } else if ("driver".equals(msg.getSenderRole())) {
             Driver driver = driverRepository.findById(msg.getSenderId()).orElse(null);
             senderName = driver != null ? driver.getName() : "";
+        } else if ("technician".equals(msg.getSenderRole())) {
+            Technician technician = technicianRepository.findById(msg.getSenderId()).orElse(null);
+            senderName = technician != null ? technician.getName() : "";
         }
 
         return ChatMessageDTO.builder()

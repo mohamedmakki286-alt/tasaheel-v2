@@ -33,9 +33,11 @@ public class InspectionReportController {
         String notes = (String) body.get("notes");
         String overallCondition = (String) body.get("overallCondition");
         String recommendations = (String) body.get("recommendations");
+        String priority = (String) body.get("priority");
         Integer mileage = body.get("mileage") != null ? ((Number) body.get("mileage")).intValue() : null;
         LocalDate nextServiceDate = body.get("nextServiceDate") != null ? LocalDate.parse((String) body.get("nextServiceDate")) : null;
         Integer nextServiceMileage = body.get("nextServiceMileage") != null ? ((Number) body.get("nextServiceMileage")).intValue() : null;
+        String status = (String) body.get("status");
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> partsData = (List<Map<String, Object>>) body.get("parts");
@@ -74,7 +76,7 @@ public class InspectionReportController {
         Locale locale = LocaleContextHolder.getLocale();
         InspectionReportDTO report = inspectionReportService.createReport(
                 requestId, user.getUserId(), parts, laborItems, checklist,
-                notes, overallCondition, recommendations, mileage, nextServiceDate, nextServiceMileage);
+                notes, overallCondition, recommendations, priority, mileage, nextServiceDate, nextServiceMileage, status);
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("inspection.created", null, locale), report));
     }
 
@@ -92,6 +94,41 @@ public class InspectionReportController {
         Locale locale = LocaleContextHolder.getLocale();
         inspectionReportService.approveReport(id, user.getUserId());
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("inspection.approved", null, locale), null));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<InspectionReportDTO>> updateReport(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        String notes = (String) body.get("notes");
+        String priority = (String) body.get("priority");
+        String status = (String) body.get("status");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> partsData = (List<Map<String, Object>>) body.get("parts");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> laborData = (List<Map<String, Object>>) body.get("laborItems");
+
+        List<InspectionPartItemDTO> parts = partsData != null ? partsData.stream().map(p ->
+                InspectionPartItemDTO.builder()
+                        .partName((String) p.get("partName"))
+                        .quantity((Integer) p.get("quantity"))
+                        .unitPrice(((Number) p.get("unitPrice")).doubleValue())
+                        .build()
+        ).collect(Collectors.toList()) : List.of();
+
+        List<InspectionLaborItemDTO> laborItems = laborData != null ? laborData.stream().map(l ->
+                InspectionLaborItemDTO.builder()
+                        .description((String) l.get("description"))
+                        .hours(((Number) l.get("hours")).doubleValue())
+                        .hourlyRate(((Number) l.get("hourlyRate")).doubleValue())
+                        .build()
+        ).collect(Collectors.toList()) : List.of();
+
+        InspectionReportDTO report = inspectionReportService.updateReport(
+                id, user.getUserId(), parts, laborItems, notes, priority, status);
+        return ResponseEntity.ok(ApiResponse.success("Report updated", report));
     }
 
     @PutMapping("/{id}/reject")

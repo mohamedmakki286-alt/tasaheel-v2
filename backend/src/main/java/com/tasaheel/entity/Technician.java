@@ -56,6 +56,13 @@ public class Technician {
     @Column(name = "fcm_token")
     private String fcmToken;
 
+    @Column(name = "availability_status", length = 20)
+    @Builder.Default
+    private String availabilityStatus = "available";
+
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

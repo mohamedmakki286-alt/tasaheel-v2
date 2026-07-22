@@ -57,6 +57,8 @@ export interface Car {
   model: string;
   year: number;
   plateNumber?: string;
+  color?: string;
+  mileage?: number;
 }
 
 export type RequestStatus = 'pending' | 'quoted' | 'accepted' | 'in_progress' | 'awaiting_payment' | 'completed' | 'cancelled';
@@ -77,6 +79,8 @@ export interface ServiceRequest {
   service: string;
   description: string;
   location: string;
+  locationLat?: number;
+  locationLng?: number;
   city: string;
   status: RequestStatus;
   createdAt: string;
@@ -86,6 +90,10 @@ export interface ServiceRequest {
   hasInvoice: boolean;
   serviceTypeIds?: number[];
   serviceTypes?: ServiceTypeInfo[];
+  technicianId?: number;
+  technicianName?: string;
+  technicianPhone?: string;
+  technicianSpecialty?: string;
 }
 
 export interface Quote {
@@ -113,7 +121,8 @@ export interface InspectionReport {
   labor: InspectionLabor[];
   taxPercent: number;
   grandTotal: number;
-  status: 'pending_approval' | 'approved' | 'rejected';
+  priority: 'urgent' | 'important' | 'deferrable';
+  status: 'draft' | 'pending_approval' | 'approved' | 'rejected';
   rejectionComment?: string;
   createdAt: string;
 }
@@ -127,7 +136,7 @@ export interface InspectionPart {
 
 export interface InspectionLabor {
   description: string;
-  hours: number;
+  minutes: number;
   hourlyRate: number;
   total: number;
 }
@@ -184,13 +193,22 @@ export interface ChatMessage {
   senderName: string;
   senderRole: 'workshop' | 'customer';
   content: string;
+  type?: string;
+  mediaUrl?: string;
+  isRead?: boolean;
   createdAt: string;
 }
 
 export interface ChatRoom {
   id: string;
   requestId: string;
+  customerId?: string;
+  customerName?: string;
+  workshopId?: string;
+  workshopName?: string;
   participants: string[];
+  unreadCount?: number;
+  lastMessage?: ChatMessage;
   createdAt: string;
 }
 
@@ -255,8 +273,9 @@ export interface SubmitQuotePayload {
 export interface InspectionReportPayload {
   notes: string;
   parts: { name: string; quantity: number; unitPrice: number }[];
-  labor: { description: string; hours: number; hourlyRate: number }[];
-  taxPercent: number;
+  labor: { description: string; minutes: number; hourlyRate: number }[];
+  priority: 'urgent' | 'important' | 'deferrable';
+  status?: 'draft' | 'pending_approval';
 }
 
 export interface InvoiceItemPayload {
@@ -308,6 +327,8 @@ export interface Technician {
   workshopName: string;
   isActive: boolean;
   isOnline: boolean;
+  availabilityStatus?: string;
+  profileImageUrl?: string;
   latitude?: number;
   longitude?: number;
   fcmToken?: string;
@@ -321,6 +342,8 @@ export interface TechnicianPayload {
   email?: string;
   password?: string;
   specialty: string;
+  availabilityStatus?: string;
+  profileImageUrl?: string;
 }
 
 export type HomeServiceStatus = 'pending_assignment' | 'assigned' | 'en_route' | 'arrived' | 'in_progress' | 'completed' | 'cancelled';

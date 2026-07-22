@@ -19,6 +19,8 @@ public class ChatRoomDTO {
     private String workshopName;
     private Long driverId;
     private String driverName;
+    private Long technicianId;
+    private String technicianName;
     private ChatMessageDTO lastMessage;
     private long unreadCount;
     private LocalDateTime createdAt;

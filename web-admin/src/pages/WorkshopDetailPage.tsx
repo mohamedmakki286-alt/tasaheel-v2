@@ -9,6 +9,7 @@ import Button from '../components/Button';
 import Avatar from '../components/Avatar';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
+import NumberInput from '../components/NumberInput';
 import { CardSkeleton } from '../components/Skeleton';
 import { formatDate, formatPhone } from '../utils/formatters';
 import toast from 'react-hot-toast';
@@ -329,7 +330,8 @@ export default function WorkshopDetailPage() {
         footer={<div className="flex gap-3 w-full"><Button variant="secondary" className="flex-1" onClick={() => setShowEditModal(false)}>إلغاء</Button><Button className="flex-1" onClick={() => editMutation.mutate()} isLoading={editMutation.isPending}>حفظ</Button></div>}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[['ownerName','اسم المالك'],['phone','رقم التواصل'],['whatsapp','واتساب'],['email','بريد الدخول'],['city','المدينة'],['address','العنوان'],['beneficiaryName','اسم المستفيد'],['bankName','البنك'],['iban','IBAN'],['taxNumber','الرقم الضريبي'],['commissionPercentage','عمولة المنصة %']].map(([key,label]) => <label key={key} className="block"><span className="text-sm font-medium text-gray-700">{label}</span><input value={editForm[key] ?? ''} onChange={e => setEditForm({ ...editForm, [key]: e.target.value })} className="input-field w-full mt-1" dir={key === 'iban' || key === 'email' ? 'ltr' : undefined}/></label>)}
+          {[['ownerName','اسم المالك'],['phone','رقم التواصل'],['whatsapp','واتساب'],['email','بريد الدخول'],['city','المدينة'],['address','العنوان'],['beneficiaryName','اسم المستفيد'],['bankName','البنك'],['iban','IBAN'],['taxNumber','الرقم الضريبي']].map(([key,label]) => <label key={key} className="block"><span className="text-sm font-medium text-gray-700">{label}</span><input value={editForm[key] ?? ''} onChange={e => setEditForm({ ...editForm, [key]: e.target.value })} className="input-field w-full mt-1" dir={key === 'iban' || key === 'email' ? 'ltr' : undefined}/></label>)}
+          <label className="block"><span className="text-sm font-medium text-gray-700">عمولة المنصة %</span><NumberInput value={editForm.commissionPercentage ?? ''} onValueChange={(v) => setEditForm({ ...editForm, commissionPercentage: v })} mode="decimal" decimalScale={1} min={0} max={100} placeholder="10" suffix="%" className="mt-1" /></label>
           <label><span className="text-sm font-medium text-gray-700">تاريخ توقيع العقد</span><input type="date" value={editForm.contractSignedAt || ''} onChange={e => setEditForm({ ...editForm, contractSignedAt: e.target.value })} className="input-field w-full mt-1"/></label>
           <label><span className="text-sm font-medium text-gray-700">انتهاء العقد</span><input type="date" value={editForm.contractExpiresAt || ''} onChange={e => setEditForm({ ...editForm, contractExpiresAt: e.target.value })} className="input-field w-full mt-1"/></label>
           <label className="sm:col-span-2"><span className="text-sm font-medium text-gray-700">استبدال/رفع العقد PDF</span><input type="file" accept="application/pdf" onChange={e => setContractFile(e.target.files?.[0] || null)} className="input-field w-full mt-1"/></label>

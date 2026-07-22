@@ -1,11 +1,15 @@
 package com.tasaheel.service;
 
 import com.tasaheel.dto.HomeServiceAssignmentDTO;
+import com.tasaheel.dto.MaintenanceRequestDTO;
 import com.tasaheel.dto.TechnicianDTO;
 import com.tasaheel.entity.*;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.exception.ResourceNotFoundException;
+import com.tasaheel.exception.UnauthorizedException;
+import com.tasaheel.repository.ChatRoomRepository;
 import com.tasaheel.repository.HomeServiceAssignmentRepository;
+import com.tasaheel.repository.MaintenanceRequestRepository;
 import com.tasaheel.repository.TechnicianRepository;
 import com.tasaheel.repository.WorkshopRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +27,8 @@ public class TechnicianService {
     private final TechnicianRepository technicianRepository;
     private final HomeServiceAssignmentRepository assignmentRepository;
     private final WorkshopRepository workshopRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final MaintenanceRequestRepository maintenanceRequestRepository;
     private final PasswordEncoder passwordEncoder;
 
     // ---- Technician CRUD ----
@@ -56,6 +62,8 @@ public class TechnicianService {
                 .workshop(workshop)
                 .isActive(true)
                 .isOnline(false)
+                .availabilityStatus(dto.getAvailabilityStatus() != null ? dto.getAvailabilityStatus() : "available")
+                .profileImageUrl(dto.getProfileImageUrl())
                 .build();
 
         tech = technicianRepository.save(tech);
@@ -75,6 +83,9 @@ public class TechnicianService {
         }
         if (dto.getEmail() != null) tech.setEmail(dto.getEmail());
         if (dto.getSpecialty() != null) tech.setSpecialty(dto.getSpecialty());
+        if (dto.getAvailabilityStatus() != null) tech.setAvailabilityStatus(dto.getAvailabilityStatus());
+        if (dto.getProfileImageUrl() != null) tech.setProfileImageUrl(dto.getProfileImageUrl());
+        if (dto.getIsOnline() != null) tech.setIsOnline(dto.getIsOnline());
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
             tech.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
@@ -122,6 +133,12 @@ public class TechnicianService {
         assignment.setAssignedAt(java.time.LocalDateTime.now());
         assignment = assignmentRepository.save(assignment);
 
+        // Add technician to chat room for this request
+        chatRoomRepository.findByRequestId(assignment.getRequest().getId()).ifPresent(room -> {
+            room.setTechnician(tech);
+            chatRoomRepository.save(room);
+        });
+
         return toAssignmentDTO(assignment);
     }
 
@@ -157,6 +174,211 @@ public class TechnicianService {
         return toAssignmentDTO(assignment);
     }
 
+    // ---- Technician Self-Service (logged-in technician) ----
+
+    public TechnicianDTO getTechnicianProfile(Long technicianId) {
+        Technician tech = technicianRepository.findById(technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician", technicianId));
+        return toDTO(tech);
+    }
+
+    @Transactional
+    public TechnicianDTO updateTechnicianProfile(Long technicianId, java.util.Map<String, Object> body) {
+        Technician tech = technicianRepository.findById(technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician", technicianId));
+        if (body.containsKey("name")) tech.setName((String) body.get("name"));
+        if (body.containsKey("phone")) tech.setPhone((String) body.get("phone"));
+        if (body.containsKey("email")) tech.setEmail((String) body.get("email"));
+        if (body.containsKey("specialty")) tech.setSpecialty((String) body.get("specialty"));
+        if (body.containsKey("profileImageUrl")) tech.setProfileImageUrl((String) body.get("profileImageUrl"));
+        if (body.containsKey("latitude")) tech.setLatitude(((Number) body.get("latitude")).doubleValue());
+        if (body.containsKey("longitude")) tech.setLongitude(((Number) body.get("longitude")).doubleValue());
+        tech = technicianRepository.save(tech);
+        return toDTO(tech);
+    }
+
+    @Transactional
+    public TechnicianDTO updateAvailability(Long technicianId, String status) {
+        Technician tech = technicianRepository.findById(technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician", technicianId));
+        tech.setAvailabilityStatus(status);
+        tech = technicianRepository.save(tech);
+        return toDTO(tech);
+    }
+
+    public List<HomeServiceAssignmentDTO> getTechnicianAssignments(Long technicianId) {
+        return assignmentRepository.findByTechnicianId(technicianId).stream()
+                .map(this::toAssignmentDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<MaintenanceRequestDTO> getTechnicianAssignedRequests(Long technicianId) {
+        return maintenanceRequestRepository.findByTechnicianIdOrderByCreatedAtDesc(technicianId).stream()
+                .map(this::toRequestDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public MaintenanceRequestDTO updateTechnicianRequestStatus(Long requestId, Long technicianId, String status) {
+        MaintenanceRequest request = maintenanceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
+
+        if (request.getTechnician() == null || !request.getTechnician().getId().equals(technicianId)) {
+            throw new BadRequestException("This request is not assigned to you");
+        }
+
+        String effectiveStatus = "completed".equals(status) ? "awaiting_payment" : status;
+        request.setStatus(effectiveStatus);
+        maintenanceRequestRepository.save(request);
+
+        return toRequestDTO(request);
+    }
+
+    @Transactional
+    public HomeServiceAssignmentDTO updateTechnicianAssignmentStatus(Long assignmentId, Long technicianId, String status) {
+        HomeServiceAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("HomeServiceAssignment", assignmentId));
+
+        if (assignment.getTechnician() == null || !assignment.getTechnician().getId().equals(technicianId)) {
+            throw new BadRequestException("This assignment is not assigned to you");
+        }
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        assignment.setStatus(status);
+
+        switch (status) {
+            case "accepted" -> assignment.setAssignedAt(now);
+            case "en_route" -> assignment.setEnRouteAt(now);
+            case "arrived" -> assignment.setArrivedAt(now);
+            case "in_progress" -> assignment.setStartedAt(now);
+            case "completed" -> {
+                assignment.setCompletedAt(now);
+                assignment.getRequest().setStatus("completed");
+            }
+        }
+
+        assignment = assignmentRepository.save(assignment);
+        return toAssignmentDTO(assignment);
+    }
+
+    @Transactional
+    public void changeEmail(Long technicianId, String newEmail, String currentPassword) {
+        Technician tech = technicianRepository.findById(technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician", technicianId));
+
+        if (newEmail == null || newEmail.isBlank()) {
+            throw new BadRequestException("New email is required");
+        }
+        newEmail = newEmail.trim().toLowerCase();
+        if (!newEmail.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            throw new BadRequestException("Invalid email format");
+        }
+        if (currentPassword == null || currentPassword.isBlank()) {
+            throw new BadRequestException("Current password is required");
+        }
+        if (!passwordEncoder.matches(currentPassword, tech.getPassword())) {
+            throw new UnauthorizedException("Current password is incorrect");
+        }
+        if (!newEmail.equals(tech.getEmail())) {
+            technicianRepository.findByEmail(newEmail).ifPresent(existing -> {
+                if (!existing.getId().equals(technicianId)) {
+                    throw new BadRequestException("Email already registered");
+                }
+            });
+            tech.setEmail(newEmail);
+            technicianRepository.save(tech);
+        }
+    }
+
+    @Transactional
+    public void changePassword(Long technicianId, String currentPassword, String newPassword) {
+        Technician tech = technicianRepository.findById(technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician", technicianId));
+
+        if (currentPassword == null || currentPassword.isBlank()) {
+            throw new BadRequestException("Current password is required");
+        }
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new BadRequestException("New password is required");
+        }
+        if (newPassword.length() < 6) {
+            throw new BadRequestException("New password must be at least 6 characters");
+        }
+        if (!passwordEncoder.matches(currentPassword, tech.getPassword())) {
+            throw new UnauthorizedException("Current password is incorrect");
+        }
+        tech.setPassword(passwordEncoder.encode(newPassword));
+        technicianRepository.save(tech);
+    }
+
+    // ---- Assign Technician to Any Request (not just home service) ----
+
+    @Transactional
+    public MaintenanceRequestDTO assignTechnicianToRequest(Long requestId, Long workshopId, Long technicianId) {
+        MaintenanceRequest request = maintenanceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
+
+        Technician tech = technicianRepository.findByIdAndWorkshopId(technicianId, workshopId)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician", technicianId));
+
+        request.setTechnician(tech);
+        maintenanceRequestRepository.save(request);
+
+        // Add technician to chat room if exists
+        chatRoomRepository.findByRequestId(requestId).ifPresent(room -> {
+            room.setTechnician(tech);
+            chatRoomRepository.save(room);
+        });
+
+        return toRequestDTO(request);
+    }
+
+    @Transactional
+    public MaintenanceRequestDTO unassignTechnicianFromRequest(Long requestId, Long workshopId) {
+        MaintenanceRequest request = maintenanceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
+
+        request.setTechnician(null);
+        maintenanceRequestRepository.save(request);
+
+        return toRequestDTO(request);
+    }
+
+    private MaintenanceRequestDTO toRequestDTO(MaintenanceRequest r) {
+        List<com.tasaheel.entity.ServiceType> sts = r.getServiceTypes();
+        com.tasaheel.entity.ServiceType primary = sts.isEmpty() ? null : sts.get(0);
+        return MaintenanceRequestDTO.builder()
+                .id(r.getId())
+                .customerId(r.getCustomer().getId())
+                .customerName(r.getCustomer().getName())
+                .customerPhone(r.getCustomer().getPhone())
+                .carId(r.getCar().getId())
+                .carMake(r.getCar().getMake())
+                .carModel(r.getCar().getModel())
+                .carYear(r.getCar().getYear())
+                .carPlateNumber(r.getCar().getPlateNumber())
+                .carColor(r.getCar().getColor())
+                .carMileage(r.getCar().getMileage())
+                .serviceTypeName(primary != null ? primary.getName() : null)
+                .serviceTypeIds(sts.stream().map(com.tasaheel.entity.ServiceType::getId).collect(Collectors.toList()))
+                .description(r.getDescription())
+                .locationLat(r.getLocationLat())
+                .locationLng(r.getLocationLng())
+                .locationAddress(r.getLocationAddress())
+                .city(r.getCity())
+                .status(r.getStatus())
+                .hasTransportRequest(r.getHasTransportRequest())
+                .executionMethod(r.getExecutionMethod())
+                .allowMultiWorkshop(r.getAllowMultiWorkshop())
+                .createdAt(r.getCreatedAt())
+                .updatedAt(r.getUpdatedAt())
+                .technicianId(r.getTechnician() != null ? r.getTechnician().getId() : null)
+                .technicianName(r.getTechnician() != null ? r.getTechnician().getName() : null)
+                .technicianPhone(r.getTechnician() != null ? r.getTechnician().getPhone() : null)
+                .technicianSpecialty(r.getTechnician() != null ? r.getTechnician().getSpecialty() : null)
+                .build();
+    }
+
     // ---- Mappers ----
 
     private TechnicianDTO toDTO(Technician tech) {
@@ -172,6 +394,9 @@ public class TechnicianService {
                 .latitude(tech.getLatitude())
                 .longitude(tech.getLongitude())
                 .fcmToken(tech.getFcmToken())
+                .availabilityStatus(tech.getAvailabilityStatus())
+                .profileImageUrl(tech.getProfileImageUrl())
+                .workshopName(tech.getWorkshop() != null ? tech.getWorkshop().getName() : null)
                 .createdAt(tech.getCreatedAt())
                 .updatedAt(tech.getUpdatedAt())
                 .build();

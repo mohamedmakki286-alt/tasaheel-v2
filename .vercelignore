@@ -1,15 +1,13 @@
-# Local and generated artifacts: Vercel installs dependencies and builds remotely.
-web-customer/node_modules
-web-admin/node_modules
-web-workshop/node_modules
-web-workshop-android/node_modules
-backend/target
-web-customer/android
-web-customer/ios
-web-workshop-android/android
-web-workshop-android/ios
-web-workshop-android/.expo
-web-workshop-android/.gradle
+backend
+web-admin
+web-workshop
+web-workshop-android
+**/node_modules
+**/android
+**/ios
+**/.vercel
+**/dist
 .git
-.vercel
 *.log
+docs
+tmp-deploy

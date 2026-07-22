@@ -12,6 +12,7 @@ import Button from '../components/Button';
 import Avatar from '../components/Avatar';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
+import NumberInput from '../components/NumberInput';
 import { CardSkeleton } from '../components/Skeleton';
 import { formatDate, formatPhone } from '../utils/formatters';
 import { exportDataToPDF } from '../utils/exportPdf';
@@ -323,7 +324,7 @@ export default function WorkshopsPage() {
           <div><label className="block text-sm font-medium text-gray-700 mb-1">اسم البنك</label><input value={createForm.bankName} onChange={(e) => setCreateForm({ ...createForm, bankName: e.target.value })} className="input-field w-full" /></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">IBAN</label><input value={createForm.iban} onChange={(e) => setCreateForm({ ...createForm, iban: e.target.value.toUpperCase().replace(/\s/g, '') })} className="input-field w-full" dir="ltr" /></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">الرقم الضريبي</label><input value={createForm.taxNumber} onChange={(e) => setCreateForm({ ...createForm, taxNumber: e.target.value })} className="input-field w-full" dir="ltr" /></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">عمولة المنصة %</label><input type="number" min="0" max="100" value={createForm.commissionPercentage} onChange={(e) => setCreateForm({ ...createForm, commissionPercentage: e.target.value })} className="input-field w-full" /></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">عمولة المنصة %</label><NumberInput value={createForm.commissionPercentage} onValueChange={(v) => setCreateForm({ ...createForm, commissionPercentage: v })} mode="decimal" decimalScale={1} min={0} max={100} placeholder="10" suffix="%" /></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">العقد الورقي (PDF اختياري)</label><label className="input-field w-full flex items-center gap-2 cursor-pointer"><Upload className="w-4 h-4" />{contractFile?.name || 'اختيار ملف'}<input type="file" accept="application/pdf" className="hidden" onChange={(e) => setContractFile(e.target.files?.[0] || null)} /></label></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">تاريخ توقيع العقد</label><input type="date" value={createForm.contractSignedAt} onChange={(e) => setCreateForm({ ...createForm, contractSignedAt: e.target.value })} className="input-field w-full" /></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">انتهاء العقد (اختياري)</label><input type="date" value={createForm.contractExpiresAt} onChange={(e) => setCreateForm({ ...createForm, contractExpiresAt: e.target.value })} className="input-field w-full" /></div>

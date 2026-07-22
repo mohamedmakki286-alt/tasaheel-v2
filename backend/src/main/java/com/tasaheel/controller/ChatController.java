@@ -1,6 +1,7 @@
 package com.tasaheel.controller;
 
 import com.tasaheel.dto.*;
+import com.tasaheel.integration.MediaService;
 import com.tasaheel.security.UserDetailsImpl;
 import com.tasaheel.service.ChatService;
 import jakarta.validation.Valid;
@@ -11,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Locale;
 import java.util.Map;
@@ -22,6 +24,7 @@ import java.util.Map;
 public class ChatController {
 
     private final ChatService chatService;
+    private final MediaService mediaService;
     private final MessageSource msg;
 
     @PostMapping("/room")
@@ -72,5 +75,13 @@ public class ChatController {
         chatService.markAsRead(roomId, user);
         Locale locale = LocaleContextHolder.getLocale();
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("chat.read", null, locale), null));
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadChatMedia(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "prefix", defaultValue = "chat") String prefix) {
+        String url = mediaService.storeFile(file, prefix);
+        return ResponseEntity.ok(ApiResponse.success("Uploaded", Map.of("url", url)));
     }
 }

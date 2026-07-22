@@ -25,6 +25,8 @@ public class MaintenanceRequestDTO {
     private String carModel;
     private Integer carYear;
     private String carPlateNumber;
+    private String carColor;
+    private Integer carMileage;
     private Long serviceTypeId;
     private String serviceTypeName;
     private String serviceTypeNameEn;
@@ -56,4 +58,8 @@ public class MaintenanceRequestDTO {
     private Boolean allowMultiWorkshop;
     private List<SubOrderDTO> subOrders;
     private List<Long> workshopIds;
+    private Long technicianId;
+    private String technicianName;
+    private String technicianPhone;
+    private String technicianSpecialty;
 }

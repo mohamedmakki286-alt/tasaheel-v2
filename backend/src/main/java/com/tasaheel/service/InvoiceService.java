@@ -2,6 +2,8 @@ package com.tasaheel.service;
 
 import com.tasaheel.dto.*;
 import com.tasaheel.entity.*;
+import com.tasaheel.event.EventPublisher;
+import com.tasaheel.event.EventType;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.repository.*;
@@ -31,6 +33,7 @@ public class InvoiceService {
     private final WorkshopSettlementRepository settlementRepository;
     private final RequestCompletionService requestCompletionService;
     private final QuoteRepository quoteRepository;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public InvoiceDTO createOrUpdateInvoice(Long requestId, Long workshopId, Double partsTotal, Double laborTotal, Double totalAmount, Double tax, Double taxPercent, Double grandTotal, List<InvoiceItemDTO> items) {
@@ -111,6 +114,7 @@ public class InvoiceService {
                 }
             }
             existing = invoiceRepository.save(existing);
+            eventPublisher.publish(this, EventType.INVOICE_CREATED, requestId, "workshop", workshopId);
             return toInvoiceDTO(existing);
         }
 
@@ -145,6 +149,7 @@ public class InvoiceService {
         }
 
         invoice = invoiceRepository.save(invoice);
+        eventPublisher.publish(this, EventType.INVOICE_CREATED, requestId, "workshop", workshopId);
         return toInvoiceDTO(invoice);
     }
 

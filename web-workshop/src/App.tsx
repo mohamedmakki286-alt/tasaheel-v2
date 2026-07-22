@@ -18,6 +18,9 @@ const ChatsPage = lazy(() => import('./pages/ChatsPage'));
 const MyQuotesPage = lazy(() => import('./pages/MyQuotesPage'));
 const ReviewsPage = lazy(() => import('./pages/ReviewsPage'));
 const TechniciansPage = lazy(() => import('./pages/TechniciansPage'));
+const TechnicianPage = lazy(() => import('./pages/TechnicianPage'));
+const TechnicianAccountPage = lazy(() => import('./pages/TechnicianAccountPage'));
+const TechnicianRequestDetailPage = lazy(() => import('./pages/TechnicianRequestDetailPage'));
 const HomeServicePage = lazy(() => import('./pages/HomeServicePage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
@@ -61,6 +64,9 @@ function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+      <Route path="/technician" element={<TechnicianPage />} />
+      <Route path="/technician/account" element={<TechnicianAccountPage />} />
+      <Route path="/technician/requests/:id" element={<TechnicianRequestDetailPage />} />
       <Route path="/set-password" element={<SetPasswordPage />} />
       <Route path="/reset-password" element={<SetPasswordPage />} />
       <Route path="/register" element={<Navigate to="/login" replace />} />

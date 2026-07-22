@@ -51,7 +51,7 @@ export default function WorkshopLayout() {
 
   useWorkshopWebSocket();
   useBackButton();
-  const { answerCall, rejectCall, hangUp, toggleMute } = useCallSignaling();
+  const { answerCall, rejectCall, hangUp, toggleMute, toggleSpeaker } = useCallSignaling();
   const callState = useCallStore();
 
   if (workshop?.isApproved === false && location.pathname !== '/pending-approval') {
@@ -364,8 +364,10 @@ export default function WorkshopLayout() {
         duration={callState.duration}
         isOutgoing={callState.isOutgoing}
         isMuted={false}
+        isSpeakerOn={callState.isSpeakerOn}
         onHangUp={hangUp}
         onToggleMute={toggleMute}
+        onToggleSpeaker={toggleSpeaker}
       />
     </div>
   );

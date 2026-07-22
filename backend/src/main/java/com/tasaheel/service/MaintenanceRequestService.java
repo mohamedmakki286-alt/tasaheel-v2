@@ -31,7 +31,6 @@ public class MaintenanceRequestService {
     private final InspectionPartItemRepository inspectionPartItemRepository;
     private final InspectionLaborItemRepository inspectionLaborItemRepository;
     private final MediaRepository mediaRepository;
-    private final SmartRouterService smartRouterService;
     private final HomeServiceAssignmentRepository homeServiceAssignmentRepository;
     private final WorkshopRepository workshopRepository;
     private final EventPublisher eventPublisher;
@@ -93,7 +92,7 @@ public class MaintenanceRequestService {
                 Map.of("city", request.getCity() != null ? request.getCity() : ""));
         }
 
-        String category = smartRouterService.determineCategory(
+        String category = determineCategory(
                 dto.getDescription(),
                 primaryServiceName
         );
@@ -392,7 +391,8 @@ public class MaintenanceRequestService {
                 .carModel(r.getCar().getModel())
                 .carYear(r.getCar().getYear())
                 .carPlateNumber(r.getCar().getPlateNumber())
-                .serviceTypeId(primary != null ? primary.getId() : null)
+                .carColor(r.getCar().getColor())
+                .carMileage(r.getCar().getMileage())
                 .serviceTypeName(primary != null ? primary.getName() : null)
                 .serviceTypeIds(sts.stream().map(ServiceType::getId).collect(Collectors.toList()))
                 .serviceTypes(sts.stream().map(s -> new ServiceItemDTO(s.getId(), s.getName())).collect(Collectors.toList()))
@@ -408,6 +408,10 @@ public class MaintenanceRequestService {
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .workshopIds(r.getPreferredWorkshopId() != null ? List.of(r.getPreferredWorkshopId()) : null)
+                .technicianId(r.getTechnician() != null ? r.getTechnician().getId() : null)
+                .technicianName(r.getTechnician() != null ? r.getTechnician().getName() : null)
+                .technicianPhone(r.getTechnician() != null ? r.getTechnician().getPhone() : null)
+                .technicianSpecialty(r.getTechnician() != null ? r.getTechnician().getSpecialty() : null)
                 .build();
     }
 
@@ -533,6 +537,7 @@ public class MaintenanceRequestService {
         report.setNotes(comment);
         inspectionReportRepository.save(report);
         createStatusHistory(request, "inspection_report", "Report rejected: " + comment, "customer:" + customerId);
+        eventPublisher.publish(this, EventType.REPORT_REJECTED, requestId, "customer", customerId);
     }
 
     public HomeServiceAssignmentDTO getTechnicianForRequest(Long requestId) {
@@ -582,5 +587,70 @@ public class MaintenanceRequestService {
                 .createdBy(h.getCreatedBy())
                 .createdAt(h.getCreatedAt())
                 .build();
+    }
+
+    private static final java.util.Map<String, String> SERVICE_CATEGORY_MAP = new java.util.LinkedHashMap<>();
+
+    static {
+        SERVICE_CATEGORY_MAP.put("بطارية", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("battery", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("oil", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("فراامل", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("brake", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("إطار", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("tire", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("مكيف", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("ac", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("فلتر", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("filter", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("دوري", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("maintenance", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("فحص", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("inspection", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("مولود", "mobile_mechanic");
+
+        SERVICE_CATEGORY_MAP.put("محرك", "workshop");
+        SERVICE_CATEGORY_MAP.put("engine", "workshop");
+        SERVICE_CATEGORY_MAP.put("قير", "workshop");
+        SERVICE_CATEGORY_MAP.put("transmission", "workshop");
+        SERVICE_CATEGORY_MAP.put("جير", "workshop");
+        SERVICE_CATEGORY_MAP.put("سمكرة", "workshop");
+        SERVICE_CATEGORY_MAP.put("body", "workshop");
+        SERVICE_CATEGORY_MAP.put("دهان", "workshop");
+        SERVICE_CATEGORY_MAP.put("paint", "workshop");
+        SERVICE_CATEGORY_MAP.put("دينمو", "workshop");
+        SERVICE_CATEGORY_MAP.put("alternator", "workshop");
+        SERVICE_CATEGORY_MAP.put("سلف", "workshop");
+        SERVICE_CATEGORY_MAP.put("starter", "workshop");
+        SERVICE_CATEGORY_MAP.put("مساعدات", "workshop");
+        SERVICE_CATEGORY_MAP.put("suspension", "workshop");
+        SERVICE_CATEGORY_MAP.put("شاصي", "workshop");
+        SERVICE_CATEGORY_MAP.put("عادم", "workshop");
+        SERVICE_CATEGORY_MAP.put("exhaust", "workshop");
+        SERVICE_CATEGORY_MAP.put("تبريد", "workshop");
+        SERVICE_CATEGORY_MAP.put("radiator", "workshop");
+
+        SERVICE_CATEGORY_MAP.put("ونش", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("سحب", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("tow", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("سحب", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("تعطل", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("accident", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("تصليح", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("مشوار", "tow_truck");
+    }
+
+    private String determineCategory(String description, String serviceName) {
+        String combined = (description != null ? description : "") + " " + (serviceName != null ? serviceName : "");
+        for (var entry : SERVICE_CATEGORY_MAP.entrySet()) {
+            if (combined.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        var serviceTypeOpt = serviceTypeRepository.findByName(serviceName);
+        if (serviceTypeOpt.isPresent() && serviceTypeOpt.get().getCategory() != null) {
+            return serviceTypeOpt.get().getCategory();
+        }
+        return "workshop";
     }
 }

@@ -138,6 +138,25 @@ export function useCallSignaling() {
     }
   }, []);
 
+  const toggleSpeaker = useCallback(async () => {
+    const next = !useCallStore.getState().isSpeakerOn;
+    useCallStore.setState({ isSpeakerOn: next });
+    const audio = document.getElementById('remote-audio') as HTMLAudioElement | null;
+    if (!audio) return;
+    if ('setSinkId' in audio) {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+        if (next && audioOutputs.length > 1) {
+          const speaker = audioOutputs.find(d => /speaker|external|phone/i.test(d.label)) || audioOutputs[1];
+          await (audio as any).setSinkId(speaker.deviceId);
+        } else if (audioOutputs.length > 0) {
+          await (audio as any).setSinkId(audioOutputs[0].deviceId);
+        }
+      } catch { }
+    }
+  }, []);
+
   // STOMP connection for call signaling
   useEffect(() => {
     if (!workshop?.id) return;
@@ -198,5 +217,5 @@ export function useCallSignaling() {
     };
   }, [workshop?.id]);
 
-  return { startCall, answerCall, rejectCall, hangUp, toggleMute };
+  return { startCall, answerCall, rejectCall, hangUp, toggleMute, toggleSpeaker };
 }

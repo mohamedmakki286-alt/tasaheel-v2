@@ -19,6 +19,13 @@ public class AuthResponse {
     private Boolean emailVerified;
     private Boolean isApproved;
 
+    // Technician-specific fields
+    private String specialty;
+    private String availabilityStatus;
+    private Long workshopId;
+    private String workshopName;
+    private String profileImageUrl;
+
     // Workshop-specific fields
     private String ownerName;
     private String address;

@@ -22,13 +22,14 @@ public class ServiceCatalogController {
 
     private static final LinkedHashMap<String, String[]> CATEGORY_META = new LinkedHashMap<>();
     static {
-        CATEGORY_META.put("periodic", new String[]{"الصيانة الدورية", "periodic", "🔧"});
-        CATEGORY_META.put("mechanical", new String[]{"الميكانيكا", "mechanical", "⚙️"});
+        CATEGORY_META.put("periodic", new String[]{"الصيانة الدورية", "periodic", "🚗"});
+        CATEGORY_META.put("mechanical", new String[]{"الميكانيكا", "mechanical", "🔧"});
         CATEGORY_META.put("electrical", new String[]{"الكهرباء", "electrical", "⚡"});
         CATEGORY_META.put("ac", new String[]{"التكييف", "ac", "❄️"});
-        CATEGORY_META.put("suspension", new String[]{"النوابض والتعليق", "suspension", "🛞"});
+        CATEGORY_META.put("suspension", new String[]{"الإطارات والتعليق", "suspension", "🛞"});
         CATEGORY_META.put("bodywork", new String[]{"السمكرة والدهان", "bodywork", "🎨"});
         CATEGORY_META.put("emergency", new String[]{"الطوارئ", "emergency", "🚨"});
+        CATEGORY_META.put("inspection", new String[]{"الفحص والتقييم", "inspection", "🔍"});
     }
 
     @GetMapping
