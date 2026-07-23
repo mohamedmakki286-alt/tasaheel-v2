@@ -37,6 +37,7 @@ public class MaintenanceRequestService {
     private final ServiceItemService serviceItemService;
     private final SplitRequestService splitRequestService;
     private final InvoiceRepository invoiceRepository;
+    private final RequestDispatchService requestDispatchService;
 
     @Transactional
     public MaintenanceRequestDTO createRequest(Long customerId, MaintenanceRequestDTO dto, boolean isDraft) {
@@ -83,6 +84,7 @@ public class MaintenanceRequestService {
 
         if (!isDraft) {
             createStatusHistory(request, "pending", "Request created", "customer:" + customerId);
+            requestDispatchService.dispatch(request);
             eventPublisher.publish(this, EventType.REQUEST_SUBMITTED, request.getId(), "customer", customerId, Map.of(
                 "serviceTypes", sts.stream().map(ServiceType::getName).toList(),
                 "city", request.getCity() != null ? request.getCity() : ""
@@ -128,6 +130,7 @@ public class MaintenanceRequestService {
         request.setStatus("pending");
         request = requestRepository.save(request);
         createStatusHistory(request, "pending", "Draft submitted", "customer:" + customerId);
+        requestDispatchService.dispatch(request);
         eventPublisher.publish(this, EventType.REQUEST_SUBMITTED, request.getId(), "customer", customerId,
                 Map.of("city", request.getCity() != null ? request.getCity() : ""));
         return toRequestDTO(request);
@@ -142,6 +145,12 @@ public class MaintenanceRequestService {
         MaintenanceRequest request = requestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", id));
         return toFullRequestDTO(request);
+    }
+
+    public void requireCustomerOwnership(Long requestId, Long customerId) {
+        if (!requestRepository.isOwnedByCustomer(requestId, customerId)) {
+            throw new BadRequestException("You are not the owner of this request");
+        }
     }
 
     public List<MaintenanceRequestDTO> getCustomerRequests(Long customerId, int page, int size) {
@@ -266,6 +275,7 @@ public class MaintenanceRequestService {
 
         request.setStatus("accepted");
         requestRepository.save(request);
+        requestDispatchService.resolveAfterAcceptance(requestId, acceptedQuote.getWorkshop().getId());
 
         createStatusHistory(request, "accepted", "Quote accepted from workshop " + acceptedQuote.getWorkshop().getName(),
                 "customer:" + customerId);

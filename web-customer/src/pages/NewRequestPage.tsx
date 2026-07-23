@@ -256,17 +256,23 @@ export function NewRequestPage() {
       const created = res.data || res;
       const requestId = created?.id;
 
+      let failedUploads = 0;
       if (requestId && mediaFiles.length > 0) {
-        await Promise.allSettled(
+        const uploadResults = await Promise.allSettled(
           mediaFiles.map((file) => mediaApi.upload(file, requestId))
         );
+        failedUploads = uploadResults.filter(result => result.status === 'rejected').length;
       }
 
       if (isDraft) {
         toast.success('تم حفظ المسودة');
         navigate('/orders');
       } else {
-        toast.success('تم إنشاء الطلب');
+        if (failedUploads > 0) {
+          toast.error(`تم إنشاء الطلب، لكن فشل رفع ${failedUploads} من المرفقات`);
+        } else {
+          toast.success('تم إنشاء الطلب');
+        }
         navigate(`/orders/${requestId}`);
       }
     } catch (err: any) {

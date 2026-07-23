@@ -59,7 +59,10 @@ public class MediaService {
             throw new BadRequestException("حجم الملف يتجاوز الحد الأقصى (10 ميجا)");
         }
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_FILE_TYPES.contains(contentType.toLowerCase())) {
+        String normalizedContentType = contentType == null
+                ? null
+                : contentType.toLowerCase(Locale.ROOT).split(";", 2)[0].trim();
+        if (normalizedContentType == null || !ALLOWED_FILE_TYPES.contains(normalizedContentType)) {
             throw new BadRequestException("نوع الملف غير مدعوم: " + contentType);
         }
     }
@@ -128,6 +131,7 @@ public class MediaService {
     }
 
     public Media uploadFile(MultipartFile file, Long requestId, com.tasaheel.entity.MaintenanceRequest request) {
+        validateFile(file);
         try {
             Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
             Files.createDirectories(uploadPath);

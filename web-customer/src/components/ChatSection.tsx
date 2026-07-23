@@ -234,7 +234,11 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+      const supportedType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+        .find(type => MediaRecorder.isTypeSupported(type));
+      const mediaRecorder = supportedType
+        ? new MediaRecorder(stream, { mimeType: supportedType })
+        : new MediaRecorder(stream);
       audioChunksRef.current = [];
       mediaRecorderRef.current = mediaRecorder;
 
@@ -243,8 +247,10 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+        const mimeType = mediaRecorder.mimeType.split(';')[0] || 'audio/webm';
+        const extension = mimeType === 'audio/mp4' ? 'm4a' : mimeType.split('/')[1] || 'webm';
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        const file = new File([blob], `voice-${Date.now()}.${extension}`, { type: mimeType });
         setPreviewFile(file);
         stream.getTracks().forEach(t => t.stop());
       };

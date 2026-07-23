@@ -103,6 +103,35 @@ public class WorkshopController {
         return ResponseEntity.ok(ApiResponse.success(requests));
     }
 
+    @GetMapping("/requests/{id}")
+    @PreAuthorize("hasRole('WORKSHOP')")
+    public ResponseEntity<ApiResponse<MaintenanceRequestDTO>> getDispatchedRequest(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                workshopService.getDispatchedRequest(id, user.getUserId())));
+    }
+
+    @PutMapping("/requests/{id}/view")
+    @PreAuthorize("hasRole('WORKSHOP')")
+    public ResponseEntity<ApiResponse<Void>> markRequestViewed(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id) {
+        workshopService.markDispatchedRequestViewed(id, user.getUserId());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/requests/{id}/decline")
+    @PreAuthorize("hasRole('WORKSHOP')")
+    public ResponseEntity<ApiResponse<Void>> declineRequest(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String reason = body != null ? body.get("reason") : null;
+        workshopService.declineDispatchedRequest(id, user.getUserId(), reason);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
     @PutMapping("/requests/{id}/status")
     @PreAuthorize("hasRole('WORKSHOP')")
     public ResponseEntity<ApiResponse<Void>> updateRequestStatus(

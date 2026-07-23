@@ -55,6 +55,11 @@ spring:
       continue-on-error: true
 
 application:
+  dispatch:
+    max-workshops: ${REQUEST_DISPATCH_MAX_WORKSHOPS:10}
+    expiry-hours: ${REQUEST_DISPATCH_EXPIRY_HOURS:24}
+  payment:
+    callback-base-url: ${PAYMENT_CALLBACK_BASE_URL:http://localhost:5175}
   name: Tasaheel
   public-url: ${PUBLIC_URL:http://localhost:8080}
   jwt:

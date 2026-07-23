@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class InspectionReportController {
     private final MessageSource msg;
 
     @PostMapping
+    @PreAuthorize("hasRole('WORKSHOP')")
     public ResponseEntity<ApiResponse<InspectionReportDTO>> createReport(
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestBody Map<String, Object> body) {
@@ -88,6 +90,7 @@ public class InspectionReportController {
     }
 
     @PutMapping("/{id}/approve")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<Void>> approveReport(
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long id) {
@@ -97,6 +100,7 @@ public class InspectionReportController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('WORKSHOP')")
     public ResponseEntity<ApiResponse<InspectionReportDTO>> updateReport(
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long id,
@@ -132,6 +136,7 @@ public class InspectionReportController {
     }
 
     @PutMapping("/{id}/reject")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<Void>> rejectReport(
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long id,

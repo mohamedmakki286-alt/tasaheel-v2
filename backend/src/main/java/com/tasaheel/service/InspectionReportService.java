@@ -272,6 +272,12 @@ public class InspectionReportService {
         if (!report.getStatus().equals("pending_approval")) {
             throw new BadRequestException("Report is not pending approval");
         }
+        if (!report.getRequest().getCustomer().getId().equals(customerId)) {
+            throw new BadRequestException("You are not the customer for this report");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new BadRequestException("A rejection reason is required");
+        }
 
         report.setStatus("rejected");
         report.setNotes(reason);

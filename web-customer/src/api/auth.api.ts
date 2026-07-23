@@ -8,8 +8,15 @@ export const authApi = {
   register: (data: { name: string; email: string; phone?: string; city: string; password: string }) =>
     client.post('/auth/register/customer', data),
   getProfile: () => client.get('/customers/profile'),
-  updateProfile: (data: { name?: string; email?: string; phone?: string; city?: string }) =>
+  updateProfile: (data: { name?: string; email?: string; phone?: string; city?: string; avatar?: string }) =>
     client.put('/customers/profile', data),
+  uploadAvatar: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('prefix', 'customer-avatar');
+    const response = await client.post('/media/upload-image', formData);
+    return response.data.url as string;
+  },
   verifyEmail: (email: string, code: string) =>
     client.post('/auth/email/verify', { email, code }),
   resendVerification: (email: string) =>

@@ -94,6 +94,15 @@ export interface ServiceRequest {
   technicianName?: string;
   technicianPhone?: string;
   technicianSpecialty?: string;
+  media?: RequestMedia[];
+}
+
+export interface RequestMedia {
+  id: string;
+  type: string;
+  url: string;
+  thumbnailUrl?: string;
+  createdAt?: string;
 }
 
 export interface Quote {

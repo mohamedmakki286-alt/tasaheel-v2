@@ -14,7 +14,7 @@ export function SettingsPage() {
   const { customer, updateCustomer, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const [form, setForm] = useState({ name: customer?.name || '', email: customer?.email || '', phone: customer?.phone || '', city: customer?.city || '' });
-  const [avatar, setAvatar] = useState(() => localStorage.getItem('tasaheel-customer-avatar') || '');
+  const [avatar, setAvatar] = useState(() => customer?.avatar || '');
   const [saving, setSaving] = useState(false);
   const [panel, setPanel] = useState<'email' | 'password' | null>(null);
   const [newEmail, setNewEmail] = useState(customer?.email || '');
@@ -22,13 +22,20 @@ export function SettingsPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const isDark = theme === 'dark';
 
-  const handleAvatar = (file?: File) => {
+  const handleAvatar = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) return toast.error('اختر صورة فقط');
     if (file.size > 4 * 1024 * 1024) return toast.error('حجم الصورة يجب ألا يتجاوز 4 ميغابايت');
-    const reader = new FileReader();
-    reader.onload = () => { const preview = String(reader.result); setAvatar(preview); localStorage.setItem('tasaheel-customer-avatar', preview); };
-    reader.readAsDataURL(file);
+    try {
+      const url = await authApi.uploadAvatar(file);
+      const response: any = await authApi.updateProfile({ avatar: url });
+      const savedCustomer = response.data || response;
+      updateCustomer(savedCustomer);
+      setAvatar(savedCustomer.avatar || url);
+      toast.success('تم رفع الصورة الشخصية وحفظها');
+    } catch (error: any) {
+      toast.error(error.friendlyMessage || 'تعذر رفع الصورة الشخصية');
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -41,12 +48,12 @@ export function SettingsPage() {
   const requestEmailChange = async () => {
     if (!newEmail || !newEmail.includes('@')) return toast.error('أدخل بريدًا إلكترونيًا صحيحًا');
     try { await authApi.resendVerification(newEmail); toast.success('أرسلنا رمز تحقق إلى البريد الجديد'); setPanel(null); }
-    catch { toast.success('سيتم إرسال رمز التحقق عند تفعيل خدمة البريد'); setPanel(null); }
+    catch { toast.error('تعذر إرسال رمز التحقق حاليًا'); }
   };
 
   const requestPasswordChange = async () => {
     try { await authApi.forgotPassword(customer?.email || ''); toast.success('أرسلنا رابط تغيير كلمة المرور إلى بريدك'); setPanel(null); }
-    catch { toast.success('سيتم إرسال رابط تغيير كلمة المرور عند تفعيل البريد'); setPanel(null); }
+    catch { toast.error('تعذر إرسال رابط تغيير كلمة المرور حاليًا'); }
   };
 
   const toggleBiometric = () => {

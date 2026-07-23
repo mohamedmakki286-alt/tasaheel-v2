@@ -25,6 +25,7 @@ import {
   Info,
   Star,
   Wrench,
+  Image,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getRequestDetail } from '../api/requests.api';
@@ -64,6 +65,8 @@ export default function RequestDetailPage() {
     { status: 'pending', icon: ClipboardList, label: t('pages.requests.detail.steps.created') },
     { status: 'quoted', icon: FileText, label: t('pages.requests.detail.steps.quoted') },
     { status: 'accepted', icon: CheckCircle2, label: t('pages.requests.detail.steps.accepted') },
+    { status: 'inspection_report', icon: FileSearch, label: t('pages.requests.detail.tabs.inspection') },
+    { status: 'customer_approved', icon: CheckCircle2, label: t('constants.requestStatuses.customer_approved') },
     { status: 'in_progress', icon: Clock, label: t('pages.requests.detail.steps.inProgress') },
     { status: 'awaiting_payment', icon: Receipt, label: t('constants.requestStatuses.awaiting_payment') },
     { status: 'completed', icon: CheckCircle2, label: t('pages.requests.detail.steps.completed') },
@@ -284,6 +287,30 @@ export default function RequestDetailPage() {
             </div>
           </div>
 
+          {request.media && request.media.length > 0 && (
+            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
+              <div className="p-5 border-b border-surface-100 dark:border-surface-800 flex items-center gap-2">
+                <Image size={19} className="text-primary-500" />
+                <h2 className="font-bold text-surface-900 dark:text-surface-100">مرفقات العميل</h2>
+                <span className="text-xs text-surface-400">({request.media.length})</span>
+              </div>
+              <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-3">
+                {request.media.map((item) => (
+                  <a key={item.id} href={item.url} target="_blank" rel="noreferrer"
+                    className="block overflow-hidden rounded-xl border border-surface-200 dark:border-surface-700 hover:border-primary-400 transition-colors">
+                    {item.type === 'image' ? (
+                      <img src={item.thumbnailUrl || item.url} alt="مرفق الطلب" className="w-full h-36 object-cover" />
+                    ) : (
+                      <div className="h-36 flex items-center justify-center bg-surface-50 dark:bg-surface-800 text-sm text-primary-600">
+                        عرض المرفق
+                      </div>
+                    )}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
             <div className="p-5 border-b border-surface-100 dark:border-surface-800 flex items-center justify-between">
               <h2 className="font-bold text-surface-900 dark:text-surface-100">{t('pages.requests.detail.requestStatus')}</h2>
@@ -482,7 +509,7 @@ export default function RequestDetailPage() {
                         </div>
                       )}
                     </div>
-                  ) : (request.status === 'completed' || invoice === null) ? (
+                  ) : request.status === 'awaiting_payment' ? (
                     <div className="text-center py-8">
                       <Receipt size={40} className="text-surface-300 mx-auto mb-3" />
                       <p className="text-surface-500 mb-4">{t('pages.requests.detail.invoice.notCreated')}</p>

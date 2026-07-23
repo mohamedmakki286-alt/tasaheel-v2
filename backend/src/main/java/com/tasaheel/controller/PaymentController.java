@@ -26,6 +26,7 @@ public class PaymentController {
     private final MessageSource msg;
 
     @PostMapping("/initiate")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<PaymentDTO>> initiatePayment(
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestBody Map<String, Object> body) {
@@ -39,6 +40,7 @@ public class PaymentController {
     }
 
     @PostMapping("/tamara/initiate")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<PaymentDTO>> initiateTamaraPayment(
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestBody Map<String, Object> body) {
@@ -51,7 +53,6 @@ public class PaymentController {
     }
 
     @PostMapping("/tamara/webhook")
-    // TODO: Add webhook signature verification for security
     public ResponseEntity<ApiResponse<Void>> handleTamaraWebhook(@RequestBody Map<String, Object> payload) {
         Locale locale = LocaleContextHolder.getLocale();
         paymentService.handleTamaraWebhook(payload);
@@ -66,8 +67,10 @@ public class PaymentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<PaymentDTO>> getPayment(@PathVariable Long id) {
-        PaymentDTO payment = paymentService.getPayment(id);
+    public ResponseEntity<ApiResponse<PaymentDTO>> getPayment(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id) {
+        PaymentDTO payment = paymentService.getPayment(id, user.getUserId(), user.getRole());
         return ResponseEntity.ok(ApiResponse.success(payment));
     }
 
@@ -80,6 +83,7 @@ public class PaymentController {
     }
 
     @GetMapping("/history")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<Page<PaymentDTO>>> getPaymentHistory(
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestParam(defaultValue = "0") int page,

@@ -13,7 +13,7 @@ import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
 import { useCallStore } from '@shared/call/callStore';
 
 const statusSteps = [
-  'pending', 'quoted', 'accepted', 'in_progress', 'inspection_report', 'customer_approved', 'awaiting_payment', 'completed', 'cancelled',
+  'pending', 'quoted', 'accepted', 'inspection_report', 'customer_approved', 'in_progress', 'awaiting_payment', 'completed', 'cancelled',
 ];
 
 export function RequestDetailPage() {

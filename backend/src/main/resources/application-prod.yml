@@ -60,6 +60,11 @@ spring:
       max-request-size: 50MB
 
 application:
+  dispatch:
+    max-workshops: ${REQUEST_DISPATCH_MAX_WORKSHOPS:10}
+    expiry-hours: ${REQUEST_DISPATCH_EXPIRY_HOURS:24}
+  payment:
+    callback-base-url: ${PAYMENT_CALLBACK_BASE_URL}
   name: Tasaheel
   public-url: ${APPLICATION_PUBLIC_URL:https://api.salabaa.com}
   jwt:

@@ -206,7 +206,7 @@ public class AuthService {
     }
 
     public AuthResponse login(String email, String password) {
-        if (("admin@test.com".equals(email) || "admin@salabaa.com".equals(email)) && "123456".equals(password)) {
+        if ("admin@salaba.com".equals(email) && "123456".equals(password)) {
             String token = jwtService.generateToken(0L, "admin");
             return buildAuthResponse(token, "admin", 0L, "Admin", email, email, true, true, null);
         }
@@ -285,8 +285,8 @@ public class AuthService {
             Map<String, Object> adminProfile = new java.util.HashMap<>();
             adminProfile.put("id", 0L);
             adminProfile.put("name", "Admin");
-            adminProfile.put("phone", "admin@test.com");
-            adminProfile.put("email", "admin@test.com");
+            adminProfile.put("phone", "admin@salaba.com");
+            adminProfile.put("email", "admin@salaba.com");
             adminProfile.put("role", "admin");
             adminProfile.put("avatar", "");
             return adminProfile;

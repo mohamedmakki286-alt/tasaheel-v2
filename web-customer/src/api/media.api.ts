@@ -5,9 +5,7 @@ export const mediaApi = {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('requestId', requestId);
-    return client.post('/media/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return client.post('/media/upload', formData);
   },
   delete: (id: string) => client.delete(`/media/${id}`),
   getByRequest: (requestId: string) => client.get(`/media/request/${requestId}`),

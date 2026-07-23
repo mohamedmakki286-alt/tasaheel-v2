@@ -14,6 +14,8 @@ import com.tasaheel.repository.ChatRoomRepository;
 import com.tasaheel.repository.HomeServiceAssignmentRepository;
 import com.tasaheel.repository.MaintenanceRequestRepository;
 import com.tasaheel.repository.MediaRepository;
+import com.tasaheel.repository.QuoteRepository;
+import com.tasaheel.repository.RequestStatusHistoryRepository;
 import com.tasaheel.repository.TechnicianRepository;
 import com.tasaheel.repository.WorkshopRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,8 @@ public class TechnicianService {
     private final ChatRoomRepository chatRoomRepository;
     private final MaintenanceRequestRepository maintenanceRequestRepository;
     private final MediaRepository mediaRepository;
+    private final QuoteRepository quoteRepository;
+    private final RequestStatusHistoryRepository statusHistoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final EventPublisher eventPublisher;
 
@@ -167,7 +171,7 @@ public class TechnicianService {
             case "in_progress" -> assignment.setStartedAt(now);
             case "completed" -> {
                 assignment.setCompletedAt(now);
-                assignment.getRequest().setStatus("completed");
+                markWorkAwaitingPayment(assignment.getRequest(), "workshop:" + workshopId);
             }
         }
 
@@ -235,8 +239,19 @@ public class TechnicianService {
         }
 
         String effectiveStatus = "completed".equals(status) ? "awaiting_payment" : status;
+        boolean allowed = ("customer_approved".equals(request.getStatus()) && "in_progress".equals(effectiveStatus))
+                || ("in_progress".equals(request.getStatus()) && "awaiting_payment".equals(effectiveStatus));
+        if (!allowed) {
+            throw new BadRequestException("Cannot transition from " + request.getStatus() + " to " + effectiveStatus);
+        }
         request.setStatus(effectiveStatus);
         maintenanceRequestRepository.save(request);
+        statusHistoryRepository.save(RequestStatusHistory.builder()
+                .request(request)
+                .status(effectiveStatus)
+                .notes("Status updated by assigned technician")
+                .createdBy("technician:" + technicianId)
+                .build());
 
         Long customerId = request.getCustomer() != null ? request.getCustomer().getId() : null;
 
@@ -264,7 +279,7 @@ public class TechnicianService {
             case "in_progress" -> assignment.setStartedAt(now);
             case "completed" -> {
                 assignment.setCompletedAt(now);
-                assignment.getRequest().setStatus("completed");
+                markWorkAwaitingPayment(assignment.getRequest(), "technician:" + technicianId);
             }
         }
 
@@ -328,12 +343,25 @@ public class TechnicianService {
     public MaintenanceRequestDTO assignTechnicianToRequest(Long requestId, Long workshopId, Long technicianId) {
         MaintenanceRequest request = maintenanceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
+        requireSelectedWorkshop(requestId, workshopId);
+        if (!List.of("accepted", "inspection_report", "customer_approved", "in_progress").contains(request.getStatus())) {
+            throw new BadRequestException("Technician cannot be assigned in request status " + request.getStatus());
+        }
 
         Technician tech = technicianRepository.findByIdAndWorkshopId(technicianId, workshopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Technician", technicianId));
+        if (!Boolean.TRUE.equals(tech.getIsActive())) {
+            throw new BadRequestException("Technician is inactive");
+        }
 
         request.setTechnician(tech);
         maintenanceRequestRepository.save(request);
+        statusHistoryRepository.save(RequestStatusHistory.builder()
+                .request(request)
+                .status(request.getStatus())
+                .notes("Technician assigned: " + tech.getName())
+                .createdBy("workshop:" + workshopId)
+                .build());
 
         // Add technician to chat room if exists
         chatRoomRepository.findByRequestId(requestId).ifPresent(room -> {
@@ -348,11 +376,42 @@ public class TechnicianService {
     public MaintenanceRequestDTO unassignTechnicianFromRequest(Long requestId, Long workshopId) {
         MaintenanceRequest request = maintenanceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
+        requireSelectedWorkshop(requestId, workshopId);
+        if ("in_progress".equals(request.getStatus()) || "awaiting_payment".equals(request.getStatus())
+                || "completed".equals(request.getStatus())) {
+            throw new BadRequestException("Technician cannot be removed after work has started");
+        }
 
         request.setTechnician(null);
         maintenanceRequestRepository.save(request);
+        statusHistoryRepository.save(RequestStatusHistory.builder()
+                .request(request)
+                .status(request.getStatus())
+                .notes("Technician unassigned")
+                .createdBy("workshop:" + workshopId)
+                .build());
 
         return toRequestDTO(request);
+    }
+
+    private void requireSelectedWorkshop(Long requestId, Long workshopId) {
+        boolean selected = quoteRepository.findByRequestIdAndStatus(requestId, "accepted")
+                .map(quote -> quote.getWorkshop().getId().equals(workshopId))
+                .orElse(false);
+        if (!selected) {
+            throw new BadRequestException("Only the selected workshop can manage technicians for this request");
+        }
+    }
+
+    private void markWorkAwaitingPayment(MaintenanceRequest request, String actor) {
+        request.setStatus("awaiting_payment");
+        maintenanceRequestRepository.save(request);
+        statusHistoryRepository.save(RequestStatusHistory.builder()
+                .request(request)
+                .status("awaiting_payment")
+                .notes("Work completed; awaiting invoice payment")
+                .createdBy(actor)
+                .build());
     }
 
     private MaintenanceRequestDTO toRequestDTO(MaintenanceRequest r) {

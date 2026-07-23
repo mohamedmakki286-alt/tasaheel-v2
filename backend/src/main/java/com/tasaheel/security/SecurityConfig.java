@@ -31,6 +31,7 @@ public class SecurityConfig {
             .cors(cors -> {})
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/payments/webhook", "/api/payments/tamara/webhook").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/services/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()

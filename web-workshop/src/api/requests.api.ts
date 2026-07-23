@@ -54,7 +54,7 @@ export async function getMyRequests(): Promise<ServiceRequest[]> {
 }
 
 export async function getRequestDetail(id: string): Promise<ServiceRequest> {
-  const response = await apiClient.get(`/requests/${id}`);
+  const response = await apiClient.get(`/workshops/requests/${id}`);
   const r = response.data;
   return {
     id: String(r.id),
@@ -78,7 +78,22 @@ export async function getRequestDetail(id: string): Promise<ServiceRequest> {
     technicianName: r.technicianName || undefined,
     technicianPhone: r.technicianPhone || undefined,
     technicianSpecialty: r.technicianSpecialty || undefined,
+    media: Array.isArray(r.media) ? r.media.map((item: any) => ({
+      id: String(item.id),
+      type: item.type || 'image',
+      url: item.url,
+      thumbnailUrl: item.thumbnailUrl || undefined,
+      createdAt: item.createdAt || undefined,
+    })) : [],
   };
+}
+
+export async function markRequestViewed(id: string): Promise<void> {
+  await apiClient.put(`/workshops/requests/${id}/view`);
+}
+
+export async function declineRequest(id: string, reason?: string): Promise<void> {
+  await apiClient.post(`/workshops/requests/${id}/decline`, reason ? { reason } : {});
 }
 
 export async function updateRequestStatus(id: string, payload: StatusUpdatePayload): Promise<ServiceRequest> {

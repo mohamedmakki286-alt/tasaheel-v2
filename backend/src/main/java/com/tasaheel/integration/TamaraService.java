@@ -93,12 +93,11 @@ public class TamaraService {
             return response.getBody();
         } catch (Exception e) {
             log.error("Failed to get Tamara order status: {}", e.getMessage());
-            return Map.of("status", "unknown");
+            throw new BadRequestException("Unable to verify Tamara order");
         }
     }
 
     public Map<String, Object> handleWebhook(Map<String, Object> payload) {
-        log.info("Tamara webhook received: {}", payload);
         return payload;
     }
 }
