@@ -2,14 +2,18 @@ package com.tasaheel.service;
 
 import com.tasaheel.dto.HomeServiceAssignmentDTO;
 import com.tasaheel.dto.MaintenanceRequestDTO;
+import com.tasaheel.dto.MediaDTO;
 import com.tasaheel.dto.TechnicianDTO;
 import com.tasaheel.entity.*;
+import com.tasaheel.event.EventPublisher;
+import com.tasaheel.event.EventType;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.exception.UnauthorizedException;
 import com.tasaheel.repository.ChatRoomRepository;
 import com.tasaheel.repository.HomeServiceAssignmentRepository;
 import com.tasaheel.repository.MaintenanceRequestRepository;
+import com.tasaheel.repository.MediaRepository;
 import com.tasaheel.repository.TechnicianRepository;
 import com.tasaheel.repository.WorkshopRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +33,9 @@ public class TechnicianService {
     private final WorkshopRepository workshopRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final MaintenanceRequestRepository maintenanceRequestRepository;
+    private final MediaRepository mediaRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EventPublisher eventPublisher;
 
     // ---- Technician CRUD ----
 
@@ -231,6 +237,10 @@ public class TechnicianService {
         request.setStatus(effectiveStatus);
         maintenanceRequestRepository.save(request);
 
+        Long customerId = request.getCustomer() != null ? request.getCustomer().getId() : null;
+
+        eventPublisher.publish(this, EventType.STATUS_UPDATED, requestId, "technician", technicianId);
+
         return toRequestDTO(request);
     }
 
@@ -347,7 +357,7 @@ public class TechnicianService {
     private MaintenanceRequestDTO toRequestDTO(MaintenanceRequest r) {
         List<com.tasaheel.entity.ServiceType> sts = r.getServiceTypes();
         com.tasaheel.entity.ServiceType primary = sts.isEmpty() ? null : sts.get(0);
-        return MaintenanceRequestDTO.builder()
+        MaintenanceRequestDTO dto = MaintenanceRequestDTO.builder()
                 .id(r.getId())
                 .customerId(r.getCustomer().getId())
                 .customerName(r.getCustomer().getName())
@@ -377,6 +387,16 @@ public class TechnicianService {
                 .technicianPhone(r.getTechnician() != null ? r.getTechnician().getPhone() : null)
                 .technicianSpecialty(r.getTechnician() != null ? r.getTechnician().getSpecialty() : null)
                 .build();
+        List<MediaDTO> media = mediaRepository.findByRequestIdOrderByCreatedAtAsc(r.getId()).stream()
+                .map(m -> MediaDTO.builder()
+                        .id(m.getId())
+                        .url(m.getUrl())
+                        .type(m.getType())
+                        .createdAt(m.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+        dto.setMedia(media);
+        return dto;
     }
 
     // ---- Mappers ----

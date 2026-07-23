@@ -4,7 +4,7 @@ import {
   Wrench, CheckCircle2, MapPin, Phone, User, LogOut, Clock,
   Home, ClipboardList, UserCircle,
   Play, Package, Star,
-  Settings, Car, Eye,
+  Settings, Car,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
@@ -107,21 +107,16 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
 // ===== Request Card =====
 function RequestCard({
   request,
-  onNextAction,
-  onDetail,
-  isLoading,
+  onNavigate,
 }: {
   request: TechnicianRequest;
-  onNextAction?: () => void;
-  onDetail?: () => void;
-  isLoading?: boolean;
+  onNavigate?: () => void;
 }) {
   const statusInfo = STATUS_LABELS[request.status] || { label: request.status, color: 'text-gray-700', bg: 'bg-gray-100' };
-  const nextAction = TECHNICIAN_NEXT_ACTION[request.status];
   const requestCall = useCallStore((s) => s.requestCall);
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50">
+    <div onClick={onNavigate} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50 cursor-pointer active:scale-[0.98] transition-all">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
@@ -141,7 +136,7 @@ function RequestCard({
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <User size={13} className="shrink-0" />
           <span className="truncate">{request.customerName}</span>
-          <button onClick={() => requestCall(request.customerId, request.customerName, request.id)} className="mr-auto text-[#E31B23] shrink-0 p-1 rounded-lg hover:bg-red-50 transition-colors">
+          <button onClick={(e) => { e.stopPropagation(); requestCall(request.customerId, request.customerName, request.id); }} className="mr-auto text-[#E31B23] shrink-0 p-1 rounded-lg hover:bg-red-50 transition-colors">
             <Phone size={14} />
           </button>
         </div>
@@ -161,27 +156,6 @@ function RequestCard({
           <Clock size={13} className="shrink-0" />
           <span>{timeAgo(request.createdAt)}</span>
         </div>
-      </div>
-
-      <div className="flex gap-2">
-        {nextAction && (
-          <button
-            onClick={onNextAction}
-            disabled={isLoading}
-            className="flex-1 py-2.5 rounded-xl bg-[#E31B23] text-white text-sm font-medium hover:bg-[#c9161e] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {request.status === 'in_progress' ? <CheckCircle2 size={16} /> : <Play size={16} />}
-            {nextAction.label}
-          </button>
-        )}
-        {onDetail && (
-          <button
-            onClick={onDetail}
-            className="py-2.5 px-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
-          >
-            <Eye size={15} />
-          </button>
-        )}
       </div>
     </div>
   );
@@ -213,18 +187,6 @@ function TechnicianDashboard() {
       const response = await apiClient.get('/technician/profile');
       return response.data;
     },
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ requestId, status }: { requestId: number; status: string }) => {
-      const response = await apiClient.put(`/technician/requests/${requestId}/status`, { status });
-      return response.data;
-    },
-    onSuccess: () => {
-      toast.success('تم تحديث الحالة بنجاح');
-      queryClient.invalidateQueries({ queryKey: ['technician-requests'] });
-    },
-    onError: () => toast.error('فشل تحديث الحالة'),
   });
 
   const availabilityMutation = useMutation({
@@ -428,23 +390,13 @@ function TechnicianDashboard() {
             <div className="flex gap-2">
               {TECHNICIAN_NEXT_ACTION[currentRequest.status] && (
                 <button
-                  onClick={() => {
-                    const action = TECHNICIAN_NEXT_ACTION[currentRequest.status];
-                    if (action) updateStatusMutation.mutate({ requestId: currentRequest.id, status: action.nextStatus });
-                  }}
-                  disabled={updateStatusMutation.isPending}
-                  className="flex-1 py-2.5 rounded-xl bg-white text-[#E31B23] text-sm font-bold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  onClick={() => navigate(`/technician/requests/${currentRequest.id}`)}
+                  className="flex-1 py-2.5 rounded-xl bg-white text-[#E31B23] text-sm font-bold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                 >
                   {currentRequest.status === 'in_progress' ? <CheckCircle2 size={16} /> : <Play size={16} />}
                   {TECHNICIAN_NEXT_ACTION[currentRequest.status]?.label}
                 </button>
               )}
-              <button
-                onClick={() => navigate(`/technician/requests/${currentRequest.id}`)}
-                className="py-2.5 px-4 rounded-xl bg-white/20 text-white text-sm font-medium hover:bg-white/30 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Eye size={15} />
-              </button>
             </div>
           </div>
         )}
@@ -510,12 +462,7 @@ function TechnicianDashboard() {
               <RequestCard
                 key={request.id}
                 request={request}
-                onNextAction={() => {
-                  const action = TECHNICIAN_NEXT_ACTION[request.status];
-                  if (action) updateStatusMutation.mutate({ requestId: request.id, status: action.nextStatus });
-                }}
-                onDetail={() => navigate(`/technician/requests/${request.id}`)}
-                isLoading={updateStatusMutation.isPending}
+                onNavigate={() => navigate(`/technician/requests/${request.id}`)}
               />
             ))}
           </div>

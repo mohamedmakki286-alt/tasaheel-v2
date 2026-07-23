@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, MapPin, Phone, Car, Wrench, MessageCircle, Send, Clock, User, FileText, CheckCheck, Plus, Smile, Image, X } from 'lucide-react';
+import {
+  ArrowRight, MapPin, Phone, Car, Wrench, MessageCircle, Send, Clock, User,
+  FileText, CheckCheck, Plus, Smile, Image, X, Play, CheckCircle2, FileSearch,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import InspectionReportForm from '../components/InspectionReportForm';
 import { getRoom, getMessages, sendMessage, markAsRead, uploadChatMedia } from '../api/chat.api';
 import { useCallStore } from '@shared/call/callStore';
+import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'قيد الانتظار', color: 'text-gray-700', bg: 'bg-gray-100' },
@@ -37,9 +41,12 @@ interface TechRequest {
   customerPhone: string;
   carMake: string;
   carModel: string;
+  carYear: number;
   carPlateNumber: string;
   carColor: string;
+  carMileage: number;
   serviceTypeName: string;
+  serviceTypeIds: number[];
   description: string;
   locationLat: number;
   locationLng: number;
@@ -49,6 +56,7 @@ interface TechRequest {
   technicianId: number | null;
   technicianName: string | null;
   createdAt: string;
+  media?: { id: number; url: string; type: string; createdAt: string }[];
 }
 
 function timeAgo(dateString: string): string {
@@ -95,7 +103,7 @@ function MediaMessage({ url, isMine }: { url: string; isMine: boolean }) {
   );
 }
 
-// ===== Chat Section (Customer-style) =====
+// ===== Chat Section =====
 function TechnicianChatSection({ requestId, customerName }: { requestId: number; customerName: string }) {
   const [content, setContent] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -178,7 +186,7 @@ function TechnicianChatSection({ requestId, customerName }: { requestId: number;
 
   if (!room) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100/50 flex items-center justify-center">
         <div className="w-5 h-5 border-2 border-[#E31B23]/30 border-t-[#E31B23] rounded-full animate-spin" />
       </div>
     );
@@ -318,6 +326,12 @@ export default function TechnicianRequestDetailPage() {
     onError: () => toast.error('فشل تحديث الحالة'),
   });
 
+  const handleWsEvent = () => {
+    queryClient.invalidateQueries({ queryKey: ['technician-requests'] });
+  };
+
+  useRequestWebSocket(id, handleWsEvent);
+
   if (!isAuthenticated || role !== 'technician') {
     return (
       <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
@@ -339,7 +353,7 @@ export default function TechnicianRequestDetailPage() {
           </div>
         </header>
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-          {[1,2,3].map(i => (
+          {[1, 2, 3].map(i => (
             <div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-pulse">
               <div className="h-4 bg-gray-200 rounded w-1/3 mb-3" />
               <div className="h-3 bg-gray-200 rounded w-2/3 mb-2" />
@@ -394,8 +408,70 @@ export default function TechnicianRequestDetailPage() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        {/* Service */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50">
+        {/* Card 1: Customer & Vehicle Info */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100/50">
+          <div className="grid grid-cols-1 gap-4">
+            {/* Customer */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#F7F8FA]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
+                  <User size={18} className="text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">العميل</p>
+                  <p className="font-semibold text-[#111827] text-sm">{request.customerName}</p>
+                </div>
+              </div>
+              {request.customerPhone && (
+                <button onClick={() => requestCall(request.customerId, request.customerName, request.id)} className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
+                  <Phone size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Vehicle */}
+            <div className="p-3 rounded-xl bg-[#F7F8FA]">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                  <Car size={18} className="text-indigo-600" />
+                </div>
+                <p className="font-semibold text-[#111827] text-sm">السيارة</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm pr-[52px]">
+                <div><span className="text-gray-400">الماركة: </span><span className="text-[#111827]">{request.carMake}</span></div>
+                <div><span className="text-gray-400">الموديل: </span><span className="text-[#111827]">{request.carModel}</span></div>
+                {request.carYear && <div><span className="text-gray-400">السنة: </span><span className="text-[#111827]">{request.carYear}</span></div>}
+                {request.carPlateNumber && <div><span className="text-gray-400">اللوحة: </span><span className="text-[#111827]">{request.carPlateNumber}</span></div>}
+                {request.carColor && <div><span className="text-gray-400">اللون: </span><span className="text-[#111827]">{request.carColor}</span></div>}
+                {request.carMileage > 0 && <div><span className="text-gray-400">الممشى: </span><span className="text-[#111827]">{request.carMileage.toLocaleString()} كم</span></div>}
+              </div>
+            </div>
+
+            {/* Location */}
+            {request.locationAddress && (
+              <div className="p-3 rounded-xl bg-[#F7F8FA]">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                    <MapPin size={18} className="text-amber-600" />
+                  </div>
+                  <p className="font-semibold text-[#111827] text-sm">الموقع</p>
+                </div>
+                <div className="pr-[52px]">
+                  <p className="text-sm text-gray-600">{request.locationAddress}</p>
+                  {request.city && <p className="text-xs text-gray-400 mt-0.5">{request.city}</p>}
+                  {request.locationLat && request.locationLng && (
+                    <a href={`https://www.google.com/maps?q=${request.locationLat},${request.locationLng}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#E31B23] hover:underline">
+                      <MapPin size={12} /> فتح في خرائط قوقل
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Card 2: Service Description */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100/50">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
               <Wrench size={18} className="text-blue-600" />
@@ -405,85 +481,54 @@ export default function TechnicianRequestDetailPage() {
               <p className="text-xs text-gray-400 flex items-center gap-1"><Clock size={12} /> {timeAgo(request.createdAt)}</p>
             </div>
           </div>
-          {request.description && <p className="text-sm text-gray-600 leading-relaxed">{request.description}</p>}
+          {request.description && <p className="text-sm text-gray-600 leading-relaxed pr-[52px]">{request.description}</p>}
         </div>
 
-        {/* Vehicle */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-              <Car size={18} className="text-indigo-600" />
+        {/* Customer Media */}
+        {request.media && request.media.length > 0 && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100/50">
+            <h3 className="font-semibold text-sm text-[#111827] mb-3">صور ومرفقات العميل</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {request.media.map((m) => (
+                <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl overflow-hidden border border-gray-100">
+                  {m.type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(m.url) ? (
+                    <img src={m.url} alt="مرفق" className="w-full h-32 object-cover" />
+                  ) : (
+                    <div className="flex items-center gap-2 p-3 bg-gray-50 h-32">
+                      <FileText size={24} className="text-gray-400" />
+                      <span className="text-xs text-gray-500 truncate">{m.url.split('/').pop()}</span>
+                    </div>
+                  )}
+                </a>
+              ))}
             </div>
-            <p className="font-semibold text-[#111827] text-sm">السيارة</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div><span className="text-gray-400">الماركة:</span> <span className="text-[#111827]">{request.carMake}</span></div>
-            <div><span className="text-gray-400">الموديل:</span> <span className="text-[#111827]">{request.carModel}</span></div>
-            {request.carPlateNumber && <div><span className="text-gray-400">اللوحة:</span> <span className="text-[#111827]">{request.carPlateNumber}</span></div>}
-            {request.carColor && <div><span className="text-gray-400">اللون:</span> <span className="text-[#111827]">{request.carColor}</span></div>}
-          </div>
-        </div>
-
-        {/* Customer */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-                <User size={18} className="text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">العميل</p>
-                <p className="font-semibold text-[#111827] text-sm">{request.customerName}</p>
-              </div>
-            </div>
-            {request.customerPhone && (
-              <button onClick={() => requestCall(request.customerId, request.customerName, request.id)} className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
-                <Phone size={18} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Location */}
-        {request.locationAddress && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                <MapPin size={18} className="text-amber-600" />
-              </div>
-              <p className="font-semibold text-[#111827] text-sm">الموقع</p>
-            </div>
-            <p className="text-sm text-gray-600">{request.locationAddress}</p>
-            {request.city && <p className="text-xs text-gray-400 mt-1">{request.city}</p>}
-            {request.locationLat && request.locationLng && (
-              <a href={`https://www.google.com/maps?q=${request.locationLat},${request.locationLng}`} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#E31B23] hover:underline">
-                <MapPin size={12} /> فتح في خرائط قوقل
-              </a>
-            )}
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          {nextAction && (
-            <button
-              onClick={() => updateStatusMutation.mutate({ requestId: request.id, status: nextAction.nextStatus })}
-              disabled={updateStatusMutation.isPending}
-              className="flex-1 py-3 rounded-xl bg-[#E31B23] text-white text-sm font-bold hover:bg-[#c9161e] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {request.status === 'in_progress' ? <CheckCheck size={18} /> : <Wrench size={18} />}
-              {updateStatusMutation.isPending ? 'جاري التحديث...' : nextAction.label}
-            </button>
-          )}
-          {canWriteReport && (
-            <button
-              onClick={() => setShowReport(true)}
-              className="flex-1 py-3 rounded-xl border-2 border-[#E31B23] text-[#E31B23] text-sm font-bold hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
-            >
-              <FileText size={18} />
-              تقرير الفحص
-            </button>
-          )}
+        {/* Status Update + Inspection Report */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100/50">
+          <h3 className="font-semibold text-sm text-[#111827] mb-3">تحديث الحالة</h3>
+          <div className="space-y-2">
+            {nextAction && (
+              <button
+                onClick={() => updateStatusMutation.mutate({ requestId: request.id, status: nextAction.nextStatus })}
+                disabled={updateStatusMutation.isPending}
+                className="w-full py-3 rounded-xl bg-[#E31B23] text-white text-sm font-bold hover:bg-[#c9161e] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {request.status === 'in_progress' ? <CheckCheck size={18} /> : <Play size={18} />}
+                {updateStatusMutation.isPending ? 'جاري التحديث...' : nextAction.label}
+              </button>
+            )}
+            {canWriteReport && (
+              <button
+                onClick={() => setShowReport(true)}
+                className="w-full py-3 rounded-xl border-2 border-[#E31B23] text-[#E31B23] text-sm font-bold hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+              >
+                <FileSearch size={18} />
+                تقرير الفحص
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Chat */}
