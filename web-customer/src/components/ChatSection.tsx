@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, MessageCircle, CheckCheck, Smile, Plus, Mic, Image, FileText, X, MicOff, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
+import { Send, MessageCircle, CheckCheck, Smile, Plus, Mic, Image, FileText, X, MicOff, Loader2, ArrowUp } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { getOrCreateRoom, getMessages, sendMessage, markAsRead, sendAttachmentMessage } from '../api/chat.api';
+import { getOrCreateRoom, getLatestMessages, getMessagesPage, sendMessage, markAsRead, sendAttachmentMessage } from '../api/chat.api';
+import type { ChatMessage } from '../types';
 import { useAuthStore } from '../stores/authStore';
 
 interface ChatSectionProps {
@@ -10,6 +11,9 @@ interface ChatSectionProps {
   workshopId?: number;
   workshopName?: string;
 }
+
+const PAGE_SIZE = 50;
+const SCROLL_THRESHOLD = 60;
 
 const emojiGroups = [
   ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤔', '😢', '😭', '😡', '🤝', '👏', '🙏', '💪', '❤️', '🔥', '🎉', '✅'],
@@ -72,9 +76,19 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const customer = useAuthStore((s) => s.customer);
   const userId = customer?.id;
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const isNearBottomRef = useRef(true);
+  const scrollHeightBeforeLoadRef = useRef(0);
 
   const { data: room } = useQuery({
     queryKey: ['chat-room', requestId],
@@ -82,12 +96,107 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
     enabled: !!userId,
   });
 
-  const { data: messages = [] } = useQuery({
-    queryKey: ['chat-messages', room?.id],
-    queryFn: () => getMessages(room!.id),
-    enabled: !!room?.id,
-    refetchInterval: 3000,
-  });
+  useEffect(() => {
+    if (!room?.id) return;
+    let cancelled = false;
+    setMessages([]);
+    setIsInitialLoad(true);
+    setCurrentPage(0);
+    setTotalPages(0);
+    setHasMore(false);
+
+    getLatestMessages(room.id, PAGE_SIZE)
+      .then((result) => {
+        if (cancelled) return;
+        setMessages(result.messages);
+        setTotalPages(result.totalPages);
+        setCurrentPage(result.currentPage);
+        setHasMore(result.currentPage > 0);
+        setIsInitialLoad(false);
+        requestAnimationFrame(() => {
+          messagesEndRef.current?.scrollIntoView();
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setIsInitialLoad(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [room?.id]);
+
+  useEffect(() => {
+    if (!room?.id || isInitialLoad) return;
+    const interval = setInterval(() => {
+      getLatestMessages(room.id, PAGE_SIZE).then((result) => {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMsgs = result.messages.filter((m) => !existingIds.has(m.id));
+          if (newMsgs.length === 0) return prev;
+          return [...prev, ...newMsgs];
+        });
+        setCurrentPage(result.currentPage);
+        setTotalPages(result.totalPages);
+        setHasMore(result.currentPage > 0);
+        if (isNearBottomRef.current) {
+          requestAnimationFrame(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          });
+        }
+      }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [room?.id, isInitialLoad]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (isLoadingMore || !hasMore || !room?.id) return;
+    const olderPage = currentPage - 1;
+    if (olderPage < 0) return;
+
+    setIsLoadingMore(true);
+    const container = containerRef.current;
+    scrollHeightBeforeLoadRef.current = container?.scrollHeight || 0;
+
+    try {
+      const result = await getMessagesPage(room.id, olderPage, PAGE_SIZE);
+      setMessages((prev) => [...result.messages, ...prev]);
+      setCurrentPage(olderPage);
+      setHasMore(olderPage > 0);
+      requestAnimationFrame(() => {
+        if (container) {
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop = newScrollHeight - scrollHeightBeforeLoadRef.current;
+        }
+      });
+    } catch {
+      // silently fail
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore, room?.id, currentPage]);
+
+  const handleScroll = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const nearTop = container.scrollTop < SCROLL_THRESHOLD;
+    if (nearTop && hasMore && !isLoadingMore) {
+      loadOlderMessages();
+    }
+    const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    isNearBottomRef.current = nearBottom;
+  }, [hasMore, isLoadingMore, loadOlderMessages]);
+
+  const refetchMessages = useCallback(() => {
+    if (!room?.id) return;
+    getLatestMessages(room.id, PAGE_SIZE).then((result) => {
+      setMessages(result.messages);
+      setCurrentPage(result.currentPage);
+      setTotalPages(result.totalPages);
+      setHasMore(result.currentPage > 0);
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }).catch(() => {});
+  }, [room?.id]);
 
   const sendMutation = useMutation({
     mutationFn: async () => {
@@ -113,7 +222,7 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
       setPreviewUrl(null);
       setUploadState('idle');
       setUploadProgress(0);
-      queryClient.invalidateQueries({ queryKey: ['chat-messages', room?.id] });
+      refetchMessages();
     },
     onError: (err: any) => {
       if (uploadState === 'failed') return;
@@ -189,14 +298,10 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
   });
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
     if (room?.id && userId) {
       readMutation.mutate();
     }
-  }, [messages, room?.id]);
+  }, [messages.length, room?.id]);
 
   useEffect(() => {
     if (previewFile) {
@@ -245,14 +350,50 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
 
   return (
     <div>
-      <div className="h-[400px] overflow-y-auto mb-4 space-y-1 p-4 bg-surface-50 dark:bg-surface-800/50 rounded-2xl scrollbar-hide">
-        {messages.length === 0 && (
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="h-[400px] overflow-y-auto mb-4 space-y-1 p-4 bg-surface-50 dark:bg-surface-800/50 rounded-2xl scrollbar-hide"
+      >
+        {hasMore && (
+          <div className="flex justify-center py-2">
+            {isLoadingMore ? (
+              <div className="flex items-center gap-2 text-xs text-surface-400">
+                <Loader2 size={14} className="animate-spin" />
+                <span>جاري تحميل الرسائل القديمة...</span>
+              </div>
+            ) : (
+              <button
+                onClick={loadOlderMessages}
+                className="flex items-center gap-1.5 text-xs text-accent-500 hover:text-accent-600 transition-colors"
+              >
+                <ArrowUp size={14} />
+                <span>تحميل الرسائل القديمة</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {!hasMore && messages.length > 0 && (
+          <div className="flex items-center justify-center py-2">
+            <span className="text-[10px] text-surface-300 dark:text-surface-600">بداية المحادثة</span>
+          </div>
+        )}
+
+        {messages.length === 0 && !isInitialLoad && (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <MessageCircle size={40} className="text-surface-300 dark:text-surface-600 mb-3" />
             <p className="text-sm text-surface-400 font-medium">ابدأ المحادثة</p>
             <p className="text-xs text-surface-300 dark:text-surface-600 mt-1">أرسل رسالة إلى {workshopName || 'الورشة'}</p>
           </div>
         )}
+
+        {isInitialLoad && messages.length === 0 && (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-5 h-5 border-2 border-accent-500/30 border-t-accent-500 rounded-full animate-spin" />
+          </div>
+        )}
+
         {messages.map((msg, idx) => {
           const isCustomer = msg.senderRole === 'customer';
           const showDate = idx === 0 || new Date(msg.createdAt).toDateString() !== new Date(messages[idx - 1]?.createdAt).toDateString();
@@ -308,7 +449,7 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
           )}
           {uploadState === 'failed' && (
             <button onClick={retryUpload} className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center">
-              <RotateCcw size={12} />
+              <Loader2 size={12} />
             </button>
           )}
           {uploadState === 'idle' && (

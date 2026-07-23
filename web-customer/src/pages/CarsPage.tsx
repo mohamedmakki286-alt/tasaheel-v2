@@ -9,6 +9,7 @@ import { EmptyState } from '../components/EmptyState';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ArrowRight, CarFront, Check, ChevronDown, Plus, X } from 'lucide-react';
 import NumberInput from '../components/NumberInput';
+import BrandPicker from '../components/BrandPicker';
 
 const currentYear = new Date().getFullYear();
 const emptyForm = { make: '', model: '', year: currentYear, color: '', plateNumber: '', mileage: 0 };
@@ -239,7 +240,7 @@ export function CarsPage() {
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">ماركة السيارة</label>
-              <input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required className="input-field h-14 font-semibold" placeholder="مثال: تويوتا" />
+              <BrandPicker value={form.make} onChange={(make) => setForm({ ...form, make })} />
             </div>
             <div>
               <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">موديل السيارة</label>

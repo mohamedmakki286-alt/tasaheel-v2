@@ -119,7 +119,7 @@ export default function AIAssistant() {
                         <span className="text-[10px] font-bold text-accent-400">ساهل</span>
                       </div>
                     )}
-                    {msg.content}
+                    <span className="whitespace-pre-wrap">{msg.content}</span>
                   </div>
                 </div>
               ))}

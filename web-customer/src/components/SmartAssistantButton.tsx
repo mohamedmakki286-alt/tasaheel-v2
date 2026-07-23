@@ -120,7 +120,7 @@ export default function SmartAssistantButton() {
                       <span className="text-[10px] font-bold text-brand">ساهل</span>
                     </div>
                   )}
-                  {msg.content}
+                  <span className="whitespace-pre-wrap">{msg.content}</span>
                 </div>
               </div>
             ))}

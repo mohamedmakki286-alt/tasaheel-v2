@@ -3,7 +3,7 @@ import { Client } from '@stomp/stompjs';
 import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { playNotificationSound } from '../services/notificationSound';
-import { registerPushNotifications } from '../services/pushNotifications';
+import { showLocalNotification } from '../services/pushNotifications';
 import i18n from '../i18n/i18n';
 
 import { getWsUrl } from '../utils/ws';
@@ -18,8 +18,6 @@ export function useCustomerWebSocket() {
 
   useEffect(() => {
     if (!customer) return;
-
-    registerPushNotifications(customer.id);
 
     const clientId = customer.id;
     const city = customer.city;
@@ -86,6 +84,13 @@ function handleEvent(data: any, add: (n: any) => void) {
   });
 
   playNotificationSound(eventType);
+
+  showLocalNotification({
+    title,
+    body,
+    requestId,
+    channelId: 'workshop-general',
+  }).catch(() => {});
 }
 
 function buildBody(eventType: string, payload: any): string {

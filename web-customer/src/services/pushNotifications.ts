@@ -1,62 +1,72 @@
-import { PushNotifications, Token } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
-import client from '../api/client';
 
-export async function registerPushNotifications(customerId: string) {
-  if (!Capacitor.isNativePlatform()) return;
+const PERMISSION_KEY = 'tasaheel_notif_permission_asked';
+
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false;
 
   try {
-    let permStatus = await PushNotifications.checkPermissions();
+    const status = await LocalNotifications.checkPermissions();
 
-    if (permStatus.receive !== 'granted') {
-      permStatus = await PushNotifications.requestPermissions();
-    }
+    if (status.display === 'granted') return true;
 
-    if (permStatus.receive !== 'granted') {
-      console.warn('Push notification permission not granted');
-      return;
-    }
+    if (sessionStorage.getItem(PERMISSION_KEY)) return false;
 
-    await PushNotifications.register();
+    sessionStorage.setItem(PERMISSION_KEY, '1');
 
-    PushNotifications.addListener('registration', (token: Token) => {
-      console.log('Push registration success, token:', token.value);
-      sendTokenToBackend(token.value, customerId);
-    });
-
-    PushNotifications.addListener('registrationError', (error: any) => {
-      console.error('Push registration error:', error);
-    });
-
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('Push received:', notification);
-    });
-
-    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('Push action performed:', action);
-      const data = action.notification.data;
-      if (data?.requestId) {
-        window.location.hash = `/requests/${data.requestId}`;
-      }
-    });
+    const result = await LocalNotifications.requestPermissions();
+    return result.display === 'granted';
   } catch (err) {
-    console.error('Failed to register push notifications:', err);
+    console.warn('Notification permission request failed:', err);
+    return false;
   }
 }
 
-async function sendTokenToBackend(fcmToken: string, customerId: string) {
+export async function showLocalNotification(opts: {
+  title: string;
+  body: string;
+  id?: number;
+  channelId?: string;
+  requestId?: string;
+  url?: string;
+}): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+
   try {
-    await client.put('/customers/profile', {
-      fcmToken: fcmToken,
+    const status = await LocalNotifications.checkPermissions();
+    if (status.display !== 'granted') return;
+
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          title: opts.title,
+          body: opts.body,
+          id: opts.id ?? Math.floor(Math.random() * 2147483647),
+          channelId: opts.channelId ?? 'workshop-general',
+          extra: {
+            requestId: opts.requestId ?? null,
+            url: opts.url ?? null,
+          },
+        },
+      ],
     });
   } catch (err) {
-    console.error('Failed to send FCM token to backend:', err);
+    console.warn('Failed to show local notification:', err);
   }
 }
 
-export async function unregisterPushNotifications() {
+export function setupNotificationListeners(
+  onActionPerformed?: (data: { requestId?: string; url?: string }) => void
+): void {
   if (!Capacitor.isNativePlatform()) return;
+
   try {
-    await PushNotifications.unregister();
-  } catch {}
+    LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+      const extra = action.notification.extra || {};
+      onActionPerformed?.({ requestId: extra.requestId, url: extra.url });
+    }).catch(() => {});
+  } catch {
+    // Plugin not available
+  }
 }

@@ -1,6 +1,30 @@
 import client from './client';
 import type { ChatRoom, ChatMessage } from '../types';
 
+function mapMessage(m: any, roomId?: string): ChatMessage {
+  return {
+    id: String(m.id),
+    roomId: String(m.roomId || roomId || ''),
+    senderId: String(m.senderId || ''),
+    senderName: m.senderName || '',
+    senderRole: m.senderRole || 'customer',
+    content: m.content || '',
+    type: (m.type || 'text').toLowerCase(),
+    mediaUrl: m.mediaUrl,
+    isRead: m.isRead,
+    createdAt: m.createdAt || '',
+    clientMessageId: m.clientMessageId,
+    attachment: m.attachment,
+  };
+}
+
+export interface ChatPaginatedResult {
+  messages: ChatMessage[];
+  totalPages: number;
+  currentPage: number;
+  totalElements: number;
+}
+
 export async function getOrCreateRoom(requestId: number, customerId: number, workshopId?: number): Promise<ChatRoom> {
   const body: Record<string, number> = { requestId, customerId };
   if (workshopId) body.workshopId = workshopId;
@@ -39,24 +63,40 @@ export async function getRoomByRequestId(requestId: number): Promise<ChatRoom | 
   }
 }
 
+export async function getLatestMessages(roomId: string, size: number = 50): Promise<ChatPaginatedResult> {
+  const { data: meta } = await client.get(`/chat/room/${roomId}/messages`, { params: { page: 0, size: 1 } });
+  const totalPages = meta.totalPages || 1;
+  const totalElements = meta.totalElements || 0;
+
+  if (totalElements === 0) {
+    return { messages: [], totalPages: 0, currentPage: 0, totalElements: 0 };
+  }
+
+  const lastPage = totalPages - 1;
+  const { data } = await client.get(`/chat/room/${roomId}/messages`, { params: { page: lastPage, size } });
+  return {
+    messages: (data.content || []).map((m: any) => mapMessage(m, roomId)),
+    totalPages: data.totalPages,
+    currentPage: lastPage,
+    totalElements: data.totalElements,
+  };
+}
+
+export async function getMessagesPage(roomId: string, page: number, size: number = 50): Promise<ChatPaginatedResult> {
+  const { data } = await client.get(`/chat/room/${roomId}/messages`, { params: { page, size } });
+  return {
+    messages: (data.content || []).map((m: any) => mapMessage(m, roomId)),
+    totalPages: data.totalPages,
+    currentPage: page,
+    totalElements: data.totalElements,
+  };
+}
+
 export async function getMessages(roomId: string): Promise<ChatMessage[]> {
   const { data } = await client.get(`/chat/room/${roomId}/messages`);
   const list = data;
   const items = Array.isArray(list) ? list : (list?.content || []);
-  return items.map((m: any) => ({
-    id: String(m.id),
-    roomId: String(m.roomId || roomId),
-    senderId: String(m.senderId || ''),
-    senderName: m.senderName || '',
-    senderRole: m.senderRole || 'customer',
-    content: m.content || '',
-    type: (m.type || 'text').toLowerCase(),
-    mediaUrl: m.mediaUrl,
-    isRead: m.isRead,
-    createdAt: m.createdAt || '',
-    clientMessageId: m.clientMessageId,
-    attachment: m.attachment,
-  }));
+  return items.map((m: any) => mapMessage(m, roomId));
 }
 
 export async function sendMessage(roomId: string, senderId: string, senderRole: string, content: string, type: string = 'text', mediaUrl?: string): Promise<ChatMessage> {

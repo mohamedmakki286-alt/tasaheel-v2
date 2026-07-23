@@ -10,6 +10,7 @@ import LoginBottomSheet from '../components/LoginBottomSheet';
 import BottomNav from '../components/BottomNav';
 import SmartAssistantButton from '../components/SmartAssistantButton';
 import UnifiedCallHost from '@shared/call/UnifiedCallHost';
+import { requestNotificationPermission } from '../services/pushNotifications';
 
 const PAGE_TITLES: Record<string, string> = {
   '/services': 'الخدمات',
@@ -27,6 +28,10 @@ export default function PublicLayout() {
   const notifRef = useRef<HTMLDivElement>(null);
 
   useCustomerWebSocket();
+
+  useEffect(() => {
+    requestNotificationPermission().catch(() => {});
+  }, []);
 
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);

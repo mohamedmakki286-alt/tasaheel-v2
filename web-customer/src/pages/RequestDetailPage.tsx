@@ -194,7 +194,7 @@ export function RequestDetailPage() {
 
       {/* Timeline */}
       <div className="card">
-        <div className="flex justify-between gap-1 overflow-x-auto py-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-1 py-2">
           {statusSteps.map((s, i) => {
             const labels: Record<string, string> = {
               pending: t('constants.status.pending'), quoted: t('constants.status.quoted'), accepted: t('constants.status.accepted'),
@@ -202,9 +202,9 @@ export function RequestDetailPage() {
             };
             const isActive = i <= currentStep;
             return (
-              <div key={s} className="flex flex-col items-center min-w-0 flex-1">
-                <div className={`h-3 w-3 rounded-full ${isActive ? 'bg-accent-500' : 'bg-surface-600'} ${currentStep === i ? 'ring-2 ring-accent-500/50' : ''}`} />
-                <span className={`text-[10px] mt-1 whitespace-nowrap ${isActive ? 'text-accent-400' : 'text-surface-500'}`}>{labels[s]}</span>
+              <div key={s} className="flex flex-row sm:flex-col items-center gap-2 sm:gap-0 min-w-0 flex-1 sm:flex-1 py-1.5 sm:py-0">
+                <div className={`h-3 w-3 rounded-full shrink-0 ${isActive ? 'bg-accent-500' : 'bg-surface-600'} ${currentStep === i ? 'ring-2 ring-accent-500/50' : ''}`} />
+                <span className={`text-xs sm:text-[10px] text-wrap break-words ${isActive ? 'text-accent-400' : 'text-surface-500'}`}>{labels[s]}</span>
               </div>
             );
           })}

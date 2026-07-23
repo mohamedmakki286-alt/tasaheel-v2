@@ -3,6 +3,7 @@ import { Client } from '@stomp/stompjs';
 import { useCallStore } from './callStore';
 import { useWebRTCCall } from './useWebRTCCall';
 import { getWsUrl } from '../utils/ws';
+import { fetchCallParticipants } from '../utils/apiClient';
 import type { UserRole } from './types';
 
 const WS_URL = getWsUrl();
@@ -12,6 +13,18 @@ interface UseCallSignalingOptions {
   userName: string;
   userRole: UserRole;
   token: string;
+}
+
+interface CallParticipants {
+  requestId: number;
+  customerId: number;
+  customerName: string;
+  assignedTechnicianId: number | null;
+  technicianName: string | null;
+  workshopId: number | null;
+  workshopName: string | null;
+  canCall: boolean;
+  denialReason: string | null;
 }
 
 export function useCallSignaling({ userId, userName, userRole, token }: UseCallSignalingOptions) {
@@ -43,19 +56,67 @@ export function useCallSignaling({ userId, userName, userRole, token }: UseCallS
 
   const rtc = useWebRTCCall(onIceCandidate, token);
 
+  const resolveParticipants = useCallback(async (requestId: number): Promise<CallParticipants | null> => {
+    return fetchCallParticipants(requestId, token);
+  }, [token]);
+
   const startCall = useCallback(
     async (calleeId: number | string, calleeName: string, requestId: number) => {
       try {
+        const participants = await resolveParticipants(requestId);
+
+        if (!participants) {
+          console.error('Could not resolve call participants');
+          return;
+        }
+
+        if (!participants.canCall) {
+          console.warn('Cannot call:', participants.denialReason);
+          return;
+        }
+
+        let resolvedCalleeId: number | string;
+        let resolvedCalleeName: string;
+
+        const uid = Number(userId);
+
+        if (userRole === 'customer' && participants.assignedTechnicianId) {
+          resolvedCalleeId = participants.assignedTechnicianId;
+          resolvedCalleeName = participants.technicianName || calleeName;
+        } else if (userRole === 'technician' && participants.customerId) {
+          resolvedCalleeId = participants.customerId;
+          resolvedCalleeName = participants.customerName || calleeName;
+        } else if (userRole === 'workshop') {
+          if (participants.assignedTechnicianId) {
+            resolvedCalleeId = participants.assignedTechnicianId;
+            resolvedCalleeName = participants.technicianName || calleeName;
+          } else if (participants.customerId) {
+            resolvedCalleeId = participants.customerId;
+            resolvedCalleeName = participants.customerName || calleeName;
+          } else {
+            console.error('No valid callee for workshop');
+            return;
+          }
+        } else {
+          resolvedCalleeId = calleeId;
+          resolvedCalleeName = calleeName;
+        }
+
+        if (!resolvedCalleeId) {
+          console.error('Could not determine callee');
+          return;
+        }
+
         await rtc.addLocalStream();
         const offer = await rtc.createOffer();
 
-        store.setPeerId(calleeId);
-        store.setPeerName(calleeName);
+        store.setPeerId(resolvedCalleeId);
+        store.setPeerName(resolvedCalleeName);
         store.setStatus('ringing');
         store.setIsOutgoing(true);
 
         publish('/app/call/offer', {
-          calleeId,
+          calleeId: resolvedCalleeId,
           requestId,
           callerName: userName,
           sdp: JSON.stringify(offer),
@@ -65,7 +126,7 @@ export function useCallSignaling({ userId, userName, userRole, token }: UseCallS
         store.reset();
       }
     },
-    [rtc, userName, publish, store],
+    [rtc, userName, publish, store, userId, userRole, resolveParticipants],
   );
 
   const answerCall = useCallback(async () => {
@@ -124,6 +185,12 @@ export function useCallSignaling({ userId, userName, userRole, token }: UseCallS
         Authorization: `Bearer ${token}`,
       },
       reconnectDelay: 5000,
+      onStompError: (frame) => {
+        console.error('Call STOMP error:', frame.headers['message']);
+      },
+      onWebSocketError: (event) => {
+        console.warn('Call WebSocket error:', event);
+      },
       onConnect: () => {
         client.subscribe('/user/queue/calls', (message) => {
           const data = JSON.parse(message.body);

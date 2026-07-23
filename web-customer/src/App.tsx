@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -8,29 +8,30 @@ import { initTheme } from './stores/themeStore';
 import { useBackButton } from './hooks/useBackButton';
 import { CustomerLayout } from './layouts/CustomerLayout';
 import PublicLayout from './layouts/PublicLayout';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { HomePage } from './pages/HomePage';
-import { CarsPage } from './pages/CarsPage';
-import { MyRequestsPage } from './pages/MyRequestsPage';
-import { RequestDetailPage } from './pages/RequestDetailPage';
-import ChatPage from './pages/ChatPage';
-import ChatsPage from './pages/ChatsPage';
-import { NewRequestPage } from './pages/NewRequestPage';
-import { InspectionReportPage } from './pages/InspectionReportPage';
-import { PaymentPage } from './pages/PaymentPage';
-import { RatingPage } from './pages/RatingPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { ReportsPage } from './pages/ReportsPage';
-import { WorkshopsPage } from './pages/WorkshopsPage';
-import { WorkshopDetailPage } from './pages/WorkshopDetailPage';
-import { ServiceDetailPage } from './pages/ServiceDetailPage';
-import { BrowseServicesPage } from './pages/BrowseServicesPage';
-import InvoicesHistoryPage from './pages/InvoicesHistoryPage';
-import CarHistoryPage from './pages/CarHistoryPage';
-import OffersPage from './pages/OffersPage';
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
+const CarsPage = lazy(() => import('./pages/CarsPage').then(m => ({ default: m.CarsPage })));
+const MyRequestsPage = lazy(() => import('./pages/MyRequestsPage').then(m => ({ default: m.MyRequestsPage })));
+const RequestDetailPage = lazy(() => import('./pages/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const ChatsPage = lazy(() => import('./pages/ChatsPage'));
+const NewRequestPage = lazy(() => import('./pages/NewRequestPage').then(m => ({ default: m.NewRequestPage })));
+const InspectionReportPage = lazy(() => import('./pages/InspectionReportPage').then(m => ({ default: m.InspectionReportPage })));
+const PaymentPage = lazy(() => import('./pages/PaymentPage').then(m => ({ default: m.PaymentPage })));
+const RatingPage = lazy(() => import('./pages/RatingPage').then(m => ({ default: m.RatingPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const ReportsPage = lazy(() => import('./pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
+const WorkshopsPage = lazy(() => import('./pages/WorkshopsPage').then(m => ({ default: m.WorkshopsPage })));
+const WorkshopDetailPage = lazy(() => import('./pages/WorkshopDetailPage').then(m => ({ default: m.WorkshopDetailPage })));
+const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage').then(m => ({ default: m.ServiceDetailPage })));
+const BrowseServicesPage = lazy(() => import('./pages/BrowseServicesPage').then(m => ({ default: m.BrowseServicesPage })));
+const InvoicesHistoryPage = lazy(() => import('./pages/InvoicesHistoryPage'));
+const CarHistoryPage = lazy(() => import('./pages/CarHistoryPage'));
+const OffersPage = lazy(() => import('./pages/OffersPage'));
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import LoadingScreen from './components/guards/LoadingScreen';
 const queryClient = new QueryClient();
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -59,12 +60,14 @@ export default function App() {
   initTheme();
 
   return (
+    <ErrorBoundary>
     <GoogleOAuthProvider clientId={googleClientId || ''}>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <BackButtonHandler />
         <AuthInit>
           <Toaster position="top-center" toastOptions={{ style: { background: '#1e293b', color: '#fff', border: '1px solid #334155', fontFamily: 'Cairo, sans-serif' } }} />
+          <Suspense fallback={<LoadingScreen />}>
           <Routes>
             {/* Public routes - guest + auth */}
             <Route path="/" element={<PublicLayout />}>
@@ -126,9 +129,11 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </AuthInit>
       </BrowserRouter>
     </QueryClientProvider>
     </GoogleOAuthProvider>
+    </ErrorBoundary>
   );
 }
