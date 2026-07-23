@@ -24,6 +24,7 @@ public class InspectionReportDTO {
     private Double grandTotal;
     private String overallCondition;
     private String recommendations;
+    private String priority;
     private Integer mileage;
     private LocalDate nextServiceDate;
     private Integer nextServiceMileage;

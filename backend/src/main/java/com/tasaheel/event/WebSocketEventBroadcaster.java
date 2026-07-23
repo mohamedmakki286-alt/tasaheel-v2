@@ -1,7 +1,12 @@
 package com.tasaheel.event;
 
+import com.tasaheel.entity.Customer;
 import com.tasaheel.entity.MaintenanceRequest;
+import com.tasaheel.entity.Workshop;
+import com.tasaheel.repository.CustomerRepository;
 import com.tasaheel.repository.MaintenanceRequestRepository;
+import com.tasaheel.repository.WorkshopRepository;
+import com.tasaheel.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -18,6 +23,9 @@ public class WebSocketEventBroadcaster {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final MaintenanceRequestRepository requestRepository;
+    private final CustomerRepository customerRepository;
+    private final WorkshopRepository workshopRepository;
+    private final NotificationService notificationService;
 
     @EventListener
     public void handleDomainEvent(DomainEvent event) {
@@ -76,9 +84,99 @@ public class WebSocketEventBroadcaster {
                 messagingTemplate.convertAndSend("/topic/city/" + event.getPayload().get("city"), message);
             }
 
+            // Broadcast to admin topic
+            messagingTemplate.convertAndSend("/topic/admin", message);
+
+            // Persist notifications for affected users
+            persistNotifications(event, customerId, workshopId);
+
             log.debug("Broadcast event {} for request {}", event.getEventType(), event.getRequestId());
         } catch (Exception e) {
             log.error("Failed to broadcast event {}: {}", event.getEventType(), e.getMessage());
         }
+    }
+
+    private void persistNotifications(DomainEvent event, Long customerId, Long workshopId) {
+        if (event.getRequestId() == null) return;
+
+        MaintenanceRequest request = requestRepository.findById(event.getRequestId()).orElse(null);
+        if (request == null) return;
+
+        String title = getTitle(event.getEventType());
+        String body = getBody(event.getEventType(), request);
+        String eventType = event.getEventType().name();
+
+        // Notify customer
+        if (customerId != null && !"customer".equals(event.getActorRole())) {
+            try {
+                notificationService.save(customerId, "customer", eventType, title, body,
+                        event.getRequestId(), eventType);
+            } catch (Exception e) {
+                log.warn("Failed to save notification for customer {}: {}", customerId, e.getMessage());
+            }
+        }
+
+        // Notify workshop(s)
+        if (workshopId != null && !"workshop".equals(event.getActorRole())) {
+            try {
+                notificationService.save(workshopId, "workshop", eventType, title, body,
+                        event.getRequestId(), eventType);
+            } catch (Exception e) {
+                log.warn("Failed to save notification for workshop {}: {}", workshopId, e.getMessage());
+            }
+        }
+
+        // Notify admin
+        try {
+            notificationService.save(0L, "admin", eventType, title, body,
+                    event.getRequestId(), eventType);
+        } catch (Exception e) {
+            log.warn("Failed to save notification for admin: {}", e.getMessage());
+        }
+    }
+
+    private String getTitle(EventType type) {
+        return switch (type) {
+            case REQUEST_CREATED, REQUEST_SUBMITTED -> "طلب جديد";
+            case QUOTE_GENERATED -> "عرض سعر جديد";
+            case OFFER_ACCEPTED -> "تم قبول العرض";
+            case QUOTE_REJECTED -> "تم رفض عرضك";
+            case STATUS_UPDATED -> "تحديث الحالة";
+            case SERVICE_STARTED -> "بدء الخدمة";
+            case SERVICE_COMPLETED -> "اكتملت الخدمة";
+            case REPORT_SUBMITTED -> "تقرير الفحص";
+            case REPORT_APPROVED -> "تم اعتماد التقرير";
+            case INVOICE_CREATED -> "فاتورة جديدة";
+            case PAYMENT_HELD -> "تم حجز الدفع";
+            case PAYMENT_RELEASED -> "تم صرف الدفع";
+            case ADMIN_OVERRIDE -> "مدير النظام قام بتحديث الطلب";
+            case REQUEST_CANCELLED -> "تم إلغاء الطلب";
+            default -> "إشعار";
+        };
+    }
+
+    private String getBody(EventType type, MaintenanceRequest request) {
+        String serviceName = "";
+        if (request.getServiceTypes() != null && !request.getServiceTypes().isEmpty()) {
+            serviceName = request.getServiceTypes().get(0).getName();
+        }
+        return switch (type) {
+            case REQUEST_CREATED -> "تم إنشاء طلب خدمة " + serviceName;
+            case REQUEST_SUBMITTED -> "تم تقديم طلب " + serviceName;
+            case QUOTE_GENERATED -> "تم استلام عرض سعر لطلب " + serviceName;
+            case OFFER_ACCEPTED -> "تم قبول العرض لطلب " + serviceName;
+            case QUOTE_REJECTED -> "تم رفض عرضك لطلب " + serviceName;
+            case STATUS_UPDATED -> "تم تغيير حالة الطلب";
+            case SERVICE_STARTED -> "بدأ العمل على الخدمة";
+            case SERVICE_COMPLETED -> "اكتملت الخدمة";
+            case REPORT_SUBMITTED -> "تم تقديم تقرير الفحص للطلب";
+            case REPORT_APPROVED -> "تم اعتماد تقرير الفحص";
+            case INVOICE_CREATED -> "تم إصدار فاتورة للطلب";
+            case PAYMENT_HELD -> "تم حجز المبلغ لحاجن الخدمة";
+            case PAYMENT_RELEASED -> "تم صرف المبلغ للورشة";
+            case ADMIN_OVERRIDE -> "قام المدير بتحديث الطلب";
+            case REQUEST_CANCELLED -> "تم إلغاء الطلب";
+            default -> "حدث تغيير على طلبك";
+        };
     }
 }

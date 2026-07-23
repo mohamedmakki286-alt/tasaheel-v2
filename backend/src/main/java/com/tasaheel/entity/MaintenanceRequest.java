@@ -67,6 +67,10 @@ public class MaintenanceRequest {
     @Column(name = "preferred_workshop_id")
     private Long preferredWorkshopId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "technician_id")
+    private Technician technician;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

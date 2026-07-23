@@ -754,20 +754,9 @@
                                                "closest":  "Closest to you",
                                                "highestRated":  "Highest rated",
                                                "mostRequested":  "Most requested",
-                                               "bestForYou":  "Best for you"
-                                           },
-                       "smartWorkshop":  {
-                                             "bestForYou":  "Best for you",
-                                             "bestSuggestion":  "Best Suggestion",
-                                             "excellentAlternative":  "Great Alternative",
-                                             "extraOption":  "Additional Option",
-                                             "footnote":  "* Based on rating, distance, and completed jobs",
-                                             "mostRequested":  "Most Requested",
-                                             "nearest":  "Closest to you",
-                                             "title":  "Smart Workshop Suggestion",
-                                             "topRated":  "Highest Rated"
-                                         }
-                   },
+                                                "bestForYou":  "Best for you"
+                                            }
+                    },
     "constants":  {
                        "currency":  "SAR",
                        "maintenanceRequest":  "Maintenance Request",

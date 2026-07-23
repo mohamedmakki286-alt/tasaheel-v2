@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Wrench } from 'lucide-react';
+import { Calendar, MapPin, Wrench, User } from 'lucide-react';
 import type { Request } from '../types';
 import { StatusBadge } from './StatusBadge';
 
@@ -6,16 +6,25 @@ export function RequestCard({ request, onClick }: { request: Request; onClick?: 
   return (
     <div
       onClick={onClick}
-      className="card hover:bg-surface-700/80 cursor-pointer transition-all duration-200 active:scale-[0.98]"
+      className="card hover:shadow-card-hover cursor-pointer transition-all duration-200 active:scale-[0.98]"
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-accent-400" />
-          <span className="font-medium">{request.serviceTypeName || request.description}</span>
+          <div className="w-8 h-8 rounded-[10px] bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center">
+            <Wrench className="h-4 w-4 text-brand" />
+          </div>
+          <span className="font-medium text-sm text-primary-500 dark:text-white">{request.serviceTypeName || request.description}</span>
         </div>
         <StatusBadge status={request.status} />
       </div>
-      <div className="flex items-center gap-2 text-sm text-surface-400 mb-1">
+      {request.technicianName && (
+        <div className="flex items-center gap-2 mb-1 mt-2 text-sm text-surface-400">
+          <User className="h-4 w-4 text-accent-400" />
+          <span>الفني: <span className="text-surface-300 font-medium">{request.technicianName}</span></span>
+          {request.technicianSpecialty && <span className="text-xs text-surface-500">({request.technicianSpecialty})</span>}
+        </div>
+      )}
+      <div className="flex items-center gap-2 text-sm text-surface-400 mb-1 mt-2">
         <Calendar className="h-4 w-4" />
         <span>{new Date(request.createdAt).toLocaleDateString('ar-SA')}</span>
       </div>

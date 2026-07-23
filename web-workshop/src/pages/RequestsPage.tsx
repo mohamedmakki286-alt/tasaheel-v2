@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   ClipboardList,
@@ -13,9 +13,11 @@ import {
   Car,
   MessageCircle,
   Wrench,
+  XCircle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getNewRequests, getMyRequests } from '../api/requests.api';
+import { declineRequest, getNewRequests, getMyRequests } from '../api/requests.api';
+import toast from 'react-hot-toast';
 import { formatDate, timeAgo, formatPhone } from '../utils/formatters';
 import QuoteForm from '../components/QuoteForm';
 import InspectionReportForm from '../components/InspectionReportForm';
@@ -35,9 +37,10 @@ interface RequestCardProps {
   onStatusUpdate?: () => void;
   onInspectionReport?: () => void;
   onClick?: () => void;
+  onDecline?: () => void;
 }
 
-function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, onStatusUpdate, onInspectionReport, onClick }: RequestCardProps) {
+function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, onStatusUpdate, onInspectionReport, onClick, onDecline }: RequestCardProps) {
   const { t } = useTranslation();
   const statusColors: Record<string, string> = {
     pending: 'bg-accent-500/20 text-accent-500',
@@ -93,10 +96,26 @@ function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, 
         <p className="text-xs text-surface-500 dark:text-surface-400 mb-3 line-clamp-2">{request.description}</p>
       )}
 
+      {request.technicianName && (
+        <div className="flex items-center gap-2 mb-3 px-2.5 py-1.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-100 dark:border-surface-700">
+          <User size={12} className="text-primary-500 shrink-0" />
+          <span className="text-[11px] font-medium text-surface-600 dark:text-surface-300">الفني: {request.technicianName}</span>
+          {request.technicianSpecialty && (
+            <span className="text-[10px] text-surface-400">({request.technicianSpecialty})</span>
+          )}
+        </div>
+      )}
+
       <div className="flex gap-2">
         {showQuoteButton && onQuote && (
           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuote(); }} className="btn-primary flex-1 text-xs py-2">
             {t('pages.requests.sendQuote')}
+          </button>
+        )}
+        {showQuoteButton && onDecline && (
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDecline(); }} className="btn-secondary px-3 text-xs py-2 text-danger-500">
+            <XCircle size={14} />
+            اعتذار
           </button>
         )}
         {showStatusUpdate && onStatusUpdate && (
@@ -123,6 +142,7 @@ function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, 
 export default function RequestsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const tabs = [
     { id: 'new' as TabType, label: t('pages.requests.tabs.new'), icon: ClipboardList },
     { id: 'mine' as TabType, label: t('pages.requests.tabs.mine'), icon: FileText },
@@ -134,6 +154,15 @@ export default function RequestsPage() {
   const [statusUpdateRequestId, setStatusUpdateRequestId] = useState<string | null>(null);
   const [statusUpdateCurrentStatus, setStatusUpdateCurrentStatus] = useState<any>(null);
   const [inspectionRequestId, setInspectionRequestId] = useState<string | null>(null);
+  const [inspectionRequest, setInspectionRequest] = useState<any>(null);
+  const declineMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => declineRequest(id, reason),
+    onSuccess: () => {
+      toast.success('تم الاعتذار عن الطلب');
+      queryClient.invalidateQueries({ queryKey: ['new-requests'] });
+    },
+    onError: () => toast.error('تعذر الاعتذار عن الطلب'),
+  });
 
   const { data: newRequests = [], isFetching: loadingNew } = useQuery({
     queryKey: ['new-requests'],
@@ -239,11 +268,15 @@ export default function RequestsPage() {
               showQuoteButton={activeTab === 'new' && !request.hasQuote}
               showStatusUpdate={(activeTab === 'active' || (activeTab === 'mine' && (request.status === 'accepted' || request.status === 'in_progress')))}
               onQuote={() => setQuoteRequestId(request.id)}
+              onDecline={() => {
+                const reason = window.prompt('سبب الاعتذار (اختياري)') || undefined;
+                declineMutation.mutate({ id: request.id, reason });
+              }}
               onStatusUpdate={() => {
                 setStatusUpdateRequestId(request.id);
                 setStatusUpdateCurrentStatus(request.status);
               }}
-              onInspectionReport={() => setInspectionRequestId(request.id)}
+              onInspectionReport={() => { setInspectionRequestId(request.id); setInspectionRequest(request); }}
               onClick={() => navigate(`/requests/${request.id}`)}
             />
           </div>
@@ -261,7 +294,7 @@ export default function RequestsPage() {
         />
       )}
       {inspectionRequestId && (
-        <InspectionReportForm requestId={inspectionRequestId} onClose={() => setInspectionRequestId(null)} />
+        <InspectionReportForm requestId={inspectionRequestId} request={inspectionRequest} onClose={() => { setInspectionRequestId(null); setInspectionRequest(null); }} />
       )}
     </div>
   );

@@ -7,12 +7,13 @@ import { invoicesApi } from '../api/invoices.api';
 import type { Request, Quote, Invoice } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle, Car, User, Phone, PhoneCall } from 'lucide-react';
 import { SERVICE_CATEGORIES } from '../constants/serviceCategories';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
+import { useCallStore } from '@shared/call/callStore';
 
 const statusSteps = [
-  'pending', 'quoted', 'accepted', 'in_progress', 'inspection_report', 'customer_approved', 'awaiting_payment', 'completed', 'cancelled',
+  'pending', 'quoted', 'accepted', 'inspection_report', 'customer_approved', 'in_progress', 'awaiting_payment', 'completed', 'cancelled',
 ];
 
 export function RequestDetailPage() {
@@ -50,6 +51,18 @@ export function RequestDetailPage() {
   }, [id]);
 
   useRequestWebSocket(id ? Number(id) : undefined, handleWebSocketEvent);
+
+  const handleRejectQuote = async (quoteId: string) => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await requestsApi.rejectQuote(id, quoteId);
+      toast.success('تم رفض عرض السعر');
+      load();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'فشل رفض عرض السعر');
+    } finally { setActionLoading(false); }
+  };
 
   const handleAcceptQuote = async (quoteId: string) => {
     if (!id) return;
@@ -181,7 +194,7 @@ export function RequestDetailPage() {
 
       {/* Timeline */}
       <div className="card">
-        <div className="flex justify-between gap-1 overflow-x-auto py-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-1 py-2">
           {statusSteps.map((s, i) => {
             const labels: Record<string, string> = {
               pending: t('constants.status.pending'), quoted: t('constants.status.quoted'), accepted: t('constants.status.accepted'),
@@ -189,9 +202,9 @@ export function RequestDetailPage() {
             };
             const isActive = i <= currentStep;
             return (
-              <div key={s} className="flex flex-col items-center min-w-0 flex-1">
-                <div className={`h-3 w-3 rounded-full ${isActive ? 'bg-accent-500' : 'bg-surface-600'} ${currentStep === i ? 'ring-2 ring-accent-500/50' : ''}`} />
-                <span className={`text-[10px] mt-1 whitespace-nowrap ${isActive ? 'text-accent-400' : 'text-surface-500'}`}>{labels[s]}</span>
+              <div key={s} className="flex flex-row sm:flex-col items-center gap-2 sm:gap-0 min-w-0 flex-1 sm:flex-1 py-1.5 sm:py-0">
+                <div className={`h-3 w-3 rounded-full shrink-0 ${isActive ? 'bg-accent-500' : 'bg-surface-600'} ${currentStep === i ? 'ring-2 ring-accent-500/50' : ''}`} />
+                <span className={`text-xs sm:text-[10px] text-wrap break-words ${isActive ? 'text-accent-400' : 'text-surface-500'}`}>{labels[s]}</span>
               </div>
             );
           })}
@@ -217,10 +230,46 @@ export function RequestDetailPage() {
         <div className="flex items-center gap-2 text-sm text-surface-400">
           <MapPin className="h-4 w-4" /> <span>{request.locationAddress || request.city}</span>
         </div>
+        {(request.carMake || request.carModel) && (
+          <div className="flex items-center gap-2 text-sm text-surface-400">
+            <Car className="h-4 w-4" /> <span>{request.carMake} {request.carModel} ({request.carYear}){request.carPlateNumber ? ` · ${request.carPlateNumber}` : ''}</span>
+          </div>
+        )}
         <div className="flex items-center gap-2 text-sm text-surface-400">
           <Calendar className="h-4 w-4" /> <span>{new Date(request.createdAt).toLocaleDateString('ar-SA')}</span>
         </div>
       </div>
+
+      {/* Technician Info */}
+      {request.technicianName && (
+        <div className="card space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-accent-500/10 flex items-center justify-center">
+              <User size={20} className="text-accent-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-surface-400">الفني المسؤول عن الصيانة</p>
+              <p className="font-semibold text-sm">{request.technicianName}</p>
+              {request.technicianSpecialty && (
+                <p className="text-xs text-surface-400">{request.technicianSpecialty}</p>
+              )}
+            </div>
+          </div>
+          {request.technicianPhone && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => request.technicianId && useCallStore.getState().requestCall(Number(request.technicianId), request.technicianName || '', Number(request.id))}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent-500 text-white hover:bg-accent-600 transition-colors text-sm font-semibold"
+              >
+                <PhoneCall size={16} /> مكالمة صوتية
+              </button>
+              <a href={`tel:${request.technicianPhone}`} className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-surface-600 text-surface-300 hover:border-accent-400 hover:text-accent-400 transition-colors text-sm">
+                <Phone size={16} />
+              </a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quotes */}
       {visibleQuotes.length > 0 && (
@@ -234,9 +283,14 @@ export function RequestDetailPage() {
                 {quote.notes && <p className="text-xs text-surface-500 mt-1">{quote.notes}</p>}
               </div>
               {quote.status === 'pending' && request.status === 'quoted' && (
-                <button onClick={() => handleAcceptQuote(quote.id)} disabled={actionLoading} className="btn-primary text-sm py-2 px-4">
-                  {t('pages.requestDetail.accept')}
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => handleRejectQuote(quote.id)} disabled={actionLoading} className="text-sm py-2 px-3 rounded-xl border border-surface-600 text-surface-300 hover:border-danger-400 hover:text-danger-400 transition-colors">
+                    <XCircle size={16} />
+                  </button>
+                  <button onClick={() => handleAcceptQuote(quote.id)} disabled={actionLoading} className="btn-primary text-sm py-2 px-4">
+                    {t('pages.requestDetail.accept')}
+                  </button>
+                </div>
               )}
             </div>
           ))}

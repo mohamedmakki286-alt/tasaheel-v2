@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { updateProfile, galleryApi } from '../api/auth.api';
+import { updateProfile, galleryApi, uploadImage } from '../api/auth.api';
 import { useAuthStore } from '../stores/authStore';
 import { WORKSHOP_TYPES, CITIES, WORKSHOP_FEATURES } from '../utils/constants';
 import Avatar from '../components/Avatar';
@@ -95,6 +95,10 @@ export default function ProfilePage() {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [latitude, setLatitude] = useState<number | undefined>();
   const [longitude, setLongitude] = useState<number | undefined>();
+  const [logoUrl, setLogoUrl] = useState('');
+  const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [workingHours, setWorkingHours] = useState<{ day: string; open: string; close: string; closed: boolean }[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
 
@@ -124,6 +128,8 @@ export default function ProfilePage() {
       setYoutubeUrl(workshop.youtubeUrl || '');
       setLatitude(workshop.latitude);
       setLongitude(workshop.longitude);
+      setLogoUrl(workshop.logoUrl || '');
+      setCoverImageUrl(workshop.coverImageUrl || '');
       setWorkingHours(parseWorkingHours(workshop.workingHours || ''));
       setFeatures(workshop.features ? workshop.features.split(',').filter(Boolean) : []);
     }
@@ -137,14 +143,18 @@ export default function ProfilePage() {
     setWorkingHours(prev => prev.map((h, i) => i === index ? { ...h, [field]: value } : h));
   };
 
+  const profilePayload = (overrides: { logoUrl?: string; coverImageUrl?: string } = {}) => ({
+    name, phone, address, city, workshopType: workshopType as any,
+    services: workshop?.services || [],
+    description, workingHours: JSON.stringify(workingHours),
+    whatsapp, website, tiktokUrl, snapchatUrl, facebookUrl, instagramUrl, xUrl, youtubeUrl,
+    features: features.join(','), latitude, longitude,
+    logoUrl: overrides.logoUrl ?? logoUrl,
+    coverImageUrl: overrides.coverImageUrl ?? coverImageUrl,
+  });
+
   const mutation = useMutation({
-    mutationFn: () => updateProfile({
-      name, phone, address, city, workshopType: workshopType as any,
-      services: workshop?.services || [],
-      description, workingHours: JSON.stringify(workingHours),
-      whatsapp, website, tiktokUrl, snapchatUrl, facebookUrl, instagramUrl, xUrl, youtubeUrl,
-      features: features.join(','), latitude, longitude,
-    }),
+    mutationFn: () => updateProfile(profilePayload()),
     onSuccess: (data) => {
       updateWorkshop(data);
       toast.success(t('toast.success.profileUpdated'));
@@ -155,13 +165,20 @@ export default function ProfilePage() {
   const handleSubmit = () => mutation.mutate();
 
   const handleAddGalleryImage = async () => {
-    const url = prompt('أدخل رابط الصورة:');
-    if (!url) return;
-    try {
-      await galleryApi.add(url, 'image', gallery.length === 0);
-      queryClient.invalidateQueries({ queryKey: ['workshop-gallery'] });
-      toast.success('تمت إضافة الصورة بنجاح');
-    } catch { toast.error('فشل إضافة الصورة'); }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const url = await uploadImage(file, 'gallery');
+        await galleryApi.add(url, 'image', gallery.length === 0);
+        queryClient.invalidateQueries({ queryKey: ['workshop-gallery'] });
+        toast.success('تمت إضافة الصورة بنجاح');
+      } catch { toast.error('فشل إضافة الصورة'); }
+    };
+    input.click();
   };
 
   const handleDeleteGalleryItem = async (itemId: number) => {
@@ -179,6 +196,36 @@ export default function ProfilePage() {
       queryClient.invalidateQueries({ queryKey: ['workshop-gallery'] });
       toast.success('تم تعيين الصورة الرئيسية');
     } catch { toast.error('فشل التعيين'); }
+  };
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const url = await uploadImage(file, 'logo');
+      const savedProfile = await updateProfile(profilePayload({ logoUrl: url }));
+      setLogoUrl(url);
+      updateWorkshop(savedProfile);
+      toast.success('تم رفع الشعار بنجاح');
+    } catch { toast.error('فشل رفع الشعار'); }
+    setUploadingLogo(false);
+    e.target.value = '';
+  };
+
+  const handleUploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCover(true);
+    try {
+      const url = await uploadImage(file, 'cover');
+      const savedProfile = await updateProfile(profilePayload({ coverImageUrl: url }));
+      setCoverImageUrl(url);
+      updateWorkshop(savedProfile);
+      toast.success('تم رفع صورة الغلاف بنجاح');
+    } catch { toast.error('فشل رفع صورة الغلاف'); }
+    setUploadingCover(false);
+    e.target.value = '';
   };
 
   if (!workshop) {
@@ -276,6 +323,40 @@ export default function ProfilePage() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">{t('pages.profile.logo', 'شعار الورشة')}</label>
+              <div className="relative group">
+                <input type="file" accept="image/*" onChange={handleUploadLogo} className="hidden" id="logo-upload" />
+                <label htmlFor="logo-upload" className="flex items-center justify-center w-full h-32 rounded-xl border-2 border-dashed border-surface-200 dark:border-surface-700 cursor-pointer hover:border-primary-400 transition-colors overflow-hidden">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-center">
+                      <Upload size={24} className="text-surface-300 mx-auto mb-1" />
+                      <span className="text-xs text-surface-400">{uploadingLogo ? 'جاري الرفع...' : 'اضغث للرفع'}</span>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className="label">{t('pages.profile.coverImage', 'صورة الغلاف')}</label>
+              <div className="relative group">
+                <input type="file" accept="image/*" onChange={handleUploadCover} className="hidden" id="cover-upload" />
+                <label htmlFor="cover-upload" className="flex items-center justify-center w-full h-32 rounded-xl border-2 border-dashed border-surface-200 dark:border-surface-700 cursor-pointer hover:border-primary-400 transition-colors overflow-hidden">
+                  {coverImageUrl ? (
+                    <img src={coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-center">
+                      <Upload size={24} className="text-surface-300 mx-auto mb-1" />
+                      <span className="text-xs text-surface-400">{uploadingCover ? 'جاري الرفع...' : 'اضغث للرفع'}</span>
+                    </div>
+                  )}
+                </label>
+              </div>
             </div>
           </div>
         </div>

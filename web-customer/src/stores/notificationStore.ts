@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { notificationsApi, ServerNotification } from '../api/notifications.api';
 
 export interface NotificationItem {
   id: string;
@@ -19,6 +20,21 @@ interface NotificationState {
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clear: () => void;
+  syncFromServer: () => Promise<void>;
+  syncUnreadCount: () => Promise<void>;
+}
+
+function mapServerNotification(n: ServerNotification): NotificationItem {
+  return {
+    id: String(n.id),
+    type: n.type.includes('PAYMENT') ? 'payment' : n.type.includes('STATUS') ? 'status' : 'request',
+    title: n.title,
+    body: n.body || '',
+    requestId: n.requestId || undefined,
+    eventType: n.eventType,
+    read: n.isRead,
+    createdAt: n.createdAt,
+  };
 }
 
 export const useNotificationStore = create<NotificationState>()(
@@ -41,12 +57,32 @@ export const useNotificationStore = create<NotificationState>()(
           notifications,
           unreadCount: notifications.filter((n) => !n.read).length,
         });
+        notificationsApi.markAsRead(Number(id)).catch(() => {});
       },
       markAllAsRead: () => {
         const notifications = get().notifications.map((n) => ({ ...n, read: true }));
         set({ notifications, unreadCount: 0 });
+        notificationsApi.markAllAsRead().catch(() => {});
       },
       clear: () => set({ notifications: [], unreadCount: 0 }),
+      syncFromServer: async () => {
+        try {
+          const page = await notificationsApi.getAll(0, 50);
+          const items = (page.content || []).map(mapServerNotification);
+          if (items.length > 0) {
+            set({
+              notifications: items,
+              unreadCount: items.filter((n: NotificationItem) => !n.read).length,
+            });
+          }
+        } catch {}
+      },
+      syncUnreadCount: async () => {
+        try {
+          const count = await notificationsApi.getUnreadCount();
+          set({ unreadCount: count });
+        } catch {}
+      },
     }),
     { name: 'salaba-customer-notifications' }
   )

@@ -7,6 +7,7 @@ import { createInvoice } from '../api/invoice.api';
 import { formatCurrency } from '../utils/formatters';
 import { useAuthStore } from '../stores/authStore';
 import type { InvoiceItemPayload } from '../types';
+import NumberInput, { toNumStr } from './NumberInput';
 
 interface InvoiceFormProps {
   requestId: string;
@@ -138,27 +139,22 @@ export default function InvoiceForm({
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <label className="text-xs text-surface-500">{t('components.invoiceForm.quantity')}</label>
-                    <input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                      className="input-field text-sm"
-                      min="1"
+                    <NumberInput
+                      value={toNumStr(item.quantity)}
+                      onValueChange={(v) => updateItem(index, 'quantity', v)}
+                      mode="integer"
+                      min={1}
                     />
                   </div>
                   <div className="flex-1">
                     <label className="text-xs text-surface-500">{t('components.invoiceForm.unitPrice')}</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-xs">{t('common.sar')}</span>
-                      <input
-                        type="number"
-                        value={item.unitPrice}
-                        onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
-                        className="input-field text-sm pl-10"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
+                    <NumberInput
+                      value={toNumStr(item.unitPrice)}
+                      onValueChange={(v) => updateItem(index, 'unitPrice', v)}
+                      mode="decimal"
+                      decimalScale={2}
+                      suffix={t('common.sar')}
+                    />
                   </div>
                   <div className="flex-1">
                     <label className="text-xs text-surface-500">{t('components.invoiceForm.total')}</label>
@@ -173,14 +169,14 @@ export default function InvoiceForm({
 
           <div>
             <label className="label">{t('components.invoiceForm.taxPercent')}</label>
-            <input
-              type="number"
+            <NumberInput
               value={taxPercent}
-              onChange={(e) => setTaxPercent(e.target.value)}
-              className="input-field"
-              min="0"
-              max="100"
-              step="0.1"
+              onValueChange={(v) => setTaxPercent(v)}
+              mode="decimal"
+              decimalScale={1}
+              min={0}
+              max={100}
+              suffix="%"
             />
           </div>
 

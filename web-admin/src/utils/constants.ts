@@ -5,12 +5,19 @@ export const WORKSHOP_TYPES = [
 ];
 
 export const STATUS_LABELS: Record<string, string> = {
+  draft: 'مسودة',
   pending: 'قيد الانتظار',
-  assigned: 'تم التخصيص',
-  inspected: 'تم الفحص',
+  quoted: 'تم التسعير',
+  offer_selected: 'تم اختيار العرض',
+  splitted: 'تم التقسيم',
+  accepted: 'مقبول',
+  customer_approved: 'تمت الموافقة من العميل',
+  inspection_report: 'تقرير الفحص',
   in_progress: 'قيد التنفيذ',
+  awaiting_payment: 'بانتظار الدفع',
   completed: 'مكتمل',
-  delivered: 'تم التوصيل',
+  verified: 'تم التحقق',
+  paid: 'مدفوع',
   cancelled: 'ملغي',
   approved: 'معتمد',
   rejected: 'مرفوض',
@@ -18,7 +25,6 @@ export const STATUS_LABELS: Record<string, string> = {
   inactive: 'غير نشط',
   online: 'متصل',
   offline: 'غير متصل',
-  paid: 'مدفوع',
   refunded: 'مسترجع',
   failed: 'فشل',
   cash: 'نقدي',
@@ -31,12 +37,19 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_COLORS: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-800',
   pending: 'bg-yellow-100 text-yellow-800',
-  assigned: 'bg-blue-100 text-blue-800',
-  inspected: 'bg-indigo-100 text-indigo-800',
+  quoted: 'bg-blue-100 text-blue-800',
+  offer_selected: 'bg-indigo-100 text-indigo-800',
+  splitted: 'bg-purple-100 text-purple-800',
+  accepted: 'bg-emerald-100 text-emerald-800',
+  customer_approved: 'bg-green-100 text-green-800',
+  inspection_report: 'bg-cyan-100 text-cyan-800',
   in_progress: 'bg-purple-100 text-purple-800',
+  awaiting_payment: 'bg-orange-100 text-orange-800',
   completed: 'bg-green-100 text-green-800',
-  delivered: 'bg-emerald-100 text-emerald-800',
+  verified: 'bg-teal-100 text-teal-800',
+  paid: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
@@ -44,7 +57,6 @@ export const STATUS_COLORS: Record<string, string> = {
   inactive: 'bg-gray-100 text-gray-800',
   online: 'bg-green-100 text-green-800',
   offline: 'bg-gray-100 text-gray-800',
-  paid: 'bg-green-100 text-green-800',
   refunded: 'bg-orange-100 text-orange-800',
   failed: 'bg-red-100 text-red-800',
 };
@@ -59,11 +71,10 @@ export const ROLES = {
 
 export const REQUEST_STATUSES = [
   { value: 'pending', label: 'قيد الانتظار' },
-  { value: 'assigned', label: 'تم التخصيص' },
-  { value: 'inspected', label: 'تم الفحص' },
+  { value: 'quoted', label: 'تم التسعير' },
+  { value: 'accepted', label: 'مقبول' },
   { value: 'in_progress', label: 'قيد التنفيذ' },
   { value: 'completed', label: 'مكتمل' },
-  { value: 'delivered', label: 'تم التوصيل' },
   { value: 'cancelled', label: 'ملغي' },
 ];
 

@@ -51,6 +51,9 @@ public class InspectionReport {
     private String recommendations;
 
     @Column
+    private String priority;
+
+    @Column
     private Integer mileage;
 
     @Column(name = "next_service_date")

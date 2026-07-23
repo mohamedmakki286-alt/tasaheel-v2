@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
   ArrowRight,
@@ -24,6 +24,8 @@ import {
   Trash2,
   Info,
   Star,
+  Wrench,
+  Image,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getRequestDetail } from '../api/requests.api';
@@ -32,13 +34,19 @@ import { getReport } from '../api/inspection.api';
 import { getInvoice, deleteInvoice } from '../api/invoice.api';
 import { getRoom, getMessages } from '../api/chat.api';
 import {
+  getTechnicians,
+  assignTechnician,
+  unassignTechnician,
+} from '../api/technicians.api';
+import {
   REQUEST_STATUS_COLORS,
   QUOTE_STATUS_COLORS,
   UPDATABLE_STATUSES,
 } from '../utils/constants';
 import { formatDate, formatCurrency, formatPhone, formatDateTime, timeAgo } from '../utils/formatters';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
-import { useCallStore } from '../stores/callStore';
+import { useCallStore } from '@shared/call/callStore';
+import { type CallState } from '@shared/call/callStore';
 import QuoteForm from '../components/QuoteForm';
 import InspectionReportForm from '../components/InspectionReportForm';
 import InvoiceForm from '../components/InvoiceForm';
@@ -57,6 +65,8 @@ export default function RequestDetailPage() {
     { status: 'pending', icon: ClipboardList, label: t('pages.requests.detail.steps.created') },
     { status: 'quoted', icon: FileText, label: t('pages.requests.detail.steps.quoted') },
     { status: 'accepted', icon: CheckCircle2, label: t('pages.requests.detail.steps.accepted') },
+    { status: 'inspection_report', icon: FileSearch, label: t('pages.requests.detail.tabs.inspection') },
+    { status: 'customer_approved', icon: CheckCircle2, label: t('constants.requestStatuses.customer_approved') },
     { status: 'in_progress', icon: Clock, label: t('pages.requests.detail.steps.inProgress') },
     { status: 'awaiting_payment', icon: Receipt, label: t('constants.requestStatuses.awaiting_payment') },
     { status: 'completed', icon: CheckCircle2, label: t('pages.requests.detail.steps.completed') },
@@ -98,6 +108,29 @@ export default function RequestDetailPage() {
     queryKey: ['invoice', id],
     queryFn: () => getInvoice(id!).catch(() => null),
     enabled: !!id,
+  });
+
+  const { data: technicians = [] } = useQuery({
+    queryKey: ['technicians'],
+    queryFn: () => getTechnicians(),
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: (technicianId: number) => assignTechnician(id!, technicianId),
+    onSuccess: () => {
+      toast.success('تم تعيين الفنى بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['request-detail', id] });
+    },
+    onError: () => toast.error('فشل تعيين الفنى'),
+  });
+
+  const unassignMutation = useMutation({
+    mutationFn: () => unassignTechnician(id!),
+    onSuccess: () => {
+      toast.success('تم إلغاء تعيين الفنى');
+      queryClient.invalidateQueries({ queryKey: ['request-detail', id] });
+    },
+    onError: () => toast.error('فشل إلغاء التعيين'),
   });
 
   const getDetailTabs = () => {
@@ -193,9 +226,7 @@ export default function RequestDetailPage() {
                         <button
                           onClick={() => {
                             if (request.customer?.id) {
-                              useCallStore.setState({ peerId: Number(request.customer.id), peerName: request.customer.name || '', peerRole: 'customer', status: 'idle' });
-                              // Trigger VoIP call via the global call signaling
-                              document.dispatchEvent(new CustomEvent('voip-call', { detail: { calleeId: request.customer.id, calleeName: request.customer.name || '' } }));
+                              useCallStore.getState().requestCall(Number(request.customer.id), request.customer.name || '', Number(request.id));
                             }
                           }}
                           className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
@@ -218,6 +249,9 @@ export default function RequestDetailPage() {
                     <div>
                       <p className="text-xs text-surface-400">{t('pages.requests.detail.vehicle')}</p>
                       <p className="font-semibold text-surface-800 dark:text-surface-200">{request.car?.make} {request.car?.model} ({request.car?.year})</p>
+                      {request.car?.plateNumber && <p className="text-xs text-surface-400">لوحة: {request.car.plateNumber}</p>}
+                      {request.car?.color && <p className="text-xs text-surface-400">اللون: {request.car.color}</p>}
+                      {request.car?.mileage != null && request.car.mileage > 0 && <p className="text-xs text-surface-400">الممشى: {request.car.mileage.toLocaleString()} كم</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
@@ -252,6 +286,30 @@ export default function RequestDetailPage() {
               <p className="text-surface-600 dark:text-surface-400 leading-relaxed">{request.description}</p>
             </div>
           </div>
+
+          {request.media && request.media.length > 0 && (
+            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
+              <div className="p-5 border-b border-surface-100 dark:border-surface-800 flex items-center gap-2">
+                <Image size={19} className="text-primary-500" />
+                <h2 className="font-bold text-surface-900 dark:text-surface-100">مرفقات العميل</h2>
+                <span className="text-xs text-surface-400">({request.media.length})</span>
+              </div>
+              <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-3">
+                {request.media.map((item) => (
+                  <a key={item.id} href={item.url} target="_blank" rel="noreferrer"
+                    className="block overflow-hidden rounded-xl border border-surface-200 dark:border-surface-700 hover:border-primary-400 transition-colors">
+                    {item.type === 'image' ? (
+                      <img src={item.thumbnailUrl || item.url} alt="مرفق الطلب" className="w-full h-36 object-cover" />
+                    ) : (
+                      <div className="h-36 flex items-center justify-center bg-surface-50 dark:bg-surface-800 text-sm text-primary-600">
+                        عرض المرفق
+                      </div>
+                    )}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
             <div className="p-5 border-b border-surface-100 dark:border-surface-800 flex items-center justify-between">
@@ -383,7 +441,7 @@ export default function RequestDetailPage() {
                           <div className="space-y-2">
                             {report.labor.map((l, i) => (
                               <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
-                                <span className="text-sm text-surface-600">{l.description} ({l.hours}h)</span>
+                                <span className="text-sm text-surface-600">{l.description} ({l.minutes} دقيقة)</span>
                                 <span className="text-sm font-semibold text-surface-800">{formatCurrency(l.total)}</span>
                               </div>
                             ))}
@@ -451,7 +509,7 @@ export default function RequestDetailPage() {
                         </div>
                       )}
                     </div>
-                  ) : (request.status === 'completed' || invoice === null) ? (
+                  ) : request.status === 'awaiting_payment' ? (
                     <div className="text-center py-8">
                       <Receipt size={40} className="text-surface-300 mx-auto mb-3" />
                       <p className="text-surface-500 mb-4">{t('pages.requests.detail.invoice.notCreated')}</p>
@@ -474,7 +532,78 @@ export default function RequestDetailPage() {
           </div>
         </div>
 
-        <div className="space-y-6">
+          {request.technicianName && (
+            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar name={request.technicianName} size="sm" />
+                  <div className="flex-1">
+                    <p className="text-[10px] text-surface-400">الفني المسؤول عن الصيانة</p>
+                    <p className="font-semibold text-sm text-surface-800 dark:text-surface-200">{request.technicianName}</p>
+                    {request.technicianSpecialty && (
+                      <p className="text-[11px] text-surface-400">{request.technicianSpecialty}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-6">
+          {(request.status === 'accepted' || request.status === 'in_progress') && (
+            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
+              <div className="p-5 border-b border-surface-100 dark:border-surface-800">
+                <h2 className="font-bold text-surface-900 dark:text-surface-100 flex items-center gap-2">
+                  <Wrench size={18} />
+                  تعيين فنى
+                </h2>
+              </div>
+              <div className="p-5 space-y-3">
+                {request.technicianId ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
+                      <Avatar name={request.technicianName} size="md" />
+                      <div className="flex-1">
+                        <p className="text-xs text-surface-400">الفنى المعين</p>
+                        <p className="font-semibold text-surface-800 dark:text-surface-200">{request.technicianName}</p>
+                        {request.technicianSpecialty && (
+                          <p className="text-xs text-surface-400">{request.technicianSpecialty}</p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => unassignMutation.mutate()}
+                      disabled={unassignMutation.isPending}
+                      className="w-full py-2 px-4 rounded-xl text-sm font-semibold text-red-600 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                    >
+                      {unassignMutation.isPending ? 'جاري الإلغاء...' : 'إلغاء التعيين'}
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <select
+                      className="w-full px-4 py-3 rounded-xl border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-800 dark:text-surface-200 font-semibold text-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-500 transition-colors appearance-none"
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          assignMutation.mutate(Number(e.target.value));
+                        }
+                      }}
+                    >
+                      <option value="">اختر فنى...</option>
+                      {technicians.filter(t => t.availabilityStatus === 'available').map((tech) => (
+                        <option key={tech.id} value={tech.id}>
+                          {tech.name} — {tech.specialty}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-surface-400 mt-2">اختر فنى لتعيينه على هذا الطلب</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
             <div className="p-4 border-b border-surface-100 dark:border-surface-800">
               <h3 className="font-bold text-surface-800 dark:text-surface-200">{t('pages.requests.detail.location')}</h3>
@@ -483,8 +612,13 @@ export default function RequestDetailPage() {
               <div className="bg-gradient-to-br from-surface-100 to-surface-200 dark:from-surface-800 dark:to-surface-700 h-36 rounded-xl flex items-center justify-center">
                 <div className="text-center">
                   <MapPin size={36} className="text-surface-400 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-surface-600 dark:text-surface-300">{request.location}</p>
+                  <p className="text-sm font-semibold text-surface-600 dark:text-surface-300">{request.location || 'بدون عنوان'}</p>
                   <p className="text-xs text-surface-400">{request.city}</p>
+                  {request.locationLat && request.locationLng && (
+                    <a href={`https://www.google.com/maps?q=${request.locationLat},${request.locationLng}`} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary-500 hover:text-primary-600">
+                      <MapPin size={12} /> فتح في خرائط قوقل
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -517,6 +651,13 @@ export default function RequestDetailPage() {
                 <h3 className="font-bold text-surface-800 dark:text-surface-200">{t('pages.requests.detail.tabs.invoice')}</h3>
               </div>
               <div className="p-4 space-y-2 text-sm">
+                {request.technicianName && (
+                  <div className="flex items-center gap-2 pb-2 mb-2 border-b border-surface-100 dark:border-surface-700">
+                    <User size={14} className="text-primary-500" />
+                    <span className="text-surface-400">الفني المسؤول:</span>
+                    <span className="font-semibold text-surface-700 dark:text-surface-300">{request.technicianName}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-surface-400">{t('pages.requests.detail.invoice.subtotal')}</span>
                   <span>{formatCurrency(invoice.partsTotal + invoice.laborTotal)}</span>
@@ -556,7 +697,7 @@ export default function RequestDetailPage() {
                     <p className="text-xs font-bold text-surface-500 mb-1">{t('pages.requests.detail.inspection.labor')}</p>
                     {report.labor.map((l, i) => (
                       <div key={i} className="flex justify-between text-xs text-surface-600 py-1">
-                        <span>{l.description} ({l.hours}h)</span>
+                        <span>{l.description} ({l.minutes} دقيقة)</span>
                         <span>{formatCurrency(l.total)}</span>
                       </div>
                     ))}
@@ -576,7 +717,7 @@ export default function RequestDetailPage() {
         <QuoteForm requestId={request.id} onClose={() => setShowQuoteForm(false)} serviceTypes={request.serviceTypes} />
       )}
       {showInspectionForm && (
-        <InspectionReportForm requestId={request.id} onClose={() => setShowInspectionForm(false)} />
+        <InspectionReportForm requestId={request.id} request={request} existingReport={report} onClose={() => setShowInspectionForm(false)} />
       )}
       {showInvoiceForm && (
         <InvoiceForm

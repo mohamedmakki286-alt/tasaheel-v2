@@ -30,15 +30,23 @@ public class ChatMessage {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String type;
+    @Builder.Default
+    private MessageType type = MessageType.TEXT;
 
     @Column(name = "media_url")
     private String mediaUrl;
 
+    @OneToOne(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private ChatAttachment attachment;
+
     @Column(name = "is_read", nullable = false)
     @Builder.Default
     private Boolean isRead = false;
+
+    @Column(name = "client_message_id", unique = true)
+    private String clientMessageId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

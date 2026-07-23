@@ -10,6 +10,7 @@ interface CallState {
   peerRole: string;
   duration: number;
   isOutgoing: boolean;
+  isSpeakerOn: boolean;
   setStatus: (status: CallStatus) => void;
   setCallSessionId: (id: number | null) => void;
   setPeerId: (id: number | null) => void;
@@ -17,6 +18,7 @@ interface CallState {
   setPeerRole: (role: string) => void;
   setDuration: (d: number) => void;
   setIsOutgoing: (v: boolean) => void;
+  setIsSpeakerOn: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -28,6 +30,7 @@ const initialState = {
   peerRole: '',
   duration: 0,
   isOutgoing: false,
+  isSpeakerOn: false,
 };
 
 export const useCallStore = create<CallState>((set) => ({
@@ -39,5 +42,6 @@ export const useCallStore = create<CallState>((set) => ({
   setPeerRole: (peerRole) => set({ peerRole }),
   setDuration: (duration) => set({ duration }),
   setIsOutgoing: (isOutgoing) => set({ isOutgoing }),
+  setIsSpeakerOn: (isSpeakerOn) => set({ isSpeakerOn }),
   reset: () => set(initialState),
 }));

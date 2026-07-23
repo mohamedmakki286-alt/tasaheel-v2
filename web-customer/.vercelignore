@@ -1,9 +1,6 @@
 node_modules
+dist
 android
 ios
-dist
-build
-.vite
-.expo
-.vercel
 *.log
+.vercel

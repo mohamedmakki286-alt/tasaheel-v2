@@ -31,13 +31,13 @@ public class MaintenanceRequestService {
     private final InspectionPartItemRepository inspectionPartItemRepository;
     private final InspectionLaborItemRepository inspectionLaborItemRepository;
     private final MediaRepository mediaRepository;
-    private final SmartRouterService smartRouterService;
     private final HomeServiceAssignmentRepository homeServiceAssignmentRepository;
     private final WorkshopRepository workshopRepository;
     private final EventPublisher eventPublisher;
     private final ServiceItemService serviceItemService;
     private final SplitRequestService splitRequestService;
     private final InvoiceRepository invoiceRepository;
+    private final RequestDispatchService requestDispatchService;
 
     @Transactional
     public MaintenanceRequestDTO createRequest(Long customerId, MaintenanceRequestDTO dto, boolean isDraft) {
@@ -84,6 +84,7 @@ public class MaintenanceRequestService {
 
         if (!isDraft) {
             createStatusHistory(request, "pending", "Request created", "customer:" + customerId);
+            requestDispatchService.dispatch(request);
             eventPublisher.publish(this, EventType.REQUEST_SUBMITTED, request.getId(), "customer", customerId, Map.of(
                 "serviceTypes", sts.stream().map(ServiceType::getName).toList(),
                 "city", request.getCity() != null ? request.getCity() : ""
@@ -93,7 +94,7 @@ public class MaintenanceRequestService {
                 Map.of("city", request.getCity() != null ? request.getCity() : ""));
         }
 
-        String category = smartRouterService.determineCategory(
+        String category = determineCategory(
                 dto.getDescription(),
                 primaryServiceName
         );
@@ -129,6 +130,7 @@ public class MaintenanceRequestService {
         request.setStatus("pending");
         request = requestRepository.save(request);
         createStatusHistory(request, "pending", "Draft submitted", "customer:" + customerId);
+        requestDispatchService.dispatch(request);
         eventPublisher.publish(this, EventType.REQUEST_SUBMITTED, request.getId(), "customer", customerId,
                 Map.of("city", request.getCity() != null ? request.getCity() : ""));
         return toRequestDTO(request);
@@ -143,6 +145,12 @@ public class MaintenanceRequestService {
         MaintenanceRequest request = requestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", id));
         return toFullRequestDTO(request);
+    }
+
+    public void requireCustomerOwnership(Long requestId, Long customerId) {
+        if (!requestRepository.isOwnedByCustomer(requestId, customerId)) {
+            throw new BadRequestException("You are not the owner of this request");
+        }
     }
 
     public List<MaintenanceRequestDTO> getCustomerRequests(Long customerId, int page, int size) {
@@ -267,6 +275,7 @@ public class MaintenanceRequestService {
 
         request.setStatus("accepted");
         requestRepository.save(request);
+        requestDispatchService.resolveAfterAcceptance(requestId, acceptedQuote.getWorkshop().getId());
 
         createStatusHistory(request, "accepted", "Quote accepted from workshop " + acceptedQuote.getWorkshop().getName(),
                 "customer:" + customerId);
@@ -287,6 +296,12 @@ public class MaintenanceRequestService {
 
         if (!request.getStatus().equals("inspection_report")) {
             throw new BadRequestException("Request is not in inspection report status");
+        }
+
+        InspectionReport report = inspectionReportRepository.findByRequestId(requestId).orElse(null);
+        if (report != null) {
+            report.setStatus("approved");
+            inspectionReportRepository.save(report);
         }
 
         request.setStatus("customer_approved");
@@ -382,6 +397,15 @@ public class MaintenanceRequestService {
     private MaintenanceRequestDTO toRequestDTO(MaintenanceRequest r) {
         List<ServiceType> sts = r.getServiceTypes();
         ServiceType primary = sts.isEmpty() ? null : sts.get(0);
+
+        String workshopName = null;
+        try {
+            Quote acceptedQuote = quoteRepository.findByRequestIdAndStatus(r.getId(), "accepted").orElse(null);
+            if (acceptedQuote != null && acceptedQuote.getWorkshop() != null) {
+                workshopName = acceptedQuote.getWorkshop().getName();
+            }
+        } catch (Exception ignored) {}
+
         return MaintenanceRequestDTO.builder()
                 .id(r.getId())
                 .customerId(r.getCustomer().getId())
@@ -392,7 +416,8 @@ public class MaintenanceRequestService {
                 .carModel(r.getCar().getModel())
                 .carYear(r.getCar().getYear())
                 .carPlateNumber(r.getCar().getPlateNumber())
-                .serviceTypeId(primary != null ? primary.getId() : null)
+                .carColor(r.getCar().getColor())
+                .carMileage(r.getCar().getMileage())
                 .serviceTypeName(primary != null ? primary.getName() : null)
                 .serviceTypeIds(sts.stream().map(ServiceType::getId).collect(Collectors.toList()))
                 .serviceTypes(sts.stream().map(s -> new ServiceItemDTO(s.getId(), s.getName())).collect(Collectors.toList()))
@@ -408,6 +433,11 @@ public class MaintenanceRequestService {
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .workshopIds(r.getPreferredWorkshopId() != null ? List.of(r.getPreferredWorkshopId()) : null)
+                .technicianId(r.getTechnician() != null ? r.getTechnician().getId() : null)
+                .technicianName(r.getTechnician() != null ? r.getTechnician().getName() : null)
+                .technicianPhone(r.getTechnician() != null ? r.getTechnician().getPhone() : null)
+                .technicianSpecialty(r.getTechnician() != null ? r.getTechnician().getSpecialty() : null)
+                .workshopName(workshopName)
                 .build();
     }
 
@@ -510,6 +540,41 @@ public class MaintenanceRequestService {
     }
 
     @Transactional
+    public void rejectQuote(Long requestId, Long quoteId, Long customerId, String reason) {
+        MaintenanceRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
+
+        if (!request.getCustomer().getId().equals(customerId)) {
+            throw new BadRequestException("You are not the owner of this request");
+        }
+
+        if (!"quoted".equals(request.getStatus()) && !"pending".equals(request.getStatus())) {
+            throw new BadRequestException("Cannot reject quote in current request status: " + request.getStatus());
+        }
+
+        Quote quote = quoteRepository.findById(quoteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quote", quoteId));
+        if (!quote.getRequest().getId().equals(requestId)) {
+            throw new BadRequestException("Quote does not belong to this request");
+        }
+
+        if ("accepted".equals(quote.getStatus()) || "rejected".equals(quote.getStatus())) {
+            throw new BadRequestException("Cannot reject a quote that is already " + quote.getStatus());
+        }
+
+        quote.setStatus("rejected");
+        quoteRepository.save(quote);
+
+        createStatusHistory(request, request.getStatus(),
+                "Quote rejected from workshop " + quote.getWorkshop().getName() + (reason != null ? ": " + reason : ""),
+                "customer:" + customerId);
+
+        eventPublisher.publish(this, EventType.QUOTE_REJECTED, requestId, "customer", customerId,
+                Map.of("quoteId", quoteId, "workshopId", quote.getWorkshop().getId(),
+                       "workshopName", quote.getWorkshop().getName(), "reason", reason != null ? reason : ""));
+    }
+
+    @Transactional
     public void cancelRequest(Long requestId, Long customerId) {
         MaintenanceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
@@ -533,6 +598,7 @@ public class MaintenanceRequestService {
         report.setNotes(comment);
         inspectionReportRepository.save(report);
         createStatusHistory(request, "inspection_report", "Report rejected: " + comment, "customer:" + customerId);
+        eventPublisher.publish(this, EventType.REPORT_REJECTED, requestId, "customer", customerId);
     }
 
     public HomeServiceAssignmentDTO getTechnicianForRequest(Long requestId) {
@@ -582,5 +648,70 @@ public class MaintenanceRequestService {
                 .createdBy(h.getCreatedBy())
                 .createdAt(h.getCreatedAt())
                 .build();
+    }
+
+    private static final java.util.Map<String, String> SERVICE_CATEGORY_MAP = new java.util.LinkedHashMap<>();
+
+    static {
+        SERVICE_CATEGORY_MAP.put("بطارية", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("battery", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("oil", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("فراامل", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("brake", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("إطار", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("tire", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("مكيف", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("ac", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("فلتر", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("filter", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("دوري", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("maintenance", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("فحص", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("inspection", "mobile_mechanic");
+        SERVICE_CATEGORY_MAP.put("مولود", "mobile_mechanic");
+
+        SERVICE_CATEGORY_MAP.put("محرك", "workshop");
+        SERVICE_CATEGORY_MAP.put("engine", "workshop");
+        SERVICE_CATEGORY_MAP.put("قير", "workshop");
+        SERVICE_CATEGORY_MAP.put("transmission", "workshop");
+        SERVICE_CATEGORY_MAP.put("جير", "workshop");
+        SERVICE_CATEGORY_MAP.put("سمكرة", "workshop");
+        SERVICE_CATEGORY_MAP.put("body", "workshop");
+        SERVICE_CATEGORY_MAP.put("دهان", "workshop");
+        SERVICE_CATEGORY_MAP.put("paint", "workshop");
+        SERVICE_CATEGORY_MAP.put("دينمو", "workshop");
+        SERVICE_CATEGORY_MAP.put("alternator", "workshop");
+        SERVICE_CATEGORY_MAP.put("سلف", "workshop");
+        SERVICE_CATEGORY_MAP.put("starter", "workshop");
+        SERVICE_CATEGORY_MAP.put("مساعدات", "workshop");
+        SERVICE_CATEGORY_MAP.put("suspension", "workshop");
+        SERVICE_CATEGORY_MAP.put("شاصي", "workshop");
+        SERVICE_CATEGORY_MAP.put("عادم", "workshop");
+        SERVICE_CATEGORY_MAP.put("exhaust", "workshop");
+        SERVICE_CATEGORY_MAP.put("تبريد", "workshop");
+        SERVICE_CATEGORY_MAP.put("radiator", "workshop");
+
+        SERVICE_CATEGORY_MAP.put("ونش", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("سحب", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("tow", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("سحب", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("تعطل", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("accident", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("تصليح", "tow_truck");
+        SERVICE_CATEGORY_MAP.put("مشوار", "tow_truck");
+    }
+
+    private String determineCategory(String description, String serviceName) {
+        String combined = (description != null ? description : "") + " " + (serviceName != null ? serviceName : "");
+        for (var entry : SERVICE_CATEGORY_MAP.entrySet()) {
+            if (combined.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        var serviceTypeOpt = serviceTypeRepository.findByName(serviceName);
+        if (serviceTypeOpt.isPresent() && serviceTypeOpt.get().getCategory() != null) {
+            return serviceTypeOpt.get().getCategory();
+        }
+        return "workshop";
     }
 }

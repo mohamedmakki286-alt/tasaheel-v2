@@ -13,6 +13,10 @@ spring:
       enabled: true
       path: /h2-console
 
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    baseline-on-migrate: false
+
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -51,7 +55,13 @@ spring:
       continue-on-error: true
 
 application:
+  dispatch:
+    max-workshops: ${REQUEST_DISPATCH_MAX_WORKSHOPS:10}
+    expiry-hours: ${REQUEST_DISPATCH_EXPIRY_HOURS:24}
+  payment:
+    callback-base-url: ${PAYMENT_CALLBACK_BASE_URL:http://localhost:5175}
   name: Tasaheel
+  public-url: ${PUBLIC_URL:http://localhost:8080}
   jwt:
     secret: ${JWT_SECRET:dGFzYWhlZWwtc2VjcmV0LWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tYW5kLXZhbGlkYXRpb24tZm9yLXRhc2FoZWVsLXBsYXRmb3JtLTIwMjQ=}
     expiration: 604800000

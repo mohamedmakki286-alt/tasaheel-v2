@@ -2,6 +2,8 @@ package com.tasaheel.service;
 
 import com.tasaheel.dto.*;
 import com.tasaheel.entity.*;
+import com.tasaheel.event.EventPublisher;
+import com.tasaheel.event.EventType;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.repository.*;
@@ -31,6 +33,7 @@ public class InvoiceService {
     private final WorkshopSettlementRepository settlementRepository;
     private final RequestCompletionService requestCompletionService;
     private final QuoteRepository quoteRepository;
+    private final EventPublisher eventPublisher;
 
     @Transactional
     public InvoiceDTO createOrUpdateInvoice(Long requestId, Long workshopId, Double partsTotal, Double laborTotal, Double totalAmount, Double tax, Double taxPercent, Double grandTotal, List<InvoiceItemDTO> items) {
@@ -45,9 +48,12 @@ public class InvoiceService {
         if (!workshopHasAcceptedQuote) {
             throw new BadRequestException("Only the selected workshop can create an invoice");
         }
-        if (!"customer_approved".equals(request.getStatus())) {
-            throw new BadRequestException("The inspection report must be approved before creating an invoice");
+        if (!List.of("awaiting_payment", "completed").contains(request.getStatus())) {
+            throw new BadRequestException("Work must be completed before creating an invoice");
         }
+        InspectionReport approvedReport = inspectionReportRepository.findTopByRequestIdOrderByCreatedAtDesc(requestId)
+                .filter(report -> "approved".equals(report.getStatus()))
+                .orElseThrow(() -> new BadRequestException("The inspection report must be approved before creating an invoice"));
 
         double safeParts = partsTotal != null ? partsTotal : 0.0;
         double safeLabor = laborTotal != null ? laborTotal : 0.0;
@@ -69,10 +75,8 @@ public class InvoiceService {
                 safeTax = safeGrandTotal - safeTotalAmount;
             }
         } else if (safeGrandTotal == 0) {
-            InspectionReport report = inspectionReportRepository.findTopByRequestIdOrderByCreatedAtDesc(requestId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Inspection report for request"));
-            safeGrandTotal = report.getGrandTotal() != null ? report.getGrandTotal() : 0.0;
-            safeTax = report.getTax() != null ? report.getTax() : safeGrandTotal * taxRate;
+            safeGrandTotal = approvedReport.getGrandTotal() != null ? approvedReport.getGrandTotal() : 0.0;
+            safeTax = approvedReport.getTax() != null ? approvedReport.getTax() : safeGrandTotal * taxRate;
             safeTotalAmount = safeGrandTotal - safeTax;
             safeParts = safeTotalAmount;
             safeLabor = 0.0;
@@ -111,6 +115,7 @@ public class InvoiceService {
                 }
             }
             existing = invoiceRepository.save(existing);
+            eventPublisher.publish(this, EventType.INVOICE_CREATED, requestId, "workshop", workshopId);
             return toInvoiceDTO(existing);
         }
 
@@ -145,12 +150,28 @@ public class InvoiceService {
         }
 
         invoice = invoiceRepository.save(invoice);
+        eventPublisher.publish(this, EventType.INVOICE_CREATED, requestId, "workshop", workshopId);
         return toInvoiceDTO(invoice);
     }
 
     public InvoiceDTO getInvoice(Long requestId) {
         Invoice invoice = invoiceRepository.findByRequestId(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice for request", requestId));
+        return toInvoiceDTO(invoice);
+    }
+
+    public InvoiceDTO getInvoiceForUser(Long requestId, Long userId, String role) {
+        Invoice invoice = invoiceRepository.findByRequestId(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice for request", requestId));
+        boolean permitted = "admin".equalsIgnoreCase(role)
+                || ("customer".equalsIgnoreCase(role) && invoice.getCustomer().getId().equals(userId))
+                || ("workshop".equalsIgnoreCase(role) && invoice.getWorkshop().getId().equals(userId))
+                || ("technician".equalsIgnoreCase(role)
+                    && invoice.getRequest().getTechnician() != null
+                    && invoice.getRequest().getTechnician().getId().equals(userId));
+        if (!permitted) {
+            throw new BadRequestException("You are not allowed to view this invoice");
+        }
         return toInvoiceDTO(invoice);
     }
 

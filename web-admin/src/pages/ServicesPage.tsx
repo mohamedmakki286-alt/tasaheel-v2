@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, Edit2, Trash2, Wrench, Settings, Truck, Shield,
-  Car, Battery, Wind, Droplets, Thermometer, Scan, X, Check, AlertCircle,
+  Plus, Edit2, Trash2, Wrench,
+  X, Check, AlertCircle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -14,23 +14,9 @@ import Badge from '../components/Badge';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { CardSkeleton } from '../components/Skeleton';
 import { formatDate } from '../utils/formatters';
+import { getServiceIcon, SERVICE_ICON_NAMES } from '../utils/serviceIcons';
 import type { ServiceType } from '../types';
 import clsx from 'clsx';
-
-const iconMap: Record<string, React.ReactNode> = {
-  wrench: <Wrench className="w-6 h-6" />,
-  settings: <Settings className="w-6 h-6" />,
-  truck: <Truck className="w-6 h-6" />,
-  shield: <Shield className="w-6 h-6" />,
-  car: <Car className="w-6 h-6" />,
-  battery: <Battery className="w-6 h-6" />,
-  wind: <Wind className="w-6 h-6" />,
-  droplets: <Droplets className="w-6 h-6" />,
-  thermometer: <Thermometer className="w-6 h-6" />,
-  tool: <Wrench className="w-6 h-6" />,
-};
-
-const iconNames = Object.keys(iconMap);
 
 const bgColors = [
   'from-amber-500 to-orange-500',
@@ -173,7 +159,7 @@ export default function ServicesPage() {
                 'w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br shadow-lg shrink-0',
                 bgColors[idx % bgColors.length]
               )}>
-                <div className="text-white">{iconMap[svc.icon || 'wrench'] || <Wrench className="w-6 h-6" />}</div>
+                <div className="text-white">{React.createElement(getServiceIcon(svc.icon), { className: "w-6 h-6" })}</div>
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-gray-900 text-lg">{svc.name}</h3>
@@ -249,7 +235,7 @@ export default function ServicesPage() {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('pages.services.form.icon')}</label>
             <div className="grid grid-cols-6 sm:grid-cols-10 gap-2">
-              {iconNames.map((name) => (
+              {SERVICE_ICON_NAMES.map((name) => (
                 <button
                   key={name}
                   type="button"
@@ -260,8 +246,9 @@ export default function ServicesPage() {
                       ? 'border-amber-500 bg-amber-50 text-amber-600 shadow-sm'
                       : 'border-gray-100 hover:border-gray-200 text-gray-400 hover:text-gray-600'
                   )}
+                  title={name}
                 >
-                  {iconMap[name]}
+                  {React.createElement(getServiceIcon(name), { className: "w-5 h-5" })}
                 </button>
               ))}
             </div>

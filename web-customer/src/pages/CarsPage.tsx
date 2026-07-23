@@ -8,6 +8,8 @@ import { CarCard } from '../components/CarCard';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ArrowRight, CarFront, Check, ChevronDown, Plus, X } from 'lucide-react';
+import NumberInput from '../components/NumberInput';
+import BrandPicker from '../components/BrandPicker';
 
 const currentYear = new Date().getFullYear();
 const emptyForm = { make: '', model: '', year: currentYear, color: '', plateNumber: '', mileage: 0 };
@@ -28,17 +30,6 @@ const saudiPlateLetters: Record<string, string> = {
   ط: 'T', ع: 'E', ق: 'G', ك: 'K', ل: 'L', م: 'Z', ن: 'N', ه: 'H', هـ: 'H',
   و: 'U', ى: 'V', ي: 'V',
 };
-
-const toWesternDigit = (char: string) => {
-  const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
-  const easternDigits = '۰۱۲۳۴۵۶۷۸۹';
-  const arabicIndex = arabicDigits.indexOf(char);
-  if (arabicIndex >= 0) return String(arabicIndex);
-  const easternIndex = easternDigits.indexOf(char);
-  return easternIndex >= 0 ? String(easternIndex) : char;
-};
-
-const toArabicDigit = (char: string) => '٠١٢٣٤٥٦٧٨٩'[Number(char)] || char;
 
 function parsePlate(value: string) {
   const normalized = [...value].map(normalizePlateDigit).join('');
@@ -68,7 +59,7 @@ function SaudiPlatePreview({ value, onChange }: { value: string; onChange: (valu
   };
 
   return (
-    <div className="relative mx-auto w-full max-w-[620px] overflow-hidden rounded-[22px] border-[3px] border-black bg-white shadow-[0_14px_32px_rgba(15,23,42,0.12)] sm:rounded-[34px] sm:border-[4px]">
+    <div className="relative mx-auto w-full max-w-[620px] overflow-hidden rounded-[20px] border-[3px] border-black bg-white shadow-lg sm:rounded-[28px] sm:border-[4px]">
       <div className="grid aspect-[2.12/1] min-h-[132px] grid-cols-[1fr_58px] sm:min-h-[190px] sm:grid-cols-[1fr_82px]" dir="ltr">
         <div className="grid grid-rows-2 divide-y-[4px] divide-black text-black">
           <div className="grid grid-cols-2 divide-x-[4px] divide-black">
@@ -81,7 +72,7 @@ function SaudiPlatePreview({ value, onChange }: { value: string; onChange: (valu
                 aria-label="أرقام اللوحة"
                 placeholder="١ ٢ ٣ ٤"
                 dir="ltr"
-                className="w-full bg-transparent text-center text-lg font-extrabold tracking-[0.12em] text-surface-900 outline-none placeholder:text-surface-300 sm:text-2xl sm:tracking-[0.18em]"
+                className="w-full bg-transparent text-center text-lg font-extrabold tracking-[0.12em] text-primary-500 outline-none placeholder:text-surface-300 sm:text-2xl sm:tracking-[0.18em]"
               />
             </div>
             <div className="flex items-center justify-center px-3">
@@ -91,13 +82,13 @@ function SaudiPlatePreview({ value, onChange }: { value: string; onChange: (valu
                 aria-label="حروف اللوحة"
                 placeholder="أ ب ح"
                 dir="rtl"
-                className="w-full bg-transparent text-center text-lg font-extrabold tracking-[0.12em] text-surface-900 outline-none placeholder:text-surface-300 sm:text-2xl sm:tracking-[0.18em]"
+                className="w-full bg-transparent text-center text-lg font-extrabold tracking-[0.12em] text-primary-500 outline-none placeholder:text-surface-300 sm:text-2xl sm:tracking-[0.18em]"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 divide-x-[4px] divide-black">
-            <div className="flex items-center justify-center text-xl font-extrabold text-surface-700">{englishNumbers}</div>
-            <div className="flex items-center justify-center text-xl font-extrabold text-surface-700">{englishLetters}</div>
+            <div className="flex items-center justify-center text-xl font-extrabold text-surface-600">{englishNumbers}</div>
+            <div className="flex items-center justify-center text-xl font-extrabold text-surface-600">{englishLetters}</div>
           </div>
         </div>
         <div className="flex flex-col items-center justify-around border-l-[4px] border-black py-3 text-black">
@@ -183,11 +174,15 @@ export function CarsPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload: any = { ...form };
+      if (!payload.mileage) delete payload.mileage;
+      if (!payload.color) delete payload.color;
+      if (!payload.plateNumber) delete payload.plateNumber;
       if (editingId) {
-        await carsApi.update(editingId, form);
+        await carsApi.update(editingId, payload);
         toast.success(t('toast.success.carUpdated'));
       } else {
-        const response: any = await carsApi.create(form);
+        const response: any = await carsApi.create(payload);
         const created = response?.data || response;
         toast.success(t('toast.success.carAdded'));
         if (routeState?.returnTo && created?.id) {
@@ -223,15 +218,15 @@ export function CarsPage() {
   if (showForm) {
     return (
       <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6 pb-28 animate-fade-in" dir="rtl">
-        <div className="flex items-center justify-between border-b border-surface-200/70 pb-4 dark:border-surface-800">
-          <button type="button" onClick={closeForm} className="flex h-10 w-10 items-center justify-center rounded-xl text-surface-500 transition-colors hover:bg-surface-100 dark:hover:bg-surface-800" aria-label="رجوع">
+        <div className="flex items-center justify-between border-b border-surface-100 pb-4 dark:border-surface-800">
+          <button type="button" onClick={closeForm} className="flex h-10 w-10 items-center justify-center rounded-[12px] text-surface-400 transition-colors hover:bg-surface-50 dark:hover:bg-surface-800" aria-label="رجوع">
             <ArrowRight className="h-5 w-5" />
           </button>
           <div className="text-center">
-            <p className="text-[11px] font-bold text-accent-500">تساهيل</p>
-            <h2 className="text-xl font-extrabold text-surface-900 dark:text-white">{editingId ? 'تعديل السيارة' : 'إضافة سيارة'}</h2>
+            <p className="text-[11px] font-bold text-brand">تساهيل</p>
+            <h2 className="text-xl font-extrabold text-primary-500 dark:text-white">{editingId ? 'تعديل السيارة' : 'إضافة سيارة'}</h2>
           </div>
-          <button type="button" onClick={closeForm} className="flex h-10 w-10 items-center justify-center rounded-xl text-surface-400 transition-colors hover:bg-surface-100 dark:hover:bg-surface-800" aria-label="إغلاق">
+          <button type="button" onClick={closeForm} className="flex h-10 w-10 items-center justify-center rounded-[12px] text-surface-400 transition-colors hover:bg-surface-50 dark:hover:bg-surface-800" aria-label="إغلاق">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -244,18 +239,18 @@ export function CarsPage() {
         <div className="space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-bold text-surface-800 dark:text-surface-100">ماركة السيارة</label>
-              <input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} required className="input-field h-14 font-semibold" placeholder="مثال: تويوتا" />
+              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">ماركة السيارة</label>
+              <BrandPicker value={form.make} onChange={(make) => setForm({ ...form, make })} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-bold text-surface-800 dark:text-surface-100">موديل السيارة</label>
+              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">موديل السيارة</label>
               <input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required className="input-field h-14 font-semibold" placeholder="مثال: كامري" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-2 block text-sm font-bold text-surface-800 dark:text-surface-100">سنة الصنع</label>
+              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">سنة الصنع</label>
               <div className="relative">
                 <select value={form.year} onChange={(e) => setForm({ ...form, year: Number(e.target.value) })} required className="input-field h-14 appearance-none pl-10 text-center text-lg font-bold">
                   {years.map((year) => <option key={year} value={year}>{year}</option>)}
@@ -264,21 +259,24 @@ export function CarsPage() {
               </div>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-bold text-surface-800 dark:text-surface-100">لون السيارة</label>
+              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">لون السيارة</label>
               <input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="input-field h-14 font-semibold" placeholder="مثال: أبيض لؤلؤي" />
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-bold text-surface-800 dark:text-surface-100">ممشى السيارة</label>
-            <div className="relative">
-              <input type="number" min="0" value={form.mileage || ''} onChange={(e) => setForm({ ...form, mileage: Number(e.target.value) })} className="input-field h-14 pl-14 font-semibold" placeholder="مثال: 150000" />
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-surface-400">كم</span>
-            </div>
+            <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">ممشى السيارة</label>
+            <NumberInput
+              value={String(form.mileage || '')}
+              onValueChange={(v) => setForm({ ...form, mileage: Number(v) || 0 })}
+              mode="integer"
+              placeholder="مثال: 150000"
+              suffix="كم"
+            />
           </div>
         </div>
 
-        <div className="fixed inset-x-0 bottom-16 z-30 mx-auto max-w-2xl px-4 lg:bottom-4">
-          <button type="submit" disabled={saving || !form.make || !form.model} className="btn-primary flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-extrabold shadow-[0_12px_32px_rgba(217,4,8,0.28)]">
+        <div className="fixed inset-x-0 bottom-[72px] z-30 mx-auto max-w-2xl px-4 lg:bottom-4">
+          <button type="submit" disabled={saving || !form.make || !form.model} className="btn-primary flex h-14 w-full items-center justify-center gap-2 rounded-[16px] text-base font-extrabold shadow-lg shadow-brand/20">
             {saving ? 'جارٍ الحفظ...' : <><Check className="h-5 w-5" />{editingId ? 'حفظ التعديلات' : 'إضافة السيارة'}</>}
           </button>
         </div>
@@ -290,24 +288,21 @@ export function CarsPage() {
     <div className="mx-auto w-full max-w-[620px] space-y-6 pb-24 pt-2 animate-fade-in sm:pb-0">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[28px] font-black tracking-tight text-surface-900 dark:text-white">{t('pages.cars.title')}</h2>
+          <h2 className="text-[28px] font-black tracking-tight text-primary-500 dark:text-white">{t('pages.cars.title')}</h2>
         </div>
         <button
           onClick={openAdd}
-          className="group fixed bottom-20 left-4 right-4 z-30 flex h-14 items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-l from-accent-600 via-accent-500 to-accent-500 px-6 text-white shadow-[0_14px_34px_rgba(217,4,8,0.32)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(217,4,8,0.38)] active:scale-[0.98] sm:static sm:h-12 sm:w-auto sm:min-w-[170px] sm:rounded-xl"
+          className="flex h-11 items-center gap-2 rounded-[12px] bg-brand px-4 text-white shadow-md shadow-brand/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
           aria-label="إضافة سيارة جديدة"
         >
-          <span className="absolute inset-y-0 -right-12 w-24 rotate-12 bg-white/10 transition-transform duration-500 group-hover:translate-x-36" />
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
-            <Plus className="h-5 w-5" strokeWidth={2.6} />
-          </span>
-          <span className="relative text-sm font-extrabold sm:text-[15px]">إضافة سيارة جديدة</span>
+          <Plus className="h-5 w-5" strokeWidth={2.6} />
+          <span className="text-sm font-extrabold">إضافة سيارة</span>
         </button>
       </div>
 
       {cars.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-surface-300 bg-surface-50/80 p-7 text-center dark:border-surface-700 dark:bg-surface-900">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-50 text-accent-500 dark:bg-accent-500/10">
+        <div className="rounded-[20px] border border-dashed border-surface-300 bg-surface-50/80 p-7 text-center dark:border-surface-700 dark:bg-surface-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[16px] bg-brand-50 text-brand dark:bg-brand-500/10">
             <CarFront className="h-8 w-8" />
           </div>
           <EmptyState title={t('pages.cars.emptyTitle')} description={t('pages.cars.emptyDesc')} />

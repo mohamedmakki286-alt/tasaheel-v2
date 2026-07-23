@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useAuthStore } from '../stores/authStore';
 import { useCallStore } from '../stores/callStore';
-
 import { getWsUrl } from '../utils/ws';
 
 const WS_URL = getWsUrl();
@@ -12,7 +11,7 @@ const STUN_SERVERS: RTCIceServer[] = [
 ];
 
 export function useCallSignaling() {
-  const { customer } = useAuthStore();
+  const customer = useAuthStore((s) => s.customer);
   const store = useCallStore();
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -138,9 +137,35 @@ export function useCallSignaling() {
     }
   }, []);
 
-  // STOMP connection for call signaling
+  const toggleSpeaker = useCallback(async () => {
+    const next = !useCallStore.getState().isSpeakerOn;
+    useCallStore.setState({ isSpeakerOn: next });
+    const audio = document.getElementById('remote-audio') as HTMLAudioElement | null;
+    if (!audio) return;
+    if ('setSinkId' in audio) {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+        if (next && audioOutputs.length > 1) {
+          const speaker = audioOutputs.find(d => /speaker|external|phone/i.test(d.label)) || audioOutputs[1];
+          await (audio as any).setSinkId(speaker.deviceId);
+        } else if (audioOutputs.length > 0) {
+          await (audio as any).setSinkId(audioOutputs[0].deviceId);
+        }
+      } catch { }
+    }
+  }, []);
+
   useEffect(() => {
     if (!customer?.id) return;
+
+    const handleVoipCall = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.calleeId) {
+        startCall(detail.calleeId, detail.calleeName, detail.requestId);
+      }
+    };
+    document.addEventListener('voip-call', handleVoipCall);
 
     const client = new Client({
       brokerURL: WS_URL,
@@ -185,9 +210,10 @@ export function useCallSignaling() {
 
     return () => {
       client.deactivate();
+      document.removeEventListener('voip-call', handleVoipCall);
       cleanup();
     };
   }, [customer?.id]);
 
-  return { startCall, answerCall, rejectCall, hangUp, toggleMute };
+  return { startCall, answerCall, rejectCall, hangUp, toggleMute, toggleSpeaker };
 }

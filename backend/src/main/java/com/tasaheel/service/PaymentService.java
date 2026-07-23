@@ -27,6 +27,9 @@ public class PaymentService {
     @Value("${application.moyasar.base-url}")
     private String baseMoyasarUrl;
 
+    @Value("${application.payment.callback-base-url:http://localhost:5175}")
+    private String callbackBaseUrl;
+
     private final PaymentRepository paymentRepository;
     private final MaintenanceRequestRepository requestRepository;
     private final CustomerRepository customerRepository;
@@ -50,6 +53,9 @@ public class PaymentService {
         if (!"approved".equals(invoice.getStatus())) {
             throw new BadRequestException("Invoice must be approved before payment");
         }
+        if (!"awaiting_payment".equals(request.getStatus())) {
+            throw new BadRequestException("Work must be completed before payment");
+        }
         double invoiceAmount = invoice.getGrandTotal() != null ? invoice.getGrandTotal() : 0.0;
         if (amount == null || Math.abs(amount - invoiceAmount) > 0.001) {
             throw new BadRequestException("Payment amount must match the approved invoice");
@@ -70,7 +76,7 @@ public class PaymentService {
 
         try {
             String sourceType = mapSourceType(method);
-            String callbackUrl = "https://salaba.com/payment/callback";
+            String callbackUrl = callbackBaseUrl + "/payment/callback";
 
             Map<String, Object> moyasarResponse = moyasarService.initiatePayment(
                     amount, "SAR", "Payment for request #" + requestId,
@@ -117,6 +123,9 @@ public class PaymentService {
         if (!"approved".equals(invoice.getStatus())) {
             throw new BadRequestException("Invoice must be approved before payment");
         }
+        if (!"awaiting_payment".equals(request.getStatus())) {
+            throw new BadRequestException("Work must be completed before payment");
+        }
         double invoiceAmount = invoice.getGrandTotal() != null ? invoice.getGrandTotal() : 0.0;
         if (amount == null || Math.abs(amount - invoiceAmount) > 0.001) {
             throw new BadRequestException("Payment amount must match the approved invoice");
@@ -140,9 +149,9 @@ public class PaymentService {
             Map<String, Object> tamaraResponse = tamaraService.initiateCheckout(
                     amount, "SAR", orderId,
                     customer.getName(), customer.getEmail(), customer.getPhone(),
-                    "https://salaba.com/payment/success",
-                    "https://salaba.com/payment/failure",
-                    "https://salaba.com/payment/cancel"
+                    callbackBaseUrl + "/payment/success",
+                    callbackBaseUrl + "/payment/failure",
+                    callbackBaseUrl + "/payment/cancel"
             );
 
             if (tamaraResponse != null) {
@@ -179,92 +188,91 @@ public class PaymentService {
 
     @Transactional
     public void handlePaymentWebhook(Map<String, Object> payload) {
-        try {
-            String paymentId = (String) payload.get("id");
-            String status = (String) payload.get("status");
+        String paymentId = payload.get("id") != null ? payload.get("id").toString() : null;
+        if (paymentId == null || paymentId.isBlank()) {
+            throw new BadRequestException("Missing payment id");
+        }
 
-            Payment payment = paymentRepository.findByMoyasarPaymentId(paymentId)
-                    .orElse(null);
+        Payment payment = paymentRepository.findByMoyasarPaymentId(paymentId)
+                .orElseThrow(() -> new BadRequestException("Unknown payment"));
+        if ("completed".equals(payment.getStatus())) {
+            return;
+        }
 
-            if (payment == null) {
-                log.warn("Payment not found for Moyasar ID: {}", paymentId);
-                return;
+        Map<String, Object> verifiedPayment = moyasarService.getPayment(paymentId);
+        String status = verifiedPayment.get("status") != null
+                ? verifiedPayment.get("status").toString() : null;
+        validateProviderAmount(verifiedPayment.get("amount"), payment.getAmount(), true);
+
+        switch (status) {
+            case "paid" -> payment.setStatus("completed");
+            case "failed" -> payment.setStatus("failed");
+            case "refunded" -> payment.setStatus("refunded");
+            default -> throw new BadRequestException("Unsupported payment status");
+        }
+
+        paymentRepository.save(payment);
+
+        if ("paid".equals(status)) {
+            Invoice invoice = invoiceRepository.findByRequestId(payment.getRequest().getId())
+                    .orElseThrow(() -> new BadRequestException("Invoice not found"));
+            if (!"approved".equals(invoice.getStatus())) {
+                throw new BadRequestException("Invoice is not approved");
             }
-
-            switch (status) {
-                case "paid":
-                    payment.setStatus("completed");
-                    break;
-                case "failed":
-                    payment.setStatus("failed");
-                    break;
-                case "refunded":
-                    payment.setStatus("refunded");
-                    break;
-                default:
-                    payment.setStatus(status);
-            }
-
-            paymentRepository.save(payment);
-
-            if ("paid".equals(status)) {
-                Invoice invoice = invoiceRepository.findByRequestId(payment.getRequest().getId()).orElse(null);
-                if (invoice != null) {
-                    invoice.setStatus("paid");
-                    invoice.setPaymentMethod(payment.getMethod());
-                    invoice.setPaymentId(paymentId);
-                    invoice.setPaidAt(java.time.LocalDateTime.now());
-                    invoiceRepository.save(invoice);
-                }
-                requestCompletionService.completeAfterPayment(payment.getRequest(), paymentId);
-            }
-        } catch (Exception e) {
-            log.error("Failed to handle payment webhook: {}", e.getMessage(), e);
+            invoice.setStatus("paid");
+            invoice.setPaymentMethod(payment.getMethod());
+            invoice.setPaymentId(paymentId);
+            invoice.setPaidAt(java.time.LocalDateTime.now());
+            invoiceRepository.save(invoice);
+            requestCompletionService.completeAfterPayment(payment.getRequest(), paymentId);
         }
     }
 
     @Transactional
     public void handleTamaraWebhook(Map<String, Object> payload) {
-        try {
-            String orderId = null;
-            String status = null;
+        String orderId = null;
 
-            if (payload.containsKey("data")) {
-                Map<String, Object> data = (Map<String, Object>) payload.get("data");
-                orderId = (String) data.get("order_id");
-                status = (String) data.get("status");
-            } else {
-                orderId = (String) payload.get("order_id");
-                status = (String) payload.get("status");
+        if (payload.containsKey("data") && payload.get("data") instanceof Map<?, ?> data) {
+            Object rawOrderId = data.get("order_id");
+            orderId = rawOrderId != null ? rawOrderId.toString() : null;
+        } else if (payload.get("order_id") != null) {
+            orderId = payload.get("order_id").toString();
+        }
+
+        if (orderId == null || orderId.isBlank()) {
+            throw new BadRequestException("Missing Tamara order id");
+        }
+
+        Payment payment = paymentRepository.findByMoyasarPaymentId(orderId)
+                .orElseThrow(() -> new BadRequestException("Unknown Tamara order"));
+        if ("completed".equals(payment.getStatus())) {
+            return;
+        }
+
+        Map<String, Object> verifiedOrder = tamaraService.getPaymentStatus(orderId);
+        String status = extractString(verifiedOrder, "status", "order_status");
+        validateProviderAmount(extractNestedAmount(verifiedOrder), payment.getAmount(), false);
+
+        if ("paid".equalsIgnoreCase(status) || "approved".equalsIgnoreCase(status)
+                || "fully_captured".equalsIgnoreCase(status)) {
+            Invoice invoice = invoiceRepository.findByRequestId(payment.getRequest().getId())
+                    .orElseThrow(() -> new BadRequestException("Invoice not found"));
+            if (!"approved".equals(invoice.getStatus())) {
+                throw new BadRequestException("Invoice is not approved");
             }
-
-            if (orderId == null) return;
-
-            Payment payment = paymentRepository.findByMoyasarPaymentId(orderId).orElse(null);
-            if (payment == null) {
-                log.warn("Tamara payment not found for order: {}", orderId);
-                return;
-            }
-
-            if ("paid".equals(status) || "approved".equals(status)) {
-                payment.setStatus("completed");
-                paymentRepository.save(payment);
-
-                Invoice invoice = invoiceRepository.findByRequestId(payment.getRequest().getId()).orElse(null);
-                if (invoice != null) {
-                    invoice.setStatus("paid");
-                    invoice.setPaymentMethod("tamara");
-                    invoice.setPaymentId(orderId);
-                    invoice.setPaidAt(java.time.LocalDateTime.now());
-                    invoiceRepository.save(invoice);
-                }
-                requestCompletionService.completeAfterPayment(payment.getRequest(), orderId);
-            } else if ("cancelled".equals(status) || "declined".equals(status)) {
-                payment.setStatus("failed");
-                paymentRepository.save(payment);
-            }
-        } catch (Exception e) {
-            log.error("Failed to handle Tamara webhook: {}", e.getMessage(), e);
+            payment.setStatus("completed");
+            paymentRepository.save(payment);
+            invoice.setStatus("paid");
+            invoice.setPaymentMethod("tamara");
+            invoice.setPaymentId(orderId);
+            invoice.setPaidAt(java.time.LocalDateTime.now());
+            invoiceRepository.save(invoice);
+            requestCompletionService.completeAfterPayment(payment.getRequest(), orderId);
+        } else if ("cancelled".equalsIgnoreCase(status) || "declined".equalsIgnoreCase(status)) {
+            payment.setStatus("failed");
+            paymentRepository.save(payment);
+        } else {
+            throw new BadRequestException("Unsupported Tamara payment status");
         }
     }
 
@@ -289,10 +297,49 @@ public class PaymentService {
         return toPaymentDTO(payment);
     }
 
-    public PaymentDTO getPayment(Long paymentId) {
+    public PaymentDTO getPayment(Long paymentId, Long userId, String role) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", paymentId));
+        if (!"admin".equalsIgnoreCase(role) && !payment.getCustomer().getId().equals(userId)) {
+            throw new BadRequestException("You are not allowed to view this payment");
+        }
         return toPaymentDTO(payment);
+    }
+
+    private void validateProviderAmount(Object rawAmount, Double expectedAmount, boolean minorUnits) {
+        if (rawAmount == null) {
+            throw new BadRequestException("Provider payment amount is missing");
+        }
+        double providerAmount;
+        if (rawAmount instanceof Number number) {
+            providerAmount = number.doubleValue();
+        } else {
+            providerAmount = Double.parseDouble(rawAmount.toString());
+        }
+        if (minorUnits) providerAmount /= 100.0;
+        if (Math.abs(providerAmount - expectedAmount) > 0.001) {
+            throw new BadRequestException("Provider payment amount does not match");
+        }
+    }
+
+    private String extractString(Map<String, Object> data, String... keys) {
+        for (String key : keys) {
+            Object value = data.get(key);
+            if (value != null) return value.toString();
+        }
+        throw new BadRequestException("Provider payment status is missing");
+    }
+
+    private Object extractNestedAmount(Map<String, Object> data) {
+        Object totalAmount = data.get("total_amount");
+        if (totalAmount instanceof Map<?, ?> amountMap) {
+            return amountMap.get("amount");
+        }
+        if (data.get("order") instanceof Map<?, ?> order
+                && order.get("total_amount") instanceof Map<?, ?> amountMap) {
+            return amountMap.get("amount");
+        }
+        return data.get("amount");
     }
 
     public Page<PaymentDTO> getPaymentHistory(Long customerId, int page, int size) {

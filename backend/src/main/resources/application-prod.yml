@@ -16,13 +16,19 @@ spring:
       data-source-properties:
         ssl: true
         sslmode: require
+        prepareThreshold: 0
       maximum-pool-size: 5
       minimum-idle: 2
       connection-timeout: 30000
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -54,7 +60,13 @@ spring:
       max-request-size: 50MB
 
 application:
+  dispatch:
+    max-workshops: ${REQUEST_DISPATCH_MAX_WORKSHOPS:10}
+    expiry-hours: ${REQUEST_DISPATCH_EXPIRY_HOURS:24}
+  payment:
+    callback-base-url: ${PAYMENT_CALLBACK_BASE_URL}
   name: Tasaheel
+  public-url: ${APPLICATION_PUBLIC_URL:https://api.salabaa.com}
   jwt:
     secret: ${APPLICATION_JWT_SECRET}
     expiration: 604800000

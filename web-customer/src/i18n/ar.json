@@ -754,20 +754,9 @@
                                                "closest":  "الأقرب إليك",
                                                "highestRated":  "أعلى تقييم",
                                                "mostRequested":  "الأكثر طلباً",
-                                               "bestForYou":  "الأنسب لك"
-                                           },
-                       "smartWorkshop":  {
-                                             "bestForYou":  "الأنسب لك",
-                                             "bestSuggestion":  "أفضل اقتراح",
-                                             "excellentAlternative":  "بديل ممتاز",
-                                             "extraOption":  "خيار إضافي",
-                                             "footnote":  "* بناءً على التقييم والمسافة وعدد الطلبات المكتملة",
-                                             "mostRequested":  "الأكثر طلباً",
-                                             "nearest":  "الأقرب إليك",
-                                             "title":  "اقتراح ذكي للورش",
-                                             "topRated":  "أعلى تقييم"
-                                         }
-                   },
+                                                "bestForYou":  "الأنسب لك"
+                                            }
+                    },
     "constants":  {
                        "currency":  "ر.س",
                        "maintenanceRequest":  "طلب صيانة",

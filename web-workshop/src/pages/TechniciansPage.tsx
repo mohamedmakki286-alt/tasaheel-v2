@@ -309,6 +309,16 @@ export default function TechniciansPage() {
                           {technician.isOnline ? <UserCheck size={12} /> : <UserX size={12} />}
                           {technician.isOnline ? t('constants.connectionStatuses.online') : t('constants.connectionStatuses.offline')}
                         </span>
+                        {technician.availabilityStatus && (
+                          <span className={`badge self-start ${
+                            technician.availabilityStatus === 'available' ? 'bg-emerald-100 text-emerald-700' :
+                            technician.availabilityStatus === 'busy' ? 'bg-amber-100 text-amber-700' :
+                            'bg-gray-100 text-gray-500'
+                          }`}>
+                            {technician.availabilityStatus === 'available' ? 'متاح' :
+                             technician.availabilityStatus === 'busy' ? 'مشغول' : 'غير متاح'}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3">

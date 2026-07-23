@@ -29,6 +29,11 @@
     <!-- Phone (for calling workshops) -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
 
+    <!-- Audio (for calls) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

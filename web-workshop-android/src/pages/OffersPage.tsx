@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Gift, Plus, Trash2, Tag } from 'lucide-react';
 import { offersApi, type OfferInput } from '../api/offers.api';
+import NumberInput from '../components/NumberInput';
 
 const empty: OfferInput = { title: '', description: '', type: 'package', serviceNames: '', originalPrice: 0, offerPrice: 0, startDate: '', endDate: '', isActive: true };
 
@@ -27,7 +28,7 @@ export default function OffersPage() {
       </div>
       <div><label className="label">الخدمات المشمولة</label><input className="input-field" value={form.serviceNames} onChange={e => setForm({...form,serviceNames:e.target.value})} placeholder="تغيير زيت، فلتر، فحص فرامل"/><p className="text-xs text-surface-400 mt-1">افصل بين الخدمات بفاصلة</p></div>
       <div><label className="label">الوصف والشروط</label><textarea rows={3} className="input-field" value={form.description} onChange={e => setForm({...form,description:e.target.value})}/></div>
-      <div className="grid grid-cols-2 gap-3"><div><label className="label">السعر قبل العرض</label><input type="number" min="0" className="input-field" value={form.originalPrice} onChange={e => setForm({...form,originalPrice:Number(e.target.value)})}/></div><div><label className="label">سعر العرض</label><input required type="number" min="0" className="input-field" value={form.offerPrice} onChange={e => setForm({...form,offerPrice:Number(e.target.value)})}/></div></div>
+      <div className="grid grid-cols-2 gap-3"><div><label className="label">السعر قبل العرض</label><NumberInput value={String(form.originalPrice)} onValueChange={v => setForm({...form,originalPrice: Number(v) || 0})} mode="decimal" decimalScale={2} /></div><div><label className="label">سعر العرض</label><NumberInput value={String(form.offerPrice)} onValueChange={v => setForm({...form,offerPrice: Number(v) || 0})} mode="decimal" decimalScale={2} required /></div></div>
       <div className="grid grid-cols-2 gap-3"><div><label className="label">من تاريخ</label><input type="date" className="input-field" value={form.startDate} onChange={e => setForm({...form,startDate:e.target.value})}/></div><div><label className="label">حتى تاريخ</label><input type="date" className="input-field" value={form.endDate} onChange={e => setForm({...form,endDate:e.target.value})}/></div></div>
       <button disabled={create.isPending} className="btn-primary w-full">{create.isPending ? 'جاري النشر...' : 'نشر للعملاء'}</button>
     </form>}

@@ -5,14 +5,12 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useCustomerWebSocket } from '../hooks/useCustomerWebSocket';
-import { useCallSignaling } from '../hooks/useCallSignaling';
-import { useCallStore } from '../stores/callStore';
 import { useGuestGuard } from '../hooks/useGuestGuard';
 import LoginBottomSheet from '../components/LoginBottomSheet';
 import BottomNav from '../components/BottomNav';
-import CallOverlay from '../components/CallOverlay';
-import IncomingCallDialog from '../components/IncomingCallDialog';
-import AIAssistant from '../components/AIAssistant';
+import SmartAssistantButton from '../components/SmartAssistantButton';
+import UnifiedCallHost from '@shared/call/UnifiedCallHost';
+import { requestNotificationPermission } from '../services/pushNotifications';
 
 const PAGE_TITLES: Record<string, string> = {
   '/services': 'الخدمات',
@@ -25,14 +23,15 @@ export default function PublicLayout() {
   const location = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { showLoginSheet, closeSheet, requireAuth, pendingMessage } = useGuestGuard();
-  const [searchFocused, setSearchFocused] = useState(false);
   const isSubPage = location.pathname !== '/';
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useCustomerWebSocket();
-  const { answerCall, rejectCall, hangUp, toggleMute } = useCallSignaling();
-  const callState = useCallStore();
+
+  useEffect(() => {
+    requestNotificationPermission().catch(() => {});
+  }, []);
 
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
@@ -60,39 +59,39 @@ export default function PublicLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-surface-950">
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-surface-950/80 backdrop-blur-xl border-b border-surface-200/50 dark:border-surface-800/50">
+    <div className="min-h-screen bg-bg dark:bg-surface-950">
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-surface-950/80 backdrop-blur-xl border-b border-surface-100 dark:border-surface-800/50">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {isSubPage && (
               <button
                 onClick={() => navigate(-1)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-surface-900 dark:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors active:scale-95"
+                className="w-9 h-9 rounded-[12px] flex items-center justify-center text-primary-500 dark:text-white hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors active:scale-95"
               >
                 <ChevronRight size={22} />
               </button>
             )}
             {!isSubPage && (
               <>
-                <img src="/tasaheel-app-icon.png" alt="" className="w-8 h-8 rounded-xl" />
-                <span className="font-bold text-lg text-surface-900 dark:text-white">تساهيل</span>
+                <img src="/tasaheel-app-icon.png" alt="" className="w-8 h-8 rounded-[10px]" />
+                <span className="font-bold text-lg text-primary-500 dark:text-white">تساهيل</span>
               </>
             )}
             {isSubPage && (
-              <span className="font-bold text-base text-surface-900 dark:text-white">{subTitle}</span>
+              <span className="font-bold text-base text-primary-500 dark:text-white">{subTitle}</span>
             )}
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-xs font-bold"
+              className="w-9 h-9 rounded-[12px] flex items-center justify-center text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors text-xs font-bold"
             >
               {i18n.language === 'ar' ? 'EN' : 'عر'}
             </button>
             {!isAuthenticated && (
               <button
                 onClick={() => requireAuth('سجل دخولك لإكمال الطلب')}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent-500 text-white text-sm font-bold hover:bg-accent-600 transition-colors active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-[12px] bg-brand text-white text-sm font-bold hover:bg-brand-600 transition-colors active:scale-95"
               >
                 <LogIn size={14} />
                 دخول
@@ -102,24 +101,24 @@ export default function PublicLayout() {
               <div className="relative" ref={notifRef}>
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative w-9 h-9 rounded-xl flex items-center justify-center text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+                  className="relative w-9 h-9 rounded-[12px] flex items-center justify-center text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
                 >
                   <Bell size={20} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-accent-500 rounded-full border-2 border-white dark:border-surface-950 flex items-center justify-center text-[9px] font-bold text-white px-1">
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-brand rounded-full border-2 border-white dark:border-surface-950 flex items-center justify-center text-[9px] font-bold text-white px-1">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-80 bg-white dark:bg-surface-900 rounded-2xl shadow-2xl border border-surface-200/50 dark:border-surface-800/50 overflow-hidden z-50">
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-80 bg-white dark:bg-surface-900 rounded-[16px] shadow-xl border border-surface-100 dark:border-surface-800/50 overflow-hidden z-50">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-surface-100 dark:border-surface-800">
-                      <span className="font-bold text-sm text-surface-900 dark:text-white">{t('websocket.panel.title')}</span>
+                      <span className="font-bold text-sm text-primary-500 dark:text-white">{t('websocket.panel.title')}</span>
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllAsRead}
-                          className="text-xs text-accent-500 font-medium hover:text-accent-600 transition-colors"
+                          className="text-xs text-brand font-medium hover:text-brand-600 transition-colors"
                         >
                           {t('websocket.panel.markAllRead')}
                         </button>
@@ -144,22 +143,22 @@ export default function PublicLayout() {
                               }
                             }}
                             className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors text-right ${
-                              !n.read ? 'bg-accent-500/5 dark:bg-accent-500/5' : ''
+                              !n.read ? 'bg-brand-50 dark:bg-brand-500/5' : ''
                             }`}
                           >
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                              n.type === 'request' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' :
-                              n.type === 'payment' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' :
-                              'bg-purple-100 dark:bg-purple-900/30 text-purple-600'
+                            <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0 ${
+                              n.type === 'request' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-500' :
+                              n.type === 'payment' ? 'bg-success-50 dark:bg-success-500/10 text-success-500' :
+                              'bg-purple-50 dark:bg-purple-900/30 text-purple-500'
                             }`}>
                               <Bell size={14} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-surface-900 dark:text-white truncate">{n.title}</p>
-                              <p className="text-[11px] text-surface-500 dark:text-surface-400 truncate mt-0.5">{n.body}</p>
+                              <p className="text-xs font-bold text-primary-500 dark:text-white truncate">{n.title}</p>
+                              <p className="text-[11px] text-surface-400 dark:text-surface-500 truncate mt-0.5">{n.body}</p>
                             </div>
                             {!n.read && (
-                              <div className="w-2 h-2 rounded-full bg-accent-500 flex-shrink-0 mt-2" />
+                              <div className="w-2 h-2 rounded-full bg-brand flex-shrink-0 mt-2" />
                             )}
                           </button>
                         ))
@@ -181,25 +180,16 @@ export default function PublicLayout() {
 
       <BottomNav />
       <LoginBottomSheet isOpen={showLoginSheet} onClose={closeSheet} message={pendingMessage} />
-      {location.pathname === '/' && <AIAssistant />}
+      <SmartAssistantButton />
 
-      <IncomingCallDialog
-        isOpen={callState.status === 'ringing' && !callState.isOutgoing}
-        callerName={callState.peerName}
-        callerRole={callState.peerRole}
-        onAccept={answerCall}
-        onReject={rejectCall}
-      />
-
-      <CallOverlay
-        status={callState.status}
-        peerName={callState.peerName}
-        duration={callState.duration}
-        isOutgoing={callState.isOutgoing}
-        isMuted={false}
-        onHangUp={hangUp}
-        onToggleMute={toggleMute}
-      />
+      {isAuthenticated && useAuthStore.getState().customer && useAuthStore.getState().token && (
+        <UnifiedCallHost
+          userId={useAuthStore.getState().customer!.id}
+          userName={useAuthStore.getState().customer!.name}
+          userRole="customer"
+          token={useAuthStore.getState().token!}
+        />
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { Client } from '@stomp/stompjs';
 import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { playNotificationSound } from '../services/notificationSound';
-import { registerPushNotifications } from '../services/pushNotifications';
+import { showLocalNotification } from '../services/pushNotifications';
 import i18n from '../i18n/i18n';
 
 import { getWsUrl } from '../utils/ws';
@@ -13,12 +13,11 @@ const WS_URL = getWsUrl();
 export function useCustomerWebSocket() {
   const { customer } = useAuthStore();
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const syncFromServer = useNotificationStore((s) => s.syncFromServer);
   const clientRef = useRef<Client | null>(null);
 
   useEffect(() => {
     if (!customer) return;
-
-    registerPushNotifications(customer.id);
 
     const clientId = customer.id;
     const city = customer.city;
@@ -29,6 +28,8 @@ export function useCustomerWebSocket() {
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
       onConnect: () => {
+        syncFromServer();
+
         if (clientId) {
           client.subscribe(`/topic/customer/${clientId}`, (message) => {
             try {
@@ -58,7 +59,7 @@ export function useCustomerWebSocket() {
     return () => {
       client.deactivate();
     };
-  }, [customer?.id, customer?.city, addNotification]);
+  }, [customer?.id, customer?.city, addNotification, syncFromServer]);
 
   return null;
 }
@@ -83,6 +84,13 @@ function handleEvent(data: any, add: (n: any) => void) {
   });
 
   playNotificationSound(eventType);
+
+  showLocalNotification({
+    title,
+    body,
+    requestId,
+    channelId: 'workshop-general',
+  }).catch(() => {});
 }
 
 function buildBody(eventType: string, payload: any): string {

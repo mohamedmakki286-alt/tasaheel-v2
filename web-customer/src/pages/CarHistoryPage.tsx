@@ -6,6 +6,7 @@ import { BellRing, CalendarDays, CarFront, CheckCircle2, Droplets, FileText, Gau
 import client from '../api/client';
 import { carsApi } from '../api/cars.api';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import NumberInput from '../components/NumberInput';
 import type { Car } from '../types';
 import { CarBrandLogo } from '../components/CarBrandLogo';
 
@@ -39,6 +40,7 @@ export default function CarHistoryPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'profile' | 'orders'>('orders');
+  const [mileage, setMileage] = useState('');
 
   const { data: car, isLoading: carLoading } = useQuery({
     queryKey: ['car-profile', carId],
@@ -112,10 +114,9 @@ export default function CarHistoryPage() {
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
-            const mileage = Number(data.get('nextOilChangeMileage'));
             reminderMutation.mutate({
               nextOilChangeDate: String(data.get('nextOilChangeDate') || '') || undefined,
-              nextOilChangeMileage: mileage || undefined,
+              nextOilChangeMileage: Number(mileage) || undefined,
               nextAppointmentDate: String(data.get('nextAppointmentDate') || '') || undefined,
             });
           }}
@@ -127,7 +128,7 @@ export default function CarHistoryPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-bold text-surface-600 dark:text-surface-300"><span className="mb-2 flex items-center gap-1"><Droplets size={15}/>تغيير الزيت القادم</span><input name="nextOilChangeDate" type="date" defaultValue={car.nextOilChangeDate || ''} className="input-field h-12" /></label>
-            <label className="text-xs font-bold text-surface-600 dark:text-surface-300"><span className="mb-2 flex items-center gap-1"><Gauge size={15}/>عند ممشى</span><input name="nextOilChangeMileage" type="number" min="1" defaultValue={car.nextOilChangeMileage || ''} placeholder="مثال: 155000 كم" className="input-field h-12" /></label>
+            <label className="text-xs font-bold text-surface-600 dark:text-surface-300"><span className="mb-2 flex items-center gap-1"><Gauge size={15}/>عند ممشى</span><NumberInput value={mileage} onValueChange={setMileage} mode="integer" min={1} placeholder="مثال: 155000" suffix="كم" className="h-12" /></label>
             <label className="text-xs font-bold text-surface-600 dark:text-surface-300 sm:col-span-2"><span className="mb-2 flex items-center gap-1"><CalendarDays size={15}/>موعد الصيانة القادم</span><input name="nextAppointmentDate" type="date" defaultValue={car.nextAppointmentDate || ''} className="input-field h-12" /></label>
           </div>
           <button disabled={reminderMutation.isPending} className="mt-4 h-12 w-full rounded-xl bg-amber-500 font-black text-white transition hover:bg-amber-600 disabled:opacity-60">{reminderMutation.isPending ? 'جاري الحفظ...' : 'حفظ التذكيرات'}</button>

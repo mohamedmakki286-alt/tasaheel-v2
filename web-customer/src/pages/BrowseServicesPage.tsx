@@ -13,6 +13,17 @@ const CATEGORY_ICONS: Record<string, string> = {
   tires: '🛞', bodywork: '🎨', emergency: '🚨', inspection: '🔍',
 };
 
+const CATEGORY_COLORS: Record<string, string> = {
+  periodic: 'bg-brand-50 text-brand',
+  mechanical: 'bg-surface-100 text-surface-600',
+  electrical: 'bg-blue-50 text-blue-500',
+  ac: 'bg-cyan-50 text-cyan-500',
+  tires: 'bg-amber-50 text-amber-500',
+  bodywork: 'bg-purple-50 text-purple-500',
+  emergency: 'bg-red-50 text-red-500',
+  inspection: 'bg-emerald-50 text-emerald-500',
+};
+
 export function BrowseServicesPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,15 +61,15 @@ export function BrowseServicesPage() {
   const displayCategories = selectedCategory ? [selectedCategory] : catalog;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <div className="flex items-center gap-3">
           {selectedCategory ? (
-            <button onClick={() => { setSelectedCategoryId(null); setSearch(''); }} className="p-2 hover:bg-surface-100 dark:hover:bg-surface-800 rounded-lg transition-colors text-surface-900 dark:text-white">
+            <button onClick={() => { setSelectedCategoryId(null); setSearch(''); }} className="p-2 hover:bg-surface-50 dark:hover:bg-surface-800 rounded-[12px] transition-colors text-primary-500 dark:text-white">
               <ArrowLeft className="h-5 w-5" />
             </button>
           ) : null}
-          <h2 className="text-xl font-bold text-surface-900 dark:text-white">{t('pages.browseServices.title')}</h2>
+          <h2 className="text-xl font-bold text-primary-500 dark:text-white">{t('pages.browseServices.title')}</h2>
         </div>
       </motion.div>
 
@@ -79,35 +90,40 @@ export function BrowseServicesPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[1,2,3,4,5,6,7,8].map(i => (
             <div key={i} className="card p-5 animate-pulse">
-              <div className="w-10 h-10 bg-surface-200 dark:bg-surface-700 rounded-xl mx-auto mb-2" />
-              <div className="h-4 bg-surface-200 dark:bg-surface-700 rounded w-2/3 mx-auto mb-1" />
-              <div className="h-3 bg-surface-200 dark:bg-surface-700 rounded w-1/2 mx-auto" />
+              <div className="w-12 h-12 bg-surface-200 dark:bg-surface-700 rounded-[14px] mx-auto mb-2" />
+              <div className="h-4 bg-surface-200 dark:bg-surface-700 rounded-[8px] w-2/3 mx-auto mb-1" />
+              <div className="h-3 bg-surface-200 dark:bg-surface-700 rounded-[8px] w-1/2 mx-auto" />
             </div>
           ))}
         </div>
       ) : !selectedCategory && !search ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {catalog.map((cat, i) => (
-            <motion.button
-              key={cat.categoryId}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              animate="visible"
-              onClick={() => setSelectedCategoryId(cat.categoryId)}
-              className="card text-center p-5 hover:scale-[1.02] transition-all duration-200 cursor-pointer"
-            >
-              <div className="text-3xl mb-2">{CATEGORY_ICONS[cat.categoryNameEn || ''] || '🔧'}</div>
-              <p className="font-bold text-sm text-surface-900 dark:text-white mb-1">{cat.categoryName}</p>
-              <p className="text-xs text-surface-400 dark:text-surface-500">{cat.templates.length} {t('pages.browseServices.servicesCount', 'خدمة')}</p>
-            </motion.button>
-          ))}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {catalog.map((cat, i) => {
+            const colorClass = CATEGORY_COLORS[cat.categoryNameEn || ''] || 'bg-surface-100 text-surface-600';
+            return (
+              <motion.button
+                key={cat.categoryId}
+                custom={i}
+                variants={fadeUp}
+                initial="hidden"
+                animate="visible"
+                onClick={() => setSelectedCategoryId(cat.categoryId)}
+                className="card text-center p-5 hover:shadow-card-hover transition-all duration-200 cursor-pointer"
+              >
+                <div className={`w-14 h-14 rounded-[16px] mx-auto mb-3 flex items-center justify-center ${colorClass}`}>
+                  <span className="text-2xl">{CATEGORY_ICONS[cat.categoryNameEn || ''] || '🔧'}</span>
+                </div>
+                <p className="font-bold text-sm text-primary-500 dark:text-white mb-1">{cat.categoryName}</p>
+                <p className="text-xs text-surface-400 dark:text-surface-500">{cat.templates.length} {t('pages.browseServices.servicesCount', 'خدمة')}</p>
+              </motion.button>
+            );
+          })}
         </div>
       ) : selectedCategory && !search ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">{CATEGORY_ICONS[selectedCategory.categoryNameEn || ''] || '🔧'}</span>
-            <h3 className="font-bold text-sm text-surface-900 dark:text-white">{selectedCategory.categoryName}</h3>
+            <h3 className="font-bold text-sm text-primary-500 dark:text-white">{selectedCategory.categoryName}</h3>
             <span className="text-xs text-surface-400">({selectedCategory.templates.length})</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -119,26 +135,31 @@ export function BrowseServicesPage() {
                 initial="hidden"
                 animate="visible"
                 onClick={() => navigate(`/services/${svc.id}`)}
-                className="card text-right p-4 transition-all hover:bg-surface-100 dark:hover:bg-surface-700/80 cursor-pointer"
+                className="card text-right p-4 transition-all hover:shadow-card-hover cursor-pointer"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-sm text-surface-900 dark:text-white">{svc.name}</p>
-                    {svc.defaultDuration && (
-                      <p className="text-xs text-surface-500 dark:text-surface-400 flex items-center gap-1 mt-0.5">
-                        <Clock className="h-3 w-3" />
-                        {svc.defaultDuration}
-                      </p>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-[12px] bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center shrink-0">
+                      <Wrench size={18} className="text-brand" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-primary-500 dark:text-white">{svc.name}</p>
+                      {svc.defaultDuration && (
+                        <p className="text-xs text-surface-400 dark:text-surface-500 flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {svc.defaultDuration}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <Star className="h-4 w-4 text-accent-400 shrink-0" />
+                  <ArrowLeft className="h-4 w-4 text-surface-300 shrink-0" />
                 </div>
               </motion.button>
             ))}
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {displayCategories.map((cat, ci) => {
             const matching = cat.templates.filter(svc =>
               search && svc.name.includes(search)
@@ -150,24 +171,29 @@ export function BrowseServicesPage() {
               <motion.div key={cat.categoryId} custom={ci} variants={fadeUp} initial="hidden" animate="visible">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-lg">{CATEGORY_ICONS[cat.categoryNameEn || ''] || '🔧'}</span>
-                  <h3 className="font-bold text-sm text-surface-900 dark:text-white">{cat.categoryName}</h3>
-                  <button onClick={() => { setSelectedCategoryId(cat.categoryId); setSearch(''); }} className="text-xs text-accent-400 mr-auto">{t('pages.browseServices.viewAll')}</button>
+                  <h3 className="font-bold text-sm text-primary-500 dark:text-white">{cat.categoryName}</h3>
+                  <button onClick={() => { setSelectedCategoryId(cat.categoryId); setSearch(''); }} className="text-xs text-brand mr-auto font-medium">عرض الكل</button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {displayServices.map((svc, i) => (
                     <button
                       key={svc.id}
                       onClick={() => navigate(`/services/${svc.id}`)}
-                      className="card text-right p-3 transition-all hover:bg-surface-100 dark:hover:bg-surface-700/80 cursor-pointer"
+                      className="card text-right p-3 transition-all hover:shadow-card-hover cursor-pointer"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-medium text-surface-900 dark:text-white">{svc.name}</p>
-                          {svc.defaultDuration && (
-                            <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{svc.defaultDuration}</p>
-                          )}
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-[10px] bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center shrink-0">
+                            <Wrench size={15} className="text-brand" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-primary-500 dark:text-white">{svc.name}</p>
+                            {svc.defaultDuration && (
+                              <p className="text-xs text-surface-400 dark:text-surface-500 mt-0.5">{svc.defaultDuration}</p>
+                            )}
+                          </div>
                         </div>
-                        <ArrowLeft className="h-3.5 w-3.5 text-surface-500 shrink-0" />
+                        <ArrowLeft className="h-3.5 w-3.5 text-surface-300 shrink-0" />
                       </div>
                     </button>
                   ))}

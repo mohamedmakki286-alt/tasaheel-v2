@@ -24,6 +24,8 @@ public class TechnicianDTO {
     private Double latitude;
     private Double longitude;
     private String fcmToken;
+    private String availabilityStatus;
+    private String profileImageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

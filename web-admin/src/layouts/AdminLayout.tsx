@@ -18,11 +18,7 @@ import {
   ChevronLeft,
   Sun,
   Moon,
-  X,
-  CheckCircle2,
-  AlertCircle,
   Info,
-  Clock,
   Wallet,
   Receipt,
   ScrollText,
@@ -32,6 +28,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useThemeStore } from '../stores/themeStore';
+import { useNotificationStore } from '../stores/notificationStore';
+import { useAdminWebSocket } from '../hooks/useAdminWebSocket';
 import AIAssistant from '../components/AIAssistant';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -44,6 +42,8 @@ export default function AdminLayout() {
   const [accountingOpen, setAccountingOpen] = useState(false);
   const { user, logout } = useAuth();
   const { theme, toggle: toggleTheme } = useThemeStore();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, syncFromServer } = useNotificationStore();
+  useAdminWebSocket();
   const location = useLocation();
   const navigate = useNavigate();
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -88,14 +88,6 @@ export default function AdminLayout() {
     '/settings': t('layout.sidebar.settings'),
   };
 
-  const notifications = [
-    { id: 1, text: t('layout.notifications.newRequest'), time: t('layout.notifications.timeAgo.5min'), type: 'request', read: false },
-    { id: 2, text: t('layout.notifications.newWorkshop'), time: t('layout.notifications.timeAgo.15min'), type: 'workshop', read: false },
-    { id: 3, text: t('layout.notifications.paymentCompleted'), time: t('layout.notifications.timeAgo.1hour'), type: 'payment', read: false },
-    { id: 4, text: t('layout.notifications.requestCompleted'), time: t('layout.notifications.timeAgo.2hours'), type: 'completed', read: true },
-    { id: 5, text: t('layout.notifications.newDriver'), time: t('layout.notifications.timeAgo.3hours'), type: 'driver', read: true },
-  ];
-
   const toggleLang = () => {
     const newLang = i18n.language === 'ar' ? 'en' : 'ar';
     i18n.changeLanguage(newLang);
@@ -122,8 +114,6 @@ export default function AdminLayout() {
   const breadcrumbs = [
     { label: breadcrumbMap[location.pathname] || breadcrumbMap['/'], path: location.pathname },
   ];
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-surface-950 flex transition-colors duration-200">
@@ -283,43 +273,51 @@ export default function AdminLayout() {
                   <div className="absolute left-0 top-full mt-2 w-80 bg-white dark:bg-surface-900 rounded-2xl shadow-xl border border-gray-100 dark:border-surface-800 z-30 animate-scale-in overflow-hidden">
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-surface-800 flex items-center justify-between">
                       <p className="text-sm font-bold text-gray-900 dark:text-surface-100">{t('layout.header.notifications')}</p>
-                      <span className="text-xs text-surface-400">{unreadCount} {t('layout.header.unread')}</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => { markAllAsRead(); }}
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+                        >
+                          {t('layout.header.markAllRead', 'مقروء الكل')}
+                        </button>
+                      )}
                     </div>
                     <div className="max-h-80 overflow-y-auto">
-                      {notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          className={`flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer ${
-                            n.read
-                              ? 'hover:bg-gray-50 dark:hover:bg-surface-800'
-                              : 'bg-amber-50/50 dark:bg-amber-500/5 hover:bg-amber-50 dark:hover:bg-amber-500/10'
-                          }`}
-                        >
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                            n.type === 'request' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' :
-                            n.type === 'workshop' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' :
-                            n.type === 'payment' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' :
-                            n.type === 'completed' ? 'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400' :
-                            'bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400'
-                          }`}>
-                            {n.type === 'request' && <ClipboardList className="w-4 h-4" />}
-                            {n.type === 'workshop' && <Wrench className="w-4 h-4" />}
-                            {n.type === 'payment' && <DollarSign className="w-4 h-4" />}
-                            {n.type === 'completed' && <CheckCircle2 className="w-4 h-4" />}
-                            {n.type === 'driver' && <Truck className="w-4 h-4" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-700 dark:text-surface-200">{n.text}</p>
-                            <p className="text-xs text-gray-400 dark:text-surface-500 mt-0.5">{n.time}</p>
-                          </div>
-                          {!n.read && <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 mt-2" />}
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-surface-500">
+                          {t('layout.notifications.empty', 'لا توجد إشعارات')}
                         </div>
-                      ))}
-                    </div>
-                    <div className="px-4 py-3 border-t border-gray-100 dark:border-surface-800">
-                      <button className="text-sm text-amber-600 hover:text-amber-700 font-medium w-full text-center">
-                        {t('layout.header.viewAll')}
-                      </button>
+                      ) : (
+                        notifications.slice(0, 10).map((n) => (
+                          <div
+                            key={n.id}
+                            onClick={() => { if (!n.read) markAsRead(n.id); }}
+                            className={`flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer ${
+                              n.read
+                                ? 'hover:bg-gray-50 dark:hover:bg-surface-800'
+                                : 'bg-amber-50/50 dark:bg-amber-500/5 hover:bg-amber-50 dark:hover:bg-amber-500/10'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                              n.type === 'request' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' :
+                              n.type === 'payment' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' :
+                              'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400'
+                            }`}>
+                              {n.type === 'request' && <ClipboardList className="w-4 h-4" />}
+                              {n.type === 'payment' && <DollarSign className="w-4 h-4" />}
+                              {n.type === 'status' && <Info className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-surface-100">{n.title}</p>
+                              {n.body && <p className="text-xs text-gray-500 dark:text-surface-400 mt-0.5 line-clamp-2">{n.body}</p>}
+                              <p className="text-xs text-gray-400 dark:text-surface-500 mt-0.5">
+                                {n.createdAt ? new Date(n.createdAt).toLocaleString('ar-SA') : ''}
+                              </p>
+                            </div>
+                            {!n.read && <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 mt-2" />}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}

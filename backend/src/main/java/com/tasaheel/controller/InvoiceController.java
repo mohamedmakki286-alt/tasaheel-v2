@@ -8,6 +8,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class InvoiceController {
     private final MessageSource msg;
 
     @PostMapping
+    @PreAuthorize("hasRole('WORKSHOP')")
     public ResponseEntity<ApiResponse<InvoiceDTO>> createInvoice(
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestBody Map<String, Object> body) {
@@ -58,6 +60,7 @@ public class InvoiceController {
     }
 
     @PutMapping("/{requestId}")
+    @PreAuthorize("hasRole('WORKSHOP')")
     public ResponseEntity<ApiResponse<InvoiceDTO>> updateInvoice(
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long requestId,
@@ -90,6 +93,7 @@ public class InvoiceController {
     }
 
     @DeleteMapping("/{requestId}")
+    @PreAuthorize("hasRole('WORKSHOP')")
     public ResponseEntity<ApiResponse<Void>> deleteInvoice(
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long requestId) {
@@ -99,20 +103,23 @@ public class InvoiceController {
     }
 
     @GetMapping("/{requestId}")
-    public ResponseEntity<ApiResponse<InvoiceDTO>> getInvoice(@PathVariable Long requestId) {
-        InvoiceDTO invoice = invoiceService.getInvoice(requestId);
+    public ResponseEntity<ApiResponse<InvoiceDTO>> getInvoice(
+            @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long requestId) {
+        InvoiceDTO invoice = invoiceService.getInvoiceForUser(requestId, user.getUserId(), user.getRole());
         return ResponseEntity.ok(ApiResponse.success(invoice));
     }
 
     @GetMapping("/customer/{requestId}")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<InvoiceDTO>> getInvoiceCustomer(
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long requestId) {
-        InvoiceDTO invoice = invoiceService.getInvoice(requestId);
+        InvoiceDTO invoice = invoiceService.getInvoiceForUser(requestId, user.getUserId(), user.getRole());
         return ResponseEntity.ok(ApiResponse.success(invoice));
     }
 
     @GetMapping("/customer")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<Page<InvoiceDTO>>> getCustomerInvoices(
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestParam(defaultValue = "0") int page,
@@ -122,6 +129,7 @@ public class InvoiceController {
     }
 
     @PostMapping("/{requestId}/approve")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<InvoiceDTO>> approveInvoice(
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long requestId) {
@@ -131,6 +139,7 @@ public class InvoiceController {
     }
 
     @PostMapping("/{requestId}/reject")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<InvoiceDTO>> rejectInvoice(
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long requestId) {

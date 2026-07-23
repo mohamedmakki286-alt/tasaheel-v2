@@ -48,4 +48,12 @@ public interface MaintenanceRequestRepository extends JpaRepository<MaintenanceR
 
     @Query("SELECT r.status, COUNT(r) FROM MaintenanceRequest r GROUP BY r.status")
     List<Object[]> countByStatusGrouped();
+
+    List<MaintenanceRequest> findByTechnicianIdOrderByCreatedAtDesc(Long technicianId);
+
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM MaintenanceRequest r WHERE r.id = :requestId AND r.customer.id = :customerId")
+    boolean isOwnedByCustomer(@Param("requestId") Long requestId, @Param("customerId") Long customerId);
+
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM MaintenanceRequest r WHERE r.id = :requestId AND r.technician.id = :technicianId")
+    boolean isAssignedToTechnician(@Param("requestId") Long requestId, @Param("technicianId") Long technicianId);
 }

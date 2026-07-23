@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "cd ../packages/shared && npm install --ignore-scripts",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },

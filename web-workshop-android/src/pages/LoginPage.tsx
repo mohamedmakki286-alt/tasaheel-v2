@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Wrench, Settings, ClipboardList, Car, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Wrench, Settings, ClipboardList, Car, ArrowRight, UserCog } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { login, authApi } from '../api/auth.api';
+import { login, mapWorkshopData, authApi } from '../api/auth.api';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import AnimatedWorkshopBackground from '../components/AnimatedWorkshopBackground';
@@ -91,12 +91,34 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await login({ email: email.trim(), password });
-      setAuth({ token: data.token, refreshToken: data.refreshToken, role: 'workshop', workshop: data.workshop });
-      toast.success(t('toast.success.loginSuccess'));
-      if (data.workshop.isApproved === false) {
-        navigate('/pending-approval', { replace: true });
+      if (data.role === 'technician') {
+        setAuth({
+          token: data.token,
+          refreshToken: data.refreshToken,
+          role: 'technician',
+          technician: {
+            id: data.userId,
+            name: data.name || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            specialty: data.specialty || '',
+            workshopId: data.workshopId,
+            workshopName: data.workshopName || '',
+            availabilityStatus: data.availabilityStatus || 'available',
+            profileImageUrl: data.profileImageUrl || null,
+          },
+        });
+        toast.success(t('toast.success.loginSuccess'));
+        navigate('/technician', { replace: true });
       } else {
-        navigate('/dashboard', { replace: true });
+        const workshopData = mapWorkshopData(data);
+        setAuth({ token: data.token, refreshToken: data.refreshToken, role: 'workshop', workshop: workshopData });
+        toast.success(t('toast.success.loginSuccess'));
+        if (workshopData.isApproved === false) {
+          navigate('/pending-approval', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       }
     } catch (err: any) {
       toast.error(err?.message || t('pages.login.loginFailed'));

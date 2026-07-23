@@ -1,6 +1,5 @@
 package com.tasaheel.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,12 +16,26 @@ public class ChatMessageDTO {
     private Long senderId;
     private String senderRole;
     private String senderName;
-
-    @NotBlank(message = "Content is required")
     private String content;
-
     private String type;
     private String mediaUrl;
     private Boolean isRead;
     private LocalDateTime createdAt;
+    private String clientMessageId;
+    private AttachmentDTO attachment;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AttachmentDTO {
+        private Long id;
+        private String url;
+        private String mimeType;
+        private Long fileSize;
+        private String originalFileName;
+        private Integer durationSeconds;
+        private Integer width;
+        private Integer height;
+    }
 }

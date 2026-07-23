@@ -6,6 +6,7 @@ import com.tasaheel.entity.*;
 import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.repository.*;
 import com.tasaheel.exception.BadRequestException;
+import com.tasaheel.integration.MediaService;
 import com.tasaheel.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -14,8 +15,7 @@ import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -23,11 +23,14 @@ public class ChatService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatAttachmentRepository chatAttachmentRepository;
     private final MaintenanceRequestRepository requestRepository;
     private final CustomerRepository customerRepository;
     private final WorkshopRepository workshopRepository;
     private final DriverRepository driverRepository;
+    private final TechnicianRepository technicianRepository;
     private final QuoteRepository quoteRepository;
+    private final MediaService mediaService;
     private final SimpMessageSendingOperations messagingTemplate;
 
     @Transactional
@@ -51,11 +54,11 @@ public class ChatService {
         MaintenanceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
         if (!request.getCustomer().getId().equals(customerId)) {
-            throw new BadRequestException("You are not the customer for this request");
+            throw new BadRequestException("لست صاحب هذا الطلب");
         }
         if (workshopId != null && !quoteRepository.findByRequestIdAndStatus(requestId, "accepted")
                 .map(quote -> quote.getWorkshop().getId().equals(workshopId)).orElse(false)) {
-            throw new BadRequestException("Conversation is only available with the selected workshop");
+            throw new BadRequestException("المحادثة متاحة فقط مع الورشة المختارة");
         }
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer", customerId));
@@ -81,17 +84,80 @@ public class ChatService {
         requireRoomParticipant(room, user);
         String senderRole = user.getRole().toLowerCase();
 
+        MessageType messageType = MessageType.fromString(type);
+
         ChatMessage message = ChatMessage.builder()
                 .room(room)
                 .senderId(user.getUserId())
                 .senderRole(senderRole)
-                .content(content)
-                .type(type != null ? type : "text")
+                .content(content != null ? content : "")
+                .type(messageType)
                 .mediaUrl(mediaUrl)
                 .isRead(false)
                 .build();
 
         message = chatMessageRepository.save(message);
+
+        ChatMessageDTO dto = toChatMessageDTO(message);
+
+        String destination = "/topic/room/" + roomId;
+        messagingTemplate.convertAndSend(destination, dto);
+
+        return dto;
+    }
+
+    @Transactional
+    public ChatMessageDTO sendAttachmentMessage(Long roomId, UserDetailsImpl user,
+                                                 String text, String clientMessageId,
+                                                 org.springframework.web.multipart.MultipartFile file) {
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new ResourceNotFoundException("ChatRoom", roomId));
+        requireRoomParticipant(room, user);
+
+        if (clientMessageId != null && !clientMessageId.isBlank()) {
+            boolean exists = chatMessageRepository.existsByClientMessageId(clientMessageId);
+            if (exists) {
+                ChatMessage existing = chatMessageRepository.findByClientMessageId(clientMessageId).orElse(null);
+                if (existing != null) return toChatMessageDTO(existing);
+            }
+        }
+
+        Map<String, Object> fileData = mediaService.storeFileWithMetadata(file, "chat");
+
+        String contentType = file.getContentType();
+        MessageType messageType = MessageType.TEXT;
+        if (contentType != null) {
+            if (contentType.startsWith("image/")) messageType = MessageType.IMAGE;
+            else if (contentType.startsWith("audio/")) messageType = MessageType.AUDIO;
+            else messageType = MessageType.FILE;
+        }
+
+        String senderRole = user.getRole().toLowerCase();
+        String content = (text != null && !text.isBlank()) ? text : "";
+
+        ChatMessage message = ChatMessage.builder()
+                .room(room)
+                .senderId(user.getUserId())
+                .senderRole(senderRole)
+                .content(content)
+                .type(messageType)
+                .mediaUrl((String) fileData.get("fileUrl"))
+                .clientMessageId(clientMessageId)
+                .isRead(false)
+                .build();
+
+        message = chatMessageRepository.save(message);
+
+        ChatAttachment attachment = ChatAttachment.builder()
+                .message(message)
+                .storageKey((String) fileData.get("storageKey"))
+                .fileUrl((String) fileData.get("fileUrl"))
+                .originalFileName((String) fileData.get("originalFileName"))
+                .mimeType((String) fileData.get("mimeType"))
+                .fileSize((Long) fileData.get("fileSize"))
+                .build();
+
+        chatAttachmentRepository.save(attachment);
 
         ChatMessageDTO dto = toChatMessageDTO(message);
 
@@ -122,35 +188,28 @@ public class ChatService {
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("ChatRoom", roomId));
         requireRoomParticipant(room, user);
-        List<ChatMessage> unreadMessages = chatMessageRepository.findByRoomIdOrderByCreatedAtAsc(roomId);
-        for (ChatMessage msg : unreadMessages) {
-            if (!msg.getSenderId().equals(user.getUserId()) && !msg.getIsRead()) {
-                msg.setIsRead(true);
-                chatMessageRepository.save(msg);
-            }
-        }
+        chatMessageRepository.markAsReadByRoomIdAndSenderIdNot(roomId, user.getUserId());
     }
 
     private void requireRoomParticipant(ChatRoom room, UserDetailsImpl user) {
         String role = user.getRole().toLowerCase();
         boolean permitted = ("customer".equals(role) && room.getCustomer() != null && room.getCustomer().getId().equals(user.getUserId()))
                 || ("workshop".equals(role) && room.getWorkshop() != null && room.getWorkshop().getId().equals(user.getUserId()))
-                || ("driver".equals(role) && room.getDriver() != null && room.getDriver().getId().equals(user.getUserId()));
-        if (!permitted) throw new BadRequestException("You are not a participant in this conversation");
+                || ("driver".equals(role) && room.getDriver() != null && room.getDriver().getId().equals(user.getUserId()))
+                || ("technician".equals(role) && room.getTechnician() != null && room.getTechnician().getId().equals(user.getUserId()));
+        if (!permitted) throw new BadRequestException("لست مشاركاً في هذه المحادثة");
     }
 
     private ChatRoomDTO toChatRoomDTO(ChatRoom room) {
-        ChatMessage lastMsg = null;
-        List<ChatMessage> msgs = chatMessageRepository.findByRoomIdOrderByCreatedAtAsc(room.getId());
-        if (!msgs.isEmpty()) {
-            lastMsg = msgs.get(msgs.size() - 1);
-        }
+        Page<ChatMessage> lastPage = chatMessageRepository
+                .findByRoomIdOrderByCreatedAtAsc(room.getId(), PageRequest.of(0, 1,
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
 
-        long unreadCount = 0;
-        if (lastMsg != null) {
-            unreadCount = chatMessageRepository
-                    .countByRoomIdAndIsReadFalseAndSenderIdNot(room.getId(), lastMsg.getSenderId());
-        }
+        ChatMessage lastMsg = lastPage.isEmpty() ? null : lastPage.getContent().get(0);
+
+        long unreadCount = lastMsg != null
+                ? chatMessageRepository.countByRoomIdAndIsReadFalseAndSenderIdNot(room.getId(), lastMsg.getSenderId())
+                : 0;
 
         ChatMessageDTO lastMessageDTO = lastMsg != null ? toChatMessageDTO(lastMsg) : null;
 
@@ -163,6 +222,8 @@ public class ChatService {
                 .workshopName(room.getWorkshop() != null ? room.getWorkshop().getName() : null)
                 .driverId(room.getDriver() != null ? room.getDriver().getId() : null)
                 .driverName(room.getDriver() != null ? room.getDriver().getName() : null)
+                .technicianId(room.getTechnician() != null ? room.getTechnician().getId() : null)
+                .technicianName(room.getTechnician() != null ? room.getTechnician().getName() : null)
                 .lastMessage(lastMessageDTO)
                 .unreadCount(unreadCount)
                 .createdAt(room.getCreatedAt())
@@ -180,6 +241,24 @@ public class ChatService {
         } else if ("driver".equals(msg.getSenderRole())) {
             Driver driver = driverRepository.findById(msg.getSenderId()).orElse(null);
             senderName = driver != null ? driver.getName() : "";
+        } else if ("technician".equals(msg.getSenderRole())) {
+            Technician technician = technicianRepository.findById(msg.getSenderId()).orElse(null);
+            senderName = technician != null ? technician.getName() : "";
+        }
+
+        ChatMessageDTO.AttachmentDTO attachmentDTO = null;
+        if (msg.getAttachment() != null) {
+            ChatAttachment att = msg.getAttachment();
+            attachmentDTO = ChatMessageDTO.AttachmentDTO.builder()
+                    .id(att.getId())
+                    .url(att.getFileUrl())
+                    .mimeType(att.getMimeType())
+                    .fileSize(att.getFileSize())
+                    .originalFileName(att.getOriginalFileName())
+                    .durationSeconds(att.getDurationSeconds())
+                    .width(att.getWidth())
+                    .height(att.getHeight())
+                    .build();
         }
 
         return ChatMessageDTO.builder()
@@ -189,10 +268,12 @@ public class ChatService {
                 .senderRole(msg.getSenderRole())
                 .senderName(senderName)
                 .content(msg.getContent())
-                .type(msg.getType())
+                .type(msg.getType() != null ? msg.getType().name() : "TEXT")
                 .mediaUrl(msg.getMediaUrl())
                 .isRead(msg.getIsRead())
                 .createdAt(msg.getCreatedAt())
+                .clientMessageId(msg.getClientMessageId())
+                .attachment(attachmentDTO)
                 .build();
     }
 }

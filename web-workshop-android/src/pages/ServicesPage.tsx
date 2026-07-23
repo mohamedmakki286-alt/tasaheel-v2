@@ -7,8 +7,10 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { serviceListingsApi, type ServiceListing, type ServiceCategory, type ServiceTemplate, type ServiceCatalogCategory, type CreateServiceListingRequest } from '../api/serviceListings.api';
+import { getServiceIcon } from '../utils/serviceIcons';
 import EmptyState from '../components/EmptyState';
 import Skeleton from '../components/Skeleton';
+import NumberInput from '../components/NumberInput';
 
 type AddStep = 'category' | 'template' | 'custom' | 'price';
 
@@ -213,14 +215,12 @@ function AddServiceModal({ catalog, onClose }: { catalog: ServiceCatalogCategory
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">{t('pages.services.price', 'السعر')} (ر.س)</label>
-                <input
-                  className="input-field"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                  value={form.price || ''}
-                  onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                <NumberInput
+                  value={String(form.price || '')}
+                  onValueChange={(v) => setForm({ ...form, price: Number(v) || 0 })}
+                  mode="decimal"
+                  decimalScale={2}
+                  placeholder="0.00"
                 />
               </div>
               <div>
@@ -328,7 +328,7 @@ function EditServiceModal({ service, categories, onClose }: { service: ServiceLi
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">{t('pages.services.price', 'السعر')}</label>
-              <input className="input-field" type="number" min="0" step="0.01" value={form.price || ''} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} required />
+              <NumberInput value={String(form.price || '')} onValueChange={(v) => setForm({ ...form, price: Number(v) || 0 })} mode="decimal" decimalScale={2} placeholder="0.00" required />
             </div>
             <div>
               <label className="label">{t('pages.services.priceType', 'نوع السعر')}</label>
@@ -417,9 +417,7 @@ export default function ServicesPage() {
     queryFn: () => serviceListingsApi.getCatalog(),
   });
 
-  console.log("CATEGORY COUNT", catalog?.length);
-  console.log("FIRST CATEGORY", catalog?.[0]);
-
+  
   const { data: services = [], isLoading } = useQuery<ServiceListing[]>({
     queryKey: ['myServiceListings'],
     queryFn: () => serviceListingsApi.getMyServices(),
@@ -573,7 +571,7 @@ export default function ServicesPage() {
                 <div key={svc.id} className="card p-4 group relative overflow-hidden">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl bg-accent-500/10 flex items-center justify-center shrink-0">
-                      <Wrench size={18} className="text-accent-400" />
+                      {(() => { const Icon = getServiceIcon(svc.icon); return <Icon size={18} className="text-accent-400" />; })()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">

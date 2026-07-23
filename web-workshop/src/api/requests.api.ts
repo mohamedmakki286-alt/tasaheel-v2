@@ -9,7 +9,7 @@ export async function getNewRequests(): Promise<ServiceRequest[]> {
   return list.map((r: any) => ({
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
-    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber },
+    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
     location: r.locationAddress || '',
@@ -21,6 +21,10 @@ export async function getNewRequests(): Promise<ServiceRequest[]> {
     hasReport: false,
     hasInvoice: false,
     serviceTypeIds: r.serviceTypeIds || [],
+    technicianId: r.technicianId ?? undefined,
+    technicianName: r.technicianName || undefined,
+    technicianPhone: r.technicianPhone || undefined,
+    technicianSpecialty: r.technicianSpecialty || undefined,
   }));
 }
 
@@ -30,7 +34,7 @@ export async function getMyRequests(): Promise<ServiceRequest[]> {
   return list.map((r: any) => ({
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
-    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber },
+    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
     location: r.locationAddress || '',
@@ -42,19 +46,25 @@ export async function getMyRequests(): Promise<ServiceRequest[]> {
     hasReport: false,
     hasInvoice: false,
     serviceTypeIds: r.serviceTypeIds || [],
+    technicianId: r.technicianId ?? undefined,
+    technicianName: r.technicianName || undefined,
+    technicianPhone: r.technicianPhone || undefined,
+    technicianSpecialty: r.technicianSpecialty || undefined,
   }));
 }
 
 export async function getRequestDetail(id: string): Promise<ServiceRequest> {
-  const response = await apiClient.get(`/requests/${id}`);
+  const response = await apiClient.get(`/workshops/requests/${id}`);
   const r = response.data;
   return {
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
-    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber },
+    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
     location: r.locationAddress || '',
+    locationLat: r.locationLat || undefined,
+    locationLng: r.locationLng || undefined,
     city: r.city || '',
     status: r.status || 'pending',
     createdAt: r.createdAt || new Date().toISOString(),
@@ -64,7 +74,26 @@ export async function getRequestDetail(id: string): Promise<ServiceRequest> {
     hasInvoice: false,
     serviceTypeIds: r.serviceTypeIds || [],
     serviceTypes: r.serviceTypes || [],
+    technicianId: r.technicianId ?? undefined,
+    technicianName: r.technicianName || undefined,
+    technicianPhone: r.technicianPhone || undefined,
+    technicianSpecialty: r.technicianSpecialty || undefined,
+    media: Array.isArray(r.media) ? r.media.map((item: any) => ({
+      id: String(item.id),
+      type: item.type || 'image',
+      url: item.url,
+      thumbnailUrl: item.thumbnailUrl || undefined,
+      createdAt: item.createdAt || undefined,
+    })) : [],
   };
+}
+
+export async function markRequestViewed(id: string): Promise<void> {
+  await apiClient.put(`/workshops/requests/${id}/view`);
+}
+
+export async function declineRequest(id: string, reason?: string): Promise<void> {
+  await apiClient.post(`/workshops/requests/${id}/decline`, reason ? { reason } : {});
 }
 
 export async function updateRequestStatus(id: string, payload: StatusUpdatePayload): Promise<ServiceRequest> {

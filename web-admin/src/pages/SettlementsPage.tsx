@@ -13,6 +13,7 @@ import {
 import { formatCurrency } from '../utils/formatters';
 import Modal from '../components/Modal';
 import Button from '../components/Button';
+import NumberInput from '../components/NumberInput';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { CardSkeleton } from '../components/Skeleton';
 import toast from 'react-hot-toast';
@@ -349,14 +350,15 @@ export default function SettlementsPage() {
                       <td className="py-2 px-3 font-mono text-xs text-gray-600">{inv.invoiceNumber}</td>
                       <td className="py-2 px-3 text-gray-900 font-medium">{formatCurrency(inv.grandTotal)}</td>
                       <td className="py-2 px-3">
-                        <input
-                          type="number"
-                          value={pct}
-                          onChange={(e) => handleCommissionChange(inv.id, e.target.value)}
-                          className="w-20 px-2 py-1 text-center border border-gray-200 rounded-lg text-sm"
-                          min="0"
-                          max="100"
-                          step="0.5"
+                        <NumberInput
+                          value={String(pct)}
+                          onValueChange={(v) => handleCommissionChange(inv.id, v)}
+                          mode="decimal"
+                          decimalScale={1}
+                          min={0}
+                          max={100}
+                          suffix="%"
+                          className="w-24"
                         />
                       </td>
                       <td className="py-2 px-3 text-amber-600 font-medium">{formatCurrency(commissionAmt)}</td>

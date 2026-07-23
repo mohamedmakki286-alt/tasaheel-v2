@@ -12,7 +12,6 @@ import type { Car, Workshop } from '../types';
 import { useRequestStore } from '../stores/requestStore';
 import { MapPicker } from '../components/MapPicker';
 import { MediaUploader } from '../components/MediaUploader';
-import SmartWorkshopSuggestion from '../components/SmartWorkshopSuggestion';
 import { ArrowLeft, Send, Star, MapPin, Wrench, Navigation, CheckCircle, Loader2, Car as CarIcon, Plus, Save, Clock, CheckCircle2, Search } from 'lucide-react';
 
 const SAUDI_CITIES = [
@@ -257,17 +256,23 @@ export function NewRequestPage() {
       const created = res.data || res;
       const requestId = created?.id;
 
+      let failedUploads = 0;
       if (requestId && mediaFiles.length > 0) {
-        await Promise.allSettled(
+        const uploadResults = await Promise.allSettled(
           mediaFiles.map((file) => mediaApi.upload(file, requestId))
         );
+        failedUploads = uploadResults.filter(result => result.status === 'rejected').length;
       }
 
       if (isDraft) {
         toast.success('تم حفظ المسودة');
         navigate('/orders');
       } else {
-        toast.success('تم إنشاء الطلب');
+        if (failedUploads > 0) {
+          toast.error(`تم إنشاء الطلب، لكن فشل رفع ${failedUploads} من المرفقات`);
+        } else {
+          toast.success('تم إنشاء الطلب');
+        }
         navigate(`/orders/${requestId}`);
       }
     } catch (err: any) {
@@ -649,13 +654,7 @@ export function NewRequestPage() {
             )}
           </div>
 
-          {!presetWorkshopId && topWorkshops.length > 0 && (
-            <SmartWorkshopSuggestion
-              workshops={topWorkshops}
-              selectedWorkshopId={selectedWorkshopId}
-              onWorkshopSelect={(id) => setSelectedWorkshopId(selectedWorkshopId === id ? null : id)}
-            />
-          )}
+
 
           <button onClick={() => setStep(3)} className="btn-secondary w-full py-3">تغيير الطريقة أو الموقع</button>
 

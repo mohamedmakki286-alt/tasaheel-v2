@@ -103,6 +103,35 @@ public class WorkshopController {
         return ResponseEntity.ok(ApiResponse.success(requests));
     }
 
+    @GetMapping("/requests/{id}")
+    @PreAuthorize("hasRole('WORKSHOP')")
+    public ResponseEntity<ApiResponse<MaintenanceRequestDTO>> getDispatchedRequest(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                workshopService.getDispatchedRequest(id, user.getUserId())));
+    }
+
+    @PutMapping("/requests/{id}/view")
+    @PreAuthorize("hasRole('WORKSHOP')")
+    public ResponseEntity<ApiResponse<Void>> markRequestViewed(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id) {
+        workshopService.markDispatchedRequestViewed(id, user.getUserId());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/requests/{id}/decline")
+    @PreAuthorize("hasRole('WORKSHOP')")
+    public ResponseEntity<ApiResponse<Void>> declineRequest(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String reason = body != null ? body.get("reason") : null;
+        workshopService.declineDispatchedRequest(id, user.getUserId(), reason);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
     @PutMapping("/requests/{id}/status")
     @PreAuthorize("hasRole('WORKSHOP')")
     public ResponseEntity<ApiResponse<Void>> updateRequestStatus(
@@ -204,6 +233,29 @@ public class WorkshopController {
         HomeServiceAssignmentDTO assignment = technicianService.updateAssignmentStatus(id, user.getUserId(), status);
         Locale locale = LocaleContextHolder.getLocale();
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("workshop.status.updated", null, locale), assignment));
+    }
+
+    // ---- Assign Technician to Any Request ----
+
+    @PutMapping("/requests/{requestId}/assign-technician/{technicianId}")
+    @PreAuthorize("hasRole('WORKSHOP')")
+    public ResponseEntity<ApiResponse<MaintenanceRequestDTO>> assignTechnicianToRequest(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long requestId,
+            @PathVariable Long technicianId) {
+        MaintenanceRequestDTO request = technicianService.assignTechnicianToRequest(requestId, user.getUserId(), technicianId);
+        Locale locale = LocaleContextHolder.getLocale();
+        return ResponseEntity.ok(ApiResponse.success(msg.getMessage("workshop.technician.assigned", null, locale), request));
+    }
+
+    @PutMapping("/requests/{requestId}/unassign-technician")
+    @PreAuthorize("hasRole('WORKSHOP')")
+    public ResponseEntity<ApiResponse<MaintenanceRequestDTO>> unassignTechnicianFromRequest(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long requestId) {
+        MaintenanceRequestDTO request = technicianService.unassignTechnicianFromRequest(requestId, user.getUserId());
+        Locale locale = LocaleContextHolder.getLocale();
+        return ResponseEntity.ok(ApiResponse.success("Technician removed", request));
     }
 
     // ---- Service Pricing Management (for workshop portal) ----

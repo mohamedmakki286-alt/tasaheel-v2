@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ import java.util.Map;
 @RequestMapping("/api/requests")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasRole('CUSTOMER')")
 public class MaintenanceRequestController {
 
     private final MaintenanceRequestService requestService;
@@ -64,19 +66,25 @@ public class MaintenanceRequestController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<MaintenanceRequestDTO>> getRequest(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<MaintenanceRequestDTO>> getRequest(
+            @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long id) {
+        requestService.requireCustomerOwnership(id, user.getUserId());
         MaintenanceRequestDTO request = requestService.getRequest(id);
         return ResponseEntity.ok(ApiResponse.success(request));
     }
 
     @GetMapping("/{id}/quotes")
-    public ResponseEntity<ApiResponse<List<QuoteDTO>>> getRequestQuotes(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<List<QuoteDTO>>> getRequestQuotes(
+            @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long id) {
+        requestService.requireCustomerOwnership(id, user.getUserId());
         MaintenanceRequestDTO request = requestService.getRequest(id);
         return ResponseEntity.ok(ApiResponse.success(request.getQuotes()));
     }
 
     @GetMapping("/{id}/quotes/comparison")
-    public ResponseEntity<ApiResponse<QuoteComparisonDTO>> getQuoteComparison(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<QuoteComparisonDTO>> getQuoteComparison(
+            @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long id) {
+        requestService.requireCustomerOwnership(id, user.getUserId());
         MaintenanceRequestDTO request = requestService.getRequest(id);
         List<QuoteDTO> quotes = request.getQuotes();
 
@@ -131,6 +139,17 @@ public class MaintenanceRequestController {
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("request.quote.accepted", null, locale), null));
     }
 
+    @PostMapping("/{id}/quotes/{quoteId}/reject")
+    public ResponseEntity<ApiResponse<Void>> rejectQuote(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id,
+            @PathVariable Long quoteId,
+            @RequestBody(required = false) Map<String, String> body) {
+        String reason = body != null ? body.get("reason") : null;
+        requestService.rejectQuote(id, quoteId, user.getUserId(), reason);
+        return ResponseEntity.ok(ApiResponse.success("تم رفض عرض السعر", null));
+    }
+
     @PostMapping("/{id}/approve-report")
     public ResponseEntity<ApiResponse<Void>> approveReport(
             @AuthenticationPrincipal UserDetailsImpl user,
@@ -141,7 +160,9 @@ public class MaintenanceRequestController {
     }
 
     @GetMapping("/{id}/timeline")
-    public ResponseEntity<ApiResponse<List<RequestStatusHistoryDTO>>> getTimeline(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<List<RequestStatusHistoryDTO>>> getTimeline(
+            @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long id) {
+        requestService.requireCustomerOwnership(id, user.getUserId());
         List<RequestStatusHistoryDTO> timeline = requestService.getTimeline(id);
         return ResponseEntity.ok(ApiResponse.success(timeline));
     }
@@ -176,13 +197,17 @@ public class MaintenanceRequestController {
     }
 
     @GetMapping("/{id}/technician")
-    public ResponseEntity<ApiResponse<HomeServiceAssignmentDTO>> getAssignedTechnician(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<HomeServiceAssignmentDTO>> getAssignedTechnician(
+            @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long id) {
+        requestService.requireCustomerOwnership(id, user.getUserId());
         HomeServiceAssignmentDTO assignment = requestService.getTechnicianForRequest(id);
         return ResponseEntity.ok(ApiResponse.success(assignment));
     }
 
     @GetMapping("/{id}/sub-orders")
-    public ResponseEntity<ApiResponse<List<SubOrderDTO>>> getSubOrders(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<List<SubOrderDTO>>> getSubOrders(
+            @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long id) {
+        requestService.requireCustomerOwnership(id, user.getUserId());
         List<SubOrderDTO> subOrders = splitRequestService.getSubOrders(id);
         return ResponseEntity.ok(ApiResponse.success(subOrders));
     }
