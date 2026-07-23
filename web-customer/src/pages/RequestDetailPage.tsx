@@ -7,7 +7,7 @@ import { invoicesApi } from '../api/invoices.api';
 import type { Request, Quote, Invoice } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle, Car } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle, Car, User, Phone } from 'lucide-react';
 import { SERVICE_CATEGORIES } from '../constants/serviceCategories';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
 
@@ -226,6 +226,29 @@ export function RequestDetailPage() {
           <Calendar className="h-4 w-4" /> <span>{new Date(request.createdAt).toLocaleDateString('ar-SA')}</span>
         </div>
       </div>
+
+      {/* Technician Info */}
+      {request.technicianName && (
+        <div className="card space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-accent-500/10 flex items-center justify-center">
+              <User size={20} className="text-accent-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-surface-400">الفني المسؤول عن الصيانة</p>
+              <p className="font-semibold text-sm">{request.technicianName}</p>
+              {request.technicianSpecialty && (
+                <p className="text-xs text-surface-400">{request.technicianSpecialty}</p>
+              )}
+            </div>
+          </div>
+          {request.technicianPhone && (
+            <a href={`tel:${request.technicianPhone}`} className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-surface-600 text-surface-300 hover:border-accent-400 hover:text-accent-400 transition-colors text-sm">
+              <Phone size={16} /> اتصال بالفني
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Quotes */}
       {visibleQuotes.length > 0 && (

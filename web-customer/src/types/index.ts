@@ -145,6 +145,10 @@ export interface Request {
   serviceItems?: ServiceItem[];
   subOrders?: SubOrder[];
   allowMultiWorkshop?: boolean;
+  technicianId?: number;
+  technicianName?: string;
+  technicianPhone?: string;
+  technicianSpecialty?: string;
 }
 
 export interface ServiceItem {

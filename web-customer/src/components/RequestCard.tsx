@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Wrench } from 'lucide-react';
+import { Calendar, MapPin, Wrench, User } from 'lucide-react';
 import type { Request } from '../types';
 import { StatusBadge } from './StatusBadge';
 
@@ -17,6 +17,13 @@ export function RequestCard({ request, onClick }: { request: Request; onClick?: 
         </div>
         <StatusBadge status={request.status} />
       </div>
+      {request.technicianName && (
+        <div className="flex items-center gap-2 mb-1 mt-2 text-sm text-surface-400">
+          <User className="h-4 w-4 text-accent-400" />
+          <span>الفني: <span className="text-surface-300 font-medium">{request.technicianName}</span></span>
+          {request.technicianSpecialty && <span className="text-xs text-surface-500">({request.technicianSpecialty})</span>}
+        </div>
+      )}
       <div className="flex items-center gap-2 text-sm text-surface-400 mb-1 mt-2">
         <Calendar className="h-4 w-4" />
         <span>{new Date(request.createdAt).toLocaleDateString('ar-SA')}</span>
