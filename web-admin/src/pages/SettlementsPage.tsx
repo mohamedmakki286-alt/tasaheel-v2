@@ -351,7 +351,7 @@ export default function SettlementsPage() {
                       <td className="py-2 px-3 text-gray-900 font-medium">{formatCurrency(inv.grandTotal)}</td>
                       <td className="py-2 px-3">
                         <NumberInput
-                          value={pct}
+                          value={String(pct)}
                           onValueChange={(v) => handleCommissionChange(inv.id, v)}
                           mode="decimal"
                           decimalScale={1}
