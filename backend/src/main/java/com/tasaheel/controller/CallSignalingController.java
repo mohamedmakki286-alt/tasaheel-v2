@@ -4,7 +4,10 @@ import com.tasaheel.config.StompUserHolder;
 import com.tasaheel.entity.CallSession;
 import com.tasaheel.entity.MaintenanceRequest;
 import com.tasaheel.repository.CallSessionRepository;
+import com.tasaheel.repository.CustomerRepository;
 import com.tasaheel.repository.MaintenanceRequestRepository;
+import com.tasaheel.repository.TechnicianRepository;
+import com.tasaheel.repository.WorkshopRepository;
 import com.tasaheel.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +26,9 @@ public class CallSignalingController {
     private final SimpMessagingTemplate messagingTemplate;
     private final CallSessionRepository callSessionRepository;
     private final MaintenanceRequestRepository requestRepository;
+    private final CustomerRepository customerRepository;
+    private final TechnicianRepository technicianRepository;
+    private final WorkshopRepository workshopRepository;
 
     @MessageMapping("/call/offer")
     public void handleOffer(Map<String, Object> payload) {
@@ -348,7 +354,18 @@ public class CallSignalingController {
     }
 
     private String resolveUserName(Long userId, String role) {
-        return "";
+        try {
+            if ("customer".equals(role)) {
+                return customerRepository.findById(userId).map(c -> c.getName()).orElse("عميل");
+            } else if ("technician".equals(role)) {
+                return technicianRepository.findById(userId).map(t -> t.getName()).orElse("فني");
+            } else if ("workshop".equals(role)) {
+                return workshopRepository.findById(userId).map(w -> w.getName()).orElse("ورشة");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to resolve user name for userId={} role={}", userId, role);
+        }
+        return "مستخدم";
     }
 
     private void sendToUser(Long userId, Object payload) {

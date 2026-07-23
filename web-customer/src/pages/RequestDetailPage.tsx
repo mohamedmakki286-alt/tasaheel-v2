@@ -7,9 +7,10 @@ import { invoicesApi } from '../api/invoices.api';
 import type { Request, Quote, Invoice } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle, Car, User, Phone } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle, Car, User, Phone, PhoneCall } from 'lucide-react';
 import { SERVICE_CATEGORIES } from '../constants/serviceCategories';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
+import { useCallStore } from '@shared/call/callStore';
 
 const statusSteps = [
   'pending', 'quoted', 'accepted', 'in_progress', 'inspection_report', 'customer_approved', 'awaiting_payment', 'completed', 'cancelled',
@@ -243,9 +244,17 @@ export function RequestDetailPage() {
             </div>
           </div>
           {request.technicianPhone && (
-            <a href={`tel:${request.technicianPhone}`} className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-surface-600 text-surface-300 hover:border-accent-400 hover:text-accent-400 transition-colors text-sm">
-              <Phone size={16} /> اتصال بالفني
-            </a>
+            <div className="flex gap-2">
+              <button
+                onClick={() => request.technicianId && useCallStore.getState().requestCall(Number(request.technicianId), request.technicianName || '', Number(request.id))}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent-500 text-white hover:bg-accent-600 transition-colors text-sm font-semibold"
+              >
+                <PhoneCall size={16} /> مكالمة صوتية
+              </button>
+              <a href={`tel:${request.technicianPhone}`} className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-surface-600 text-surface-300 hover:border-accent-400 hover:text-accent-400 transition-colors text-sm">
+                <Phone size={16} />
+              </a>
+            </div>
           )}
         </div>
       )}

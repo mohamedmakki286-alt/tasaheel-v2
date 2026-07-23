@@ -1,16 +1,48 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { useCallStore } from './callStore';
 
-const STUN_SERVERS: RTCIceServer[] = [
+const DEFAULT_STUN_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
 
-export function useWebRTCCall(onIceCandidate: (candidate: RTCIceCandidate) => void) {
+let cachedIceServers: RTCIceServer[] | null = null;
+let iceServersPromise: Promise<RTCIceServer[]> | null = null;
+
+async function fetchIceServers(token?: string): Promise<RTCIceServer[]> {
+  if (cachedIceServers) return cachedIceServers;
+  if (iceServersPromise) return iceServersPromise;
+
+  iceServersPromise = (async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/calls/ice-servers`, { headers });
+      if (!res.ok) return DEFAULT_STUN_SERVERS;
+      const json = await res.json();
+      const servers: RTCIceServer[] = json.data?.iceServers || DEFAULT_STUN_SERVERS;
+      cachedIceServers = servers;
+      return servers;
+    } catch {
+      return DEFAULT_STUN_SERVERS;
+    }
+  })();
+
+  return iceServersPromise;
+}
+
+export function useWebRTCCall(onIceCandidate: (candidate: RTCIceCandidate) => void, token?: string) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const durationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const iceServersRef = useRef<RTCIceServer[]>(DEFAULT_STUN_SERVERS);
+
+  useEffect(() => {
+    fetchIceServers(token).then((servers) => {
+      iceServersRef.current = servers;
+    });
+  }, [token]);
 
   const cleanup = useCallback(() => {
     if (durationRef.current) {
@@ -37,7 +69,7 @@ export function useWebRTCCall(onIceCandidate: (candidate: RTCIceCandidate) => vo
   const getOrCreatePC = useCallback(() => {
     if (pcRef.current) return pcRef.current;
 
-    const pc = new RTCPeerConnection({ iceServers: STUN_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {

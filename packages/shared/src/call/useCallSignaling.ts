@@ -41,7 +41,7 @@ export function useCallSignaling({ userId, userName, userRole, token }: UseCallS
     [userId, publish],
   );
 
-  const rtc = useWebRTCCall(onIceCandidate);
+  const rtc = useWebRTCCall(onIceCandidate, token);
 
   const startCall = useCallback(
     async (calleeId: number | string, calleeName: string, requestId: number) => {

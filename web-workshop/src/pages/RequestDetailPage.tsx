@@ -44,7 +44,8 @@ import {
 } from '../utils/constants';
 import { formatDate, formatCurrency, formatPhone, formatDateTime, timeAgo } from '../utils/formatters';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
-import { useCallStore } from '../stores/callStore';
+import { useCallStore } from '@shared/call/callStore';
+import { type CallState } from '@shared/call/callStore';
 import QuoteForm from '../components/QuoteForm';
 import InspectionReportForm from '../components/InspectionReportForm';
 import InvoiceForm from '../components/InvoiceForm';
@@ -222,9 +223,7 @@ export default function RequestDetailPage() {
                         <button
                           onClick={() => {
                             if (request.customer?.id) {
-                              useCallStore.setState({ peerId: Number(request.customer.id), peerName: request.customer.name || '', peerRole: 'customer', status: 'idle' });
-                              // Trigger VoIP call via the global call signaling
-                              document.dispatchEvent(new CustomEvent('voip-call', { detail: { calleeId: request.customer.id, calleeName: request.customer.name || '' } }));
+                              useCallStore.getState().requestCall(Number(request.customer.id), request.customer.name || '', Number(request.id));
                             }
                           }}
                           className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"

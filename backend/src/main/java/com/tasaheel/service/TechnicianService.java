@@ -92,6 +92,7 @@ public class TechnicianService {
         if (dto.getAvailabilityStatus() != null) tech.setAvailabilityStatus(dto.getAvailabilityStatus());
         if (dto.getProfileImageUrl() != null) tech.setProfileImageUrl(dto.getProfileImageUrl());
         if (dto.getIsOnline() != null) tech.setIsOnline(dto.getIsOnline());
+        if (dto.getIsActive() != null) tech.setIsActive(dto.getIsActive());
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
             tech.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
