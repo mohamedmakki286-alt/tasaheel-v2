@@ -62,4 +62,5 @@ public class MaintenanceRequestDTO {
     private String technicianName;
     private String technicianPhone;
     private String technicianSpecialty;
+    private String workshopName;
 }

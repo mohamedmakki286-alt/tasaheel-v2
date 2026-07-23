@@ -381,6 +381,15 @@ public class MaintenanceRequestService {
     private MaintenanceRequestDTO toRequestDTO(MaintenanceRequest r) {
         List<ServiceType> sts = r.getServiceTypes();
         ServiceType primary = sts.isEmpty() ? null : sts.get(0);
+
+        String workshopName = null;
+        try {
+            Quote acceptedQuote = quoteRepository.findByRequestIdAndStatus(r.getId(), "accepted").orElse(null);
+            if (acceptedQuote != null && acceptedQuote.getWorkshop() != null) {
+                workshopName = acceptedQuote.getWorkshop().getName();
+            }
+        } catch (Exception ignored) {}
+
         return MaintenanceRequestDTO.builder()
                 .id(r.getId())
                 .customerId(r.getCustomer().getId())
@@ -412,6 +421,7 @@ public class MaintenanceRequestService {
                 .technicianName(r.getTechnician() != null ? r.getTechnician().getName() : null)
                 .technicianPhone(r.getTechnician() != null ? r.getTechnician().getPhone() : null)
                 .technicianSpecialty(r.getTechnician() != null ? r.getTechnician().getSpecialty() : null)
+                .workshopName(workshopName)
                 .build();
     }
 
