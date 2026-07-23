@@ -131,6 +131,17 @@ public class MaintenanceRequestController {
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("request.quote.accepted", null, locale), null));
     }
 
+    @PostMapping("/{id}/quotes/{quoteId}/reject")
+    public ResponseEntity<ApiResponse<Void>> rejectQuote(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id,
+            @PathVariable Long quoteId,
+            @RequestBody(required = false) Map<String, String> body) {
+        String reason = body != null ? body.get("reason") : null;
+        requestService.rejectQuote(id, quoteId, user.getUserId(), reason);
+        return ResponseEntity.ok(ApiResponse.success("تم رفض عرض السعر", null));
+    }
+
     @PostMapping("/{id}/approve-report")
     public ResponseEntity<ApiResponse<Void>> approveReport(
             @AuthenticationPrincipal UserDetailsImpl user,

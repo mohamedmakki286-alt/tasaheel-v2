@@ -22,6 +22,8 @@ export const requestsApi = {
   getQuotes: (id: string) => client.get(`/requests/${id}/quotes`),
   acceptQuote: (requestId: string, quoteId: string) =>
     client.post(`/requests/${requestId}/quotes/${quoteId}/accept`),
+  rejectQuote: (requestId: string, quoteId: string, reason?: string) =>
+    client.post(`/requests/${requestId}/quotes/${quoteId}/reject`, reason ? { reason } : {}),
   getSubOrders: (requestId: string) =>
     client.get(`/requests/${requestId}/sub-orders`),
   getTimeline: (id: string) => client.get(`/requests/${id}/timeline`),

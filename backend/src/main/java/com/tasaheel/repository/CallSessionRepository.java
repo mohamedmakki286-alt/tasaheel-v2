@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,4 +30,11 @@ public interface CallSessionRepository extends JpaRepository<CallSession, Long> 
 
     @Query("SELECT COUNT(c) > 0 FROM CallSession c WHERE c.status IN ('ringing', 'connecting', 'active') AND (c.callerId = :userId OR c.calleeId = :userId)")
     boolean hasActiveCallForUser(@Param("userId") Long userId);
+
+    List<CallSession> findByStatusAndRingingAtBefore(String status, LocalDateTime ringingAt);
+
+    List<CallSession> findByStatusAndUpdatedAtBefore(String status, LocalDateTime updatedAt);
+
+    @Query("SELECT COUNT(c) > 0 FROM CallSession c WHERE c.status IN ('ringing', 'connecting', 'active') AND c.calleeId = :calleeId")
+    boolean hasActiveCallForCallee(@Param("calleeId") Long calleeId);
 }

@@ -288,6 +288,12 @@ public class MaintenanceRequestService {
             throw new BadRequestException("Request is not in inspection report status");
         }
 
+        InspectionReport report = inspectionReportRepository.findByRequestId(requestId).orElse(null);
+        if (report != null) {
+            report.setStatus("approved");
+            inspectionReportRepository.save(report);
+        }
+
         request.setStatus("customer_approved");
         requestRepository.save(request);
 
@@ -521,6 +527,41 @@ public class MaintenanceRequestService {
         } catch (Exception ignored) {}
 
         return dto;
+    }
+
+    @Transactional
+    public void rejectQuote(Long requestId, Long quoteId, Long customerId, String reason) {
+        MaintenanceRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
+
+        if (!request.getCustomer().getId().equals(customerId)) {
+            throw new BadRequestException("You are not the owner of this request");
+        }
+
+        if (!"quoted".equals(request.getStatus()) && !"pending".equals(request.getStatus())) {
+            throw new BadRequestException("Cannot reject quote in current request status: " + request.getStatus());
+        }
+
+        Quote quote = quoteRepository.findById(quoteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quote", quoteId));
+        if (!quote.getRequest().getId().equals(requestId)) {
+            throw new BadRequestException("Quote does not belong to this request");
+        }
+
+        if ("accepted".equals(quote.getStatus()) || "rejected".equals(quote.getStatus())) {
+            throw new BadRequestException("Cannot reject a quote that is already " + quote.getStatus());
+        }
+
+        quote.setStatus("rejected");
+        quoteRepository.save(quote);
+
+        createStatusHistory(request, request.getStatus(),
+                "Quote rejected from workshop " + quote.getWorkshop().getName() + (reason != null ? ": " + reason : ""),
+                "customer:" + customerId);
+
+        eventPublisher.publish(this, EventType.QUOTE_REJECTED, requestId, "customer", customerId,
+                Map.of("quoteId", quoteId, "workshopId", quote.getWorkshop().getId(),
+                       "workshopName", quote.getWorkshop().getName(), "reason", reason != null ? reason : ""));
     }
 
     @Transactional

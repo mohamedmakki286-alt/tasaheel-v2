@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Send, MessageCircle, CheckCheck, Smile, Plus, Mic, Image, FileText, X } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Send, MessageCircle, CheckCheck, Smile, Plus, Mic, Image, FileText, X, MicOff } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { getOrCreateRoom, getMessages, sendMessage, markAsRead, uploadChatMedia } from '../api/chat.api';
@@ -31,6 +31,15 @@ function DateSeparator({ date }: { date: string }) {
 function MediaMessage({ url, isCustomer }: { url: string; isCustomer: boolean }) {
   const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url);
   const isPdf = /\.pdf$/i.test(url);
+  const isAudio = /\.(mp3|wav|ogg|m4a|webm|aac)$/i.test(url);
+
+  if (isAudio) {
+    return (
+      <audio controls className="max-w-[240px] h-10">
+        <source src={url} />
+      </audio>
+    );
+  }
 
   if (isImage) {
     return (
@@ -53,6 +62,11 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -77,7 +91,7 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
     mutationFn: async () => {
       if (previewFile && room?.id) {
         const url = await uploadChatMedia(previewFile);
-        const type = previewFile.type.startsWith('image/') ? 'image' : 'file';
+        const type = previewFile.type.startsWith('image/') ? 'image' : previewFile.type.startsWith('audio/') ? 'audio' : 'file';
         return sendMessage(room.id, String(userId), 'customer', content || '', type, url);
       }
       return sendMessage(room!.id, String(userId), 'customer', content);
@@ -90,6 +104,67 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
     },
     onError: () => toast.error('فشل إرسال الرسالة'),
   });
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+        setPreviewFile(file);
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingIntervalRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+    } catch {
+      toast.error('لا يمكن الوصول إلى الميكروفون');
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  }, [isRecording]);
+
+  const cancelRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
+      setIsRecording(false);
+      setRecordingTime(0);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  }, [isRecording]);
+
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
 
   const readMutation = useMutation({
     mutationFn: () => markAsRead(room!.id),
@@ -207,17 +282,34 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
         <input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={handleFileSelect} />
         <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="إضافة ملف"><Plus size={29} strokeWidth={2.2} /></button>
         <button type="button" onClick={() => setShowEmojiPicker((open) => !open)} className="flex h-12 w-10 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="الإيموجي"><Smile size={28} strokeWidth={2.2} /></button>
-        <div className="relative min-w-0 flex-1">
-          <input
-            type="text"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="h-12 w-full bg-transparent px-1 text-base text-surface-900 outline-none placeholder:text-surface-400 dark:text-white"
-            placeholder="اكتب رسالة"
-            dir="rtl"
-          />
-        </div>
-        {content.trim() || previewFile ? <button type="submit" disabled={sendMutation.isPending} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-500 text-white transition hover:bg-accent-600 disabled:opacity-50"><Send size={20} /></button> : <button type="button" onClick={() => toast('التسجيل الصوتي سيُفعّل قريباً')} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="رسالة صوتية"><Mic size={27} strokeWidth={2.3} /></button>}
+        {isRecording ? (
+          <div className="flex items-center gap-2 flex-1">
+            <button type="button" onClick={cancelRecording} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-400">
+              <X size={20} />
+            </button>
+            <div className="flex items-center gap-2 flex-1">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-sm text-red-400 font-mono">{String(Math.floor(recordingTime / 60)).padStart(2, '0')}:{String(recordingTime % 60).padStart(2, '0')}</span>
+            </div>
+            <button type="button" onClick={stopRecording} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-500 text-white animate-pulse">
+              <MicOff size={22} />
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="relative min-w-0 flex-1">
+              <input
+                type="text"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="h-12 w-full bg-transparent px-1 text-base text-surface-900 outline-none placeholder:text-surface-400 dark:text-white"
+                placeholder="اكتب رسالة"
+                dir="rtl"
+              />
+            </div>
+            {content.trim() || previewFile ? <button type="submit" disabled={sendMutation.isPending} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-500 text-white transition hover:bg-accent-600 disabled:opacity-50"><Send size={20} /></button> : <button type="button" onClick={startRecording} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="رسالة صوتية"><Mic size={27} strokeWidth={2.3} /></button>}
+          </>
+        )}
       </form>
     </div>
   );

@@ -184,13 +184,22 @@ export interface ChatMessage {
   senderName: string;
   senderRole: 'workshop' | 'customer';
   content: string;
+  type?: string;
+  mediaUrl?: string;
+  isRead?: boolean;
   createdAt: string;
 }
 
 export interface ChatRoom {
   id: string;
   requestId: string;
+  customerId?: string;
+  customerName?: string;
+  workshopId?: string;
+  workshopName?: string;
   participants: string[];
+  unreadCount?: number;
+  lastMessage?: ChatMessage;
   createdAt: string;
 }
 

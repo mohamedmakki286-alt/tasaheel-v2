@@ -94,12 +94,19 @@ export interface MaintenanceRequest {
 }
 
 export type RequestStatus =
+  | 'draft'
   | 'pending'
-  | 'assigned'
-  | 'inspected'
+  | 'quoted'
+  | 'offer_selected'
+  | 'splitted'
+  | 'accepted'
+  | 'customer_approved'
+  | 'inspection_report'
   | 'in_progress'
+  | 'awaiting_payment'
   | 'completed'
-  | 'delivered'
+  | 'verified'
+  | 'paid'
   | 'cancelled';
 
 export interface Quote {

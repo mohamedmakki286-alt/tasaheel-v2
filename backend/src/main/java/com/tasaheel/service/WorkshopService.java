@@ -236,11 +236,27 @@ public class WorkshopService {
         requestRepository.save(request);
     }
 
+    private static final java.util.Map<String, java.util.Set<String>> WORKSHOP_ALLOWED_TRANSITIONS = java.util.Map.of(
+        "accepted", java.util.Set.of("in_progress", "cancelled"),
+        "in_progress", java.util.Set.of("completed", "cancelled"),
+        "customer_approved", java.util.Set.of("in_progress", "cancelled")
+    );
+
     public void updateRequestStatus(Long requestId, Long workshopId, String status) {
         MaintenanceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
         List<Quote> workshopQuotes = quoteRepository.findByRequestIdAndWorkshopId(requestId, workshopId);
+        if (workshopQuotes.isEmpty()) {
+            throw new BadRequestException("Workshop has no quote for this request");
+        }
+
         String effectiveStatus = "completed".equals(status) ? "awaiting_payment" : status;
+
+        java.util.Set<String> allowed = WORKSHOP_ALLOWED_TRANSITIONS.getOrDefault(request.getStatus(), java.util.Set.of());
+        if (!allowed.contains(effectiveStatus) && !"awaiting_payment".equals(effectiveStatus)) {
+            throw new BadRequestException("Cannot transition from " + request.getStatus() + " to " + effectiveStatus);
+        }
+
         request.setStatus(effectiveStatus);
         requestRepository.save(request);
 

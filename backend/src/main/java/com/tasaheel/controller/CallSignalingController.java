@@ -59,6 +59,12 @@ public class CallSignalingController {
             return;
         }
 
+        if (callSessionRepository.hasActiveCallForCallee(calleeId)) {
+            log.warn("Callee {} is busy", calleeId);
+            sendError(callerId, "USER_BUSY");
+            return;
+        }
+
         if (requestId != null) {
             String calleeRole = resolveCalleeRole(callerRole, requestId, callerId, calleeId);
             if (calleeRole == null) {

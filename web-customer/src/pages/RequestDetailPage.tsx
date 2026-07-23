@@ -52,6 +52,18 @@ export function RequestDetailPage() {
 
   useRequestWebSocket(id ? Number(id) : undefined, handleWebSocketEvent);
 
+  const handleRejectQuote = async (quoteId: string) => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await requestsApi.rejectQuote(id, quoteId);
+      toast.success('تم رفض عرض السعر');
+      load();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'فشل رفض عرض السعر');
+    } finally { setActionLoading(false); }
+  };
+
   const handleAcceptQuote = async (quoteId: string) => {
     if (!id) return;
     setActionLoading(true);
@@ -271,9 +283,14 @@ export function RequestDetailPage() {
                 {quote.notes && <p className="text-xs text-surface-500 mt-1">{quote.notes}</p>}
               </div>
               {quote.status === 'pending' && request.status === 'quoted' && (
-                <button onClick={() => handleAcceptQuote(quote.id)} disabled={actionLoading} className="btn-primary text-sm py-2 px-4">
-                  {t('pages.requestDetail.accept')}
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => handleRejectQuote(quote.id)} disabled={actionLoading} className="text-sm py-2 px-3 rounded-xl border border-surface-600 text-surface-300 hover:border-danger-400 hover:text-danger-400 transition-colors">
+                    <XCircle size={16} />
+                  </button>
+                  <button onClick={() => handleAcceptQuote(quote.id)} disabled={actionLoading} className="btn-primary text-sm py-2 px-4">
+                    {t('pages.requestDetail.accept')}
+                  </button>
+                </div>
               )}
             </div>
           ))}
