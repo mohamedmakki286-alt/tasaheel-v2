@@ -335,12 +335,23 @@ export interface ChatMessage {
   roomId: string;
   senderId: string;
   senderName: string;
-  senderRole: 'customer' | 'workshop' | 'driver';
+  senderRole: 'customer' | 'workshop' | 'driver' | 'technician';
   content: string;
   type?: string;
   mediaUrl?: string;
   isRead?: boolean;
   createdAt: string;
+  clientMessageId?: string;
+  attachment?: {
+    id: number;
+    url: string;
+    mimeType: string;
+    fileSize: number;
+    originalFileName: string;
+    durationSeconds?: number;
+    width?: number;
+    height?: number;
+  };
 }
 
 export interface ChatRoom {

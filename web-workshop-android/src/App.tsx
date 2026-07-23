@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
 import WorkshopLayout from './layouts/WorkshopLayout';
+import TechnicianLayout from './layouts/TechnicianLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingScreen from './components/guards/LoadingScreen';
 
@@ -18,6 +19,9 @@ const ChatsPage = lazy(() => import('./pages/ChatsPage'));
 const MyQuotesPage = lazy(() => import('./pages/MyQuotesPage'));
 const ReviewsPage = lazy(() => import('./pages/ReviewsPage'));
 const TechniciansPage = lazy(() => import('./pages/TechniciansPage'));
+const TechnicianPage = lazy(() => import('./pages/TechnicianPage'));
+const TechnicianAccountPage = lazy(() => import('./pages/TechnicianAccountPage'));
+const TechnicianRequestDetailPage = lazy(() => import('./pages/TechnicianRequestDetailPage'));
 const HomeServicePage = lazy(() => import('./pages/HomeServicePage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
@@ -61,6 +65,11 @@ function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+      <Route path="/technician" element={<TechnicianLayout />}>
+        <Route index element={<TechnicianPage />} />
+        <Route path="account" element={<TechnicianAccountPage />} />
+        <Route path="requests/:id" element={<TechnicianRequestDetailPage />} />
+      </Route>
       <Route path="/set-password" element={<SetPasswordPage />} />
       <Route path="/reset-password" element={<SetPasswordPage />} />
       <Route path="/register" element={<Navigate to="/login" replace />} />

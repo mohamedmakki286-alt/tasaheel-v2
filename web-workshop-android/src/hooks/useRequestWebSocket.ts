@@ -3,7 +3,9 @@ import { Client } from '@stomp/stompjs';
 import toast from 'react-hot-toast';
 import i18n from '../i18n/i18n';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws';
+import { getWsUrl } from '../utils/ws';
+
+const WS_URL = getWsUrl();
 
 export function useRequestWebSocket(requestId: string | undefined, onEvent?: (type: string, payload: any) => void) {
   const clientRef = useRef<Client | null>(null);

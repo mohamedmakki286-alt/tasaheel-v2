@@ -12,6 +12,7 @@ export default function GuestRoute({ children }: { children: React.ReactNode }) 
     switch (role) {
       case 'customer': return <Navigate to="/app" replace />;
       case 'workshop': return <Navigate to="/dashboard" replace />;
+      case 'technician': return <Navigate to="/technician" replace />;
       case 'admin':
       case 'super_admin': return <Navigate to="/" replace />;
       default: return <Navigate to="/dashboard" replace />;

@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { submitQuote } from '../api/quotes.api';
+import NumberInput from './NumberInput';
 
 interface ServiceTypeOption {
   id: number;
@@ -86,19 +87,14 @@ export default function QuoteForm({ requestId, onClose, serviceTypes }: QuoteFor
 
           <div>
             <label className="label">{t('components.quoteForm.price')}</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-500 font-semibold text-sm bg-surface-100 px-2 py-1 rounded-lg">{t('common.sar')}</span>
-              <input
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="input-field pl-16 text-lg font-bold"
-                placeholder={t('components.quoteForm.pricePlaceholder')}
-                min="0"
-                step="0.01"
-                required
-              />
-            </div>
+            <NumberInput
+              value={price}
+              onValueChange={(v) => setPrice(v)}
+              mode="decimal"
+              decimalScale={2}
+              placeholder={t('components.quoteForm.pricePlaceholder')}
+              suffix={t('common.sar')}
+            />
           </div>
 
           <div>

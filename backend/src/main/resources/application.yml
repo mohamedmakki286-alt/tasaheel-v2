@@ -56,6 +56,7 @@ spring:
 
 application:
   name: Tasaheel
+  public-url: ${PUBLIC_URL:http://localhost:8080}
   jwt:
     secret: ${JWT_SECRET:dGFzYWhlZWwtc2VjcmV0LWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tYW5kLXZhbGlkYXRpb24tZm9yLXRhc2FoZWVsLXBsYXRmb3JtLTIwMjQ=}
     expiration: 604800000

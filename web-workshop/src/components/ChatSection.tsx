@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, MessageCircle, CheckCheck, Smile, Plus, Mic, Image, FileText, X, MicOff } from 'lucide-react';
+import { Send, MessageCircle, CheckCheck, Smile, Plus, Mic, Image, FileText, X, MicOff, Loader2, RotateCcw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { getRoom, getMessages, sendMessage, markAsRead, uploadChatMedia } from '../api/chat.api';
+import { getRoom, getMessages, sendMessage, markAsRead, sendAttachmentMessage } from '../api/chat.api';
 import { formatDateTime } from '../utils/formatters';
 import { useAuthStore } from '../stores/authStore';
 import Avatar from './Avatar';
@@ -27,10 +27,13 @@ function DateSeparator({ date }: { date: string }) {
   );
 }
 
-function MediaMessage({ url, isWorkshop }: { url: string; isWorkshop: boolean }) {
-  const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url);
-  const isPdf = /\.pdf$/i.test(url);
-  const isAudio = /\.(mp3|wav|ogg|m4a|webm|aac)$/i.test(url);
+function MediaMessage({ msg, isWorkshop }: { msg: { mediaUrl?: string; content?: string; type?: string; attachment?: any }; isWorkshop: boolean }) {
+  const url = msg.attachment?.url || msg.mediaUrl || msg.content;
+  if (!url) return null;
+  const type = msg.type?.toLowerCase() || '';
+  const isImage = type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+  const isAudio = type === 'audio' || /\.(mp3|wav|ogg|m4a|webm|aac)$/i.test(url);
+  const isPdf = type === 'file' && /\.pdf$/i.test(url);
 
   if (isAudio) {
     return (
@@ -39,7 +42,6 @@ function MediaMessage({ url, isWorkshop }: { url: string; isWorkshop: boolean })
       </audio>
     );
   }
-
   if (isImage) {
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className="block">
@@ -47,11 +49,10 @@ function MediaMessage({ url, isWorkshop }: { url: string; isWorkshop: boolean })
       </a>
     );
   }
-
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-3 py-2 rounded-xl ${isWorkshop ? 'bg-white/20' : 'bg-surface-100 dark:bg-surface-600'}`}>
       {isPdf ? <FileText size={18} /> : <Image size={18} />}
-      <span className="text-xs truncate max-w-[150px]">{url.split('/').pop()}</span>
+      <span className="text-xs truncate max-w-[150px]">{msg.attachment?.originalFileName || url.split('/').pop()}</span>
     </a>
   );
 }
@@ -63,6 +64,8 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'sent' | 'failed'>('idle');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -97,10 +100,19 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (previewFile && room?.id) {
-        const url = await uploadChatMedia(previewFile);
-        const type = previewFile.type.startsWith('image/') ? 'image' : previewFile.type.startsWith('audio/') ? 'audio' : 'file';
-        return sendMessage(room.id, content || '', type, url);
+      if (!room?.id) throw new Error('No room');
+      if (previewFile) {
+        setUploadState('uploading');
+        setUploadProgress(0);
+        const clientMsgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        try {
+          const result = await sendAttachmentMessage(room.id, previewFile, content, clientMsgId, (p) => setUploadProgress(p));
+          setUploadState('sent');
+          return result;
+        } catch (e) {
+          setUploadState('failed');
+          throw e;
+        }
       }
       return sendMessage(room!.id, content);
     },
@@ -108,9 +120,15 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
       setContent('');
       setPreviewFile(null);
       setPreviewUrl(null);
+      setUploadState('idle');
+      setUploadProgress(0);
       queryClient.invalidateQueries({ queryKey: ['chat-messages', room?.id] });
     },
-    onError: () => toast.error(t('components.chatSection.sendFailed')),
+    onError: (err: any) => {
+      if (uploadState === 'failed') return;
+      const msg = err?.friendlyMessage || err?.message || t('components.chatSection.sendFailed');
+      toast.error(msg);
+    },
   });
 
   const startRecording = useCallback(async () => {
@@ -189,7 +207,7 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!content.trim() && !previewFile) || !room?.id) return;
+    if ((!content.trim() && !previewFile) || !room?.id || mutation.isPending) return;
     mutation.mutate();
   };
 
@@ -200,8 +218,19 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
       toast.error('الحد الأقصى لحجم الملف 10 ميجا');
       return;
     }
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/mpeg', 'audio/wav', 'application/pdf'];
+    if (!allowed.includes(file.type)) {
+      toast.error('نوع الملف غير مدعوم');
+      return;
+    }
     setPreviewFile(file);
+    setUploadState('idle');
     e.target.value = '';
+  };
+
+  const retryUpload = () => {
+    setUploadState('idle');
+    mutation.mutate();
   };
 
   if (!room) {
@@ -225,6 +254,7 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
         {messages.map((msg, idx) => {
           const isWorkshop = msg.senderRole === 'workshop';
           const showDateSeparator = idx === 0 || new Date(msg.createdAt).toDateString() !== new Date(messages[idx - 1]?.createdAt).toDateString();
+          const msgType = msg.type?.toLowerCase() || '';
           return (
             <div key={msg.id}>
               {showDateSeparator && <DateSeparator date={msg.createdAt} />}
@@ -244,14 +274,14 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
                           {msg.senderName}
                         </span>
                       </div>
-                      {msg.type === 'image' || msg.type === 'file' ? (
-                        <MediaMessage url={msg.mediaUrl || msg.content} isWorkshop={isWorkshop} />
+                      {(msgType === 'image' || msgType === 'audio' || msgType === 'file') ? (
+                        <MediaMessage msg={msg} isWorkshop={isWorkshop} />
                       ) : (
                         <p className="text-sm leading-relaxed">{msg.content}</p>
                       )}
                     </div>
                     <div className={`flex items-center gap-1 mt-0.5 ${isWorkshop ? 'pr-1' : 'pl-1'} ${isWorkshop ? '' : 'justify-end'}`}>
-                      <span className={`text-[10px] ${isWorkshop ? 'text-surface-400' : 'text-surface-400'}`}>
+                      <span className="text-[10px] text-surface-400">
                         {new Date(msg.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {isWorkshop && <CheckCheck size={12} className="text-primary-500" />}
@@ -269,21 +299,41 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
         <div className="mb-3 relative inline-block">
           {previewFile.type.startsWith('image/') ? (
             <img src={previewUrl} alt="معاينة" className="max-h-24 rounded-xl border border-surface-200" />
+          ) : previewFile.type.startsWith('audio/') ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary-50 border border-primary-200">
+              <Mic size={16} className="text-primary-500" />
+              <span className="text-xs text-primary-600">رسالة صوتية جاهزة للإرسال</span>
+            </div>
           ) : (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-100 dark:bg-surface-700 border border-surface-200 dark:border-surface-600">
               <FileText size={16} className="text-surface-500" />
               <span className="text-xs text-surface-600 dark:text-surface-300 truncate max-w-[120px]">{previewFile.name}</span>
             </div>
           )}
-          <button onClick={() => { setPreviewFile(null); setPreviewUrl(null); }} className="absolute -top-2 -left-2 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center">
-            <X size={12} />
-          </button>
+          {uploadState === 'uploading' && (
+            <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+              <div className="text-center">
+                <Loader2 size={20} className="text-white animate-spin mx-auto mb-1" />
+                <span className="text-[10px] text-white">{uploadProgress}%</span>
+              </div>
+            </div>
+          )}
+          {uploadState === 'failed' && (
+            <button onClick={retryUpload} className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center">
+              <RotateCcw size={12} />
+            </button>
+          )}
+          {uploadState === 'idle' && (
+            <button onClick={() => { setPreviewFile(null); setPreviewUrl(null); }} className="absolute -top-2 -left-2 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center">
+              <X size={12} />
+            </button>
+          )}
         </div>
       )}
 
       <form onSubmit={handleSend} className="relative flex items-center gap-2 rounded-[28px] bg-white p-1.5 shadow-[0_5px_20px_rgba(15,23,42,0.10)] ring-1 ring-surface-100 dark:bg-surface-800 dark:ring-surface-700" dir="ltr">
         {showEmojiPicker && <div className="absolute bottom-[68px] left-0 right-0 z-20 rounded-2xl border border-surface-200 bg-white p-3 shadow-2xl dark:border-surface-700 dark:bg-surface-900" dir="rtl">{emojiGroups.map((group, groupIndex) => <div key={groupIndex} className="mb-2 grid grid-cols-10 gap-1 last:mb-0">{group.map((emoji) => <button key={emoji} type="button" onClick={() => { setContent((value) => `${value}${emoji}`); setShowEmojiPicker(false); }} className="rounded-lg p-1.5 text-xl transition hover:bg-surface-100 dark:hover:bg-surface-800">{emoji}</button>)}</div>)}</div>}
-        <input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={handleFileSelect} />
+        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,audio/webm,audio/ogg,audio/mp4,audio/m4a,audio/aac,audio/mpeg,audio/wav,.pdf,.doc,.docx" className="hidden" onChange={handleFileSelect} />
         <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="إضافة ملف"><Plus size={29} strokeWidth={2.2} /></button>
         <button type="button" onClick={() => setShowEmojiPicker((open) => !open)} className="flex h-12 w-10 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="الإيموجي"><Smile size={28} strokeWidth={2.2} /></button>
         {isRecording ? (
@@ -311,7 +361,13 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
                 dir="rtl"
               />
             </div>
-            {content.trim() || previewFile ? <button type="submit" disabled={mutation.isPending} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-500 text-white transition hover:bg-primary-600 disabled:opacity-50"><Send size={20} /></button> : <button type="button" onClick={startRecording} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="رسالة صوتية"><Mic size={27} strokeWidth={2.3} /></button>}
+            {content.trim() || previewFile ? (
+              <button type="submit" disabled={mutation.isPending} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-500 text-white transition hover:bg-primary-600 disabled:opacity-50">
+                {mutation.isPending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+              </button>
+            ) : (
+              <button type="button" onClick={startRecording} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="رسالة صوتية"><Mic size={27} strokeWidth={2.3} /></button>
+            )}
           </>
         )}
       </form>

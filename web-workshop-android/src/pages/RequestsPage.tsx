@@ -93,6 +93,16 @@ function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, 
         <p className="text-xs text-surface-500 dark:text-surface-400 mb-3 line-clamp-2">{request.description}</p>
       )}
 
+      {request.technicianName && (
+        <div className="flex items-center gap-2 mb-3 px-2.5 py-1.5 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-100 dark:border-surface-700">
+          <User size={12} className="text-primary-500 shrink-0" />
+          <span className="text-[11px] font-medium text-surface-600 dark:text-surface-300">الفني: {request.technicianName}</span>
+          {request.technicianSpecialty && (
+            <span className="text-[10px] text-surface-400">({request.technicianSpecialty})</span>
+          )}
+        </div>
+      )}
+
       <div className="flex gap-2">
         {showQuoteButton && onQuote && (
           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuote(); }} className="btn-primary flex-1 text-xs py-2">
@@ -134,6 +144,7 @@ export default function RequestsPage() {
   const [statusUpdateRequestId, setStatusUpdateRequestId] = useState<string | null>(null);
   const [statusUpdateCurrentStatus, setStatusUpdateCurrentStatus] = useState<any>(null);
   const [inspectionRequestId, setInspectionRequestId] = useState<string | null>(null);
+  const [inspectionRequest, setInspectionRequest] = useState<any>(null);
 
   const { data: newRequests = [], isFetching: loadingNew } = useQuery({
     queryKey: ['new-requests'],
@@ -243,7 +254,7 @@ export default function RequestsPage() {
                 setStatusUpdateRequestId(request.id);
                 setStatusUpdateCurrentStatus(request.status);
               }}
-              onInspectionReport={() => setInspectionRequestId(request.id)}
+              onInspectionReport={() => { setInspectionRequestId(request.id); setInspectionRequest(request); }}
               onClick={() => navigate(`/requests/${request.id}`)}
             />
           </div>
@@ -261,7 +272,7 @@ export default function RequestsPage() {
         />
       )}
       {inspectionRequestId && (
-        <InspectionReportForm requestId={inspectionRequestId} onClose={() => setInspectionRequestId(null)} />
+        <InspectionReportForm requestId={inspectionRequestId} request={inspectionRequest} onClose={() => { setInspectionRequestId(null); setInspectionRequest(null); }} />
       )}
     </div>
   );

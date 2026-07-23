@@ -61,6 +61,7 @@ spring:
 
 application:
   name: Tasaheel
+  public-url: ${APPLICATION_PUBLIC_URL:https://api.salabaa.com}
   jwt:
     secret: ${APPLICATION_JWT_SECRET}
     expiration: 604800000

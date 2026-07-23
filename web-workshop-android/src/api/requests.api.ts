@@ -9,7 +9,7 @@ export async function getNewRequests(): Promise<ServiceRequest[]> {
   return list.map((r: any) => ({
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
-    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber },
+    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
     location: r.locationAddress || '',
@@ -21,6 +21,10 @@ export async function getNewRequests(): Promise<ServiceRequest[]> {
     hasReport: false,
     hasInvoice: false,
     serviceTypeIds: r.serviceTypeIds || [],
+    technicianId: r.technicianId ?? undefined,
+    technicianName: r.technicianName || undefined,
+    technicianPhone: r.technicianPhone || undefined,
+    technicianSpecialty: r.technicianSpecialty || undefined,
   }));
 }
 
@@ -30,7 +34,7 @@ export async function getMyRequests(): Promise<ServiceRequest[]> {
   return list.map((r: any) => ({
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
-    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber },
+    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
     location: r.locationAddress || '',
@@ -42,6 +46,10 @@ export async function getMyRequests(): Promise<ServiceRequest[]> {
     hasReport: false,
     hasInvoice: false,
     serviceTypeIds: r.serviceTypeIds || [],
+    technicianId: r.technicianId ?? undefined,
+    technicianName: r.technicianName || undefined,
+    technicianPhone: r.technicianPhone || undefined,
+    technicianSpecialty: r.technicianSpecialty || undefined,
   }));
 }
 
@@ -51,10 +59,12 @@ export async function getRequestDetail(id: string): Promise<ServiceRequest> {
   return {
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
-    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber },
+    car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
     location: r.locationAddress || '',
+    locationLat: r.locationLat || undefined,
+    locationLng: r.locationLng || undefined,
     city: r.city || '',
     status: r.status || 'pending',
     createdAt: r.createdAt || new Date().toISOString(),
@@ -64,6 +74,10 @@ export async function getRequestDetail(id: string): Promise<ServiceRequest> {
     hasInvoice: false,
     serviceTypeIds: r.serviceTypeIds || [],
     serviceTypes: r.serviceTypes || [],
+    technicianId: r.technicianId ?? undefined,
+    technicianName: r.technicianName || undefined,
+    technicianPhone: r.technicianPhone || undefined,
+    technicianSpecialty: r.technicianSpecialty || undefined,
   };
 }
 

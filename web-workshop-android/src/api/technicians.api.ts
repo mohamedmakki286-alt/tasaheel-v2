@@ -14,6 +14,8 @@ export async function getTechnicians(): Promise<Technician[]> {
     workshopName: t.workshopName || '',
     isActive: t.isActive ?? true,
     isOnline: t.isOnline ?? false,
+    availabilityStatus: t.availabilityStatus || 'available',
+    profileImageUrl: t.profileImageUrl || null,
     latitude: t.latitude,
     longitude: t.longitude,
     fcmToken: t.fcmToken,
@@ -87,4 +89,12 @@ export async function updateTechnician(id: number, payload: Partial<TechnicianPa
 
 export async function deleteTechnician(id: number): Promise<void> {
   await apiClient.delete(`/workshops/technicians/${id}`);
+}
+
+export async function assignTechnician(requestId: string, technicianId: number): Promise<void> {
+  await apiClient.put(`/workshops/requests/${requestId}/assign-technician/${technicianId}`);
+}
+
+export async function unassignTechnician(requestId: string): Promise<void> {
+  await apiClient.put(`/workshops/requests/${requestId}/unassign-technician`);
 }

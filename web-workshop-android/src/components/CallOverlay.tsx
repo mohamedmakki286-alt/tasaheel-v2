@@ -1,4 +1,4 @@
-import { Mic, MicOff, PhoneOff, Phone } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Phone, Volume2, VolumeX } from 'lucide-react';
 
 interface CallOverlayProps {
   status: string;
@@ -6,8 +6,10 @@ interface CallOverlayProps {
   duration: number;
   isOutgoing: boolean;
   isMuted: boolean;
+  isSpeakerOn: boolean;
   onHangUp: () => void;
   onToggleMute: () => void;
+  onToggleSpeaker: () => void;
 }
 
 function formatDuration(seconds: number): string {
@@ -16,7 +18,7 @@ function formatDuration(seconds: number): string {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function CallOverlay({ status, peerName, duration, isOutgoing, isMuted, onHangUp, onToggleMute }: CallOverlayProps) {
+export default function CallOverlay({ status, peerName, duration, isOutgoing, isMuted, isSpeakerOn, onHangUp, onToggleMute, onToggleSpeaker }: CallOverlayProps) {
   if (status === 'idle') return null;
 
   return (
@@ -41,14 +43,14 @@ export default function CallOverlay({ status, peerName, duration, isOutgoing, is
         )}
       </div>
 
-      <div className="flex items-center gap-6 mb-8">
+      <div className="flex items-center gap-4 mb-8">
         <button
           onClick={onToggleMute}
-          className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${
+          className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
             isMuted ? 'bg-white text-red-500' : 'bg-white/20 text-white'
           }`}
         >
-          {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+          {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
         </button>
 
         <button
@@ -56,6 +58,15 @@ export default function CallOverlay({ status, peerName, duration, isOutgoing, is
           className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
         >
           <PhoneOff size={28} className="text-white" />
+        </button>
+
+        <button
+          onClick={onToggleSpeaker}
+          className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+            isSpeakerOn ? 'bg-white text-primary-600' : 'bg-white/20 text-white'
+          }`}
+        >
+          {isSpeakerOn ? <Volume2 size={22} /> : <VolumeX size={22} />}
         </button>
       </div>
     </div>

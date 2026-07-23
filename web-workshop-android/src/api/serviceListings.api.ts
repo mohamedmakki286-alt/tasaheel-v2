@@ -94,7 +94,6 @@ export const serviceListingsApi = {
     const catalog = Array.isArray(response.data)
       ? response.data
       : (response.data?.data ?? []);
-    console.log("CATALOG", catalog);
     return catalog;
   },
 

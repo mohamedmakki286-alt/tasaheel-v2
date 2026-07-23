@@ -20,7 +20,7 @@ export async function getRoom(requestId: string): Promise<ChatRoom> {
       senderName: r.lastMessage.senderName || '',
       senderRole: r.lastMessage.senderRole || 'customer',
       content: r.lastMessage.content || '',
-      type: r.lastMessage.type || 'text',
+      type: (r.lastMessage.type || 'text').toLowerCase(),
       mediaUrl: r.lastMessage.mediaUrl,
       createdAt: r.lastMessage.createdAt || '',
     } : undefined,
@@ -39,10 +39,12 @@ export async function getMessages(roomId: string): Promise<ChatMessage[]> {
     senderName: m.senderName || '',
     senderRole: m.senderRole || 'customer',
     content: m.content || '',
-    type: m.type || 'text',
+    type: (m.type || 'text').toLowerCase(),
     mediaUrl: m.mediaUrl,
     isRead: m.isRead,
     createdAt: m.createdAt || '',
+    clientMessageId: m.clientMessageId,
+    attachment: m.attachment,
   }));
 }
 
@@ -56,9 +58,11 @@ export async function sendMessage(roomId: string, content: string, type: string 
     senderName: m.senderName || '',
     senderRole: m.senderRole || 'workshop',
     content: m.content || content,
-    type: m.type || 'text',
-    mediaUrl: m.mediaUrl,
+    type: (m.type || type).toLowerCase(),
+    mediaUrl: m.mediaUrl || mediaUrl,
     createdAt: m.createdAt || new Date().toISOString(),
+    clientMessageId: m.clientMessageId,
+    attachment: m.attachment,
   };
 }
 
@@ -66,12 +70,45 @@ export async function markAsRead(roomId: string): Promise<void> {
   await apiClient.put(`/chat/room/${roomId}/read`);
 }
 
+export async function sendAttachmentMessage(
+  roomId: string,
+  file: File,
+  text: string = '',
+  clientMessageId?: string,
+  onProgress?: (progress: number) => void
+): Promise<ChatMessage> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (text) formData.append('text', text);
+  if (clientMessageId) formData.append('clientMessageId', clientMessageId);
+
+  const response = await apiClient.post(`/chat/room/${roomId}/attachments`, formData, {
+    onUploadProgress: (e) => {
+      if (e.total && onProgress) {
+        onProgress(Math.round((e.loaded * 100) / e.total));
+      }
+    },
+  });
+  const m = response.data;
+  return {
+    id: String(m.id || ''),
+    roomId: String(m.roomId || roomId),
+    senderId: String(m.senderId || ''),
+    senderName: m.senderName || '',
+    senderRole: m.senderRole || 'workshop',
+    content: m.content || text,
+    type: (m.type || 'text').toLowerCase(),
+    mediaUrl: m.mediaUrl,
+    createdAt: m.createdAt || new Date().toISOString(),
+    clientMessageId: m.clientMessageId,
+    attachment: m.attachment,
+  };
+}
+
 export async function uploadChatMedia(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('prefix', 'chat');
-  const { data } = await apiClient.post('/chat/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const { data } = await apiClient.post('/chat/upload', formData);
   return data.url || data;
 }

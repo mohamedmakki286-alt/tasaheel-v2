@@ -4,7 +4,7 @@ import i18n from '../i18n/i18n';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
-function mapWorkshopData(resp: any): Workshop {
+export function mapWorkshopData(resp: any): Workshop {
   return {
     id: String(resp.id || resp.userId),
     name: resp.name || '',
@@ -41,9 +41,15 @@ function mapWorkshopData(resp: any): Workshop {
   };
 }
 
-export async function login(payload: LoginPayload): Promise<AuthResponse> {
+export async function login(payload: LoginPayload): Promise<any> {
   const response = await apiClient.post('/auth/login', { email: payload.email, password: payload.password });
   const resp = response.data;
+  if (resp.role !== 'workshop' && resp.role !== 'technician') throw new Error(i18n.t('toast.error.workshopOnly'));
+  return resp;
+}
+
+export async function loginAsWorkshop(payload: LoginPayload): Promise<AuthResponse> {
+  const resp = await login(payload);
   if (resp.role !== 'workshop') throw new Error(i18n.t('toast.error.workshopOnly'));
   return {
     token: resp.token,
@@ -65,7 +71,7 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
   if (payload.municipalityLicense) formData.append('municipalityLicense', payload.municipalityLicense);
   const response = await apiClient.post('/auth/register/workshop', formData, { headers: { 'Content-Type': undefined } });
   const resp = response.data;
-  return { token: resp.token, workshop: mapWorkshopData({ ...resp, services: Array.isArray(payload.services) ? payload.services.join(',') : '' }) };
+  return { token: resp.token, refreshToken: resp.refreshToken, workshop: mapWorkshopData({ ...resp, services: Array.isArray(payload.services) ? payload.services.join(',') : '' }) };
 }
 
 export async function getProfile(): Promise<Workshop> {
@@ -100,6 +106,14 @@ export async function updateProfile(payload: UpdateProfilePayload): Promise<Work
   };
   const response = await apiClient.put('/workshops/profile', body);
   return mapWorkshopData(response.data);
+}
+
+export async function uploadImage(file: File, prefix: string = 'img'): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('prefix', prefix);
+  const response = await apiClient.post('/media/upload-image', formData, { headers: { 'Content-Type': undefined } });
+  return response.data.url;
 }
 
 export const galleryApi = {

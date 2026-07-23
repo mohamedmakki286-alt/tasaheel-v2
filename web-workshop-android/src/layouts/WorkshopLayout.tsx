@@ -30,13 +30,10 @@ import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
 import { useNotificationStore, NotificationItem } from '../stores/notificationStore';
 import { useWorkshopWebSocket } from '../hooks/useWorkshopWebSocket';
-import { useCallSignaling } from '../hooks/useCallSignaling';
-import { useCallStore } from '../stores/callStore';
 import { useBackButton } from '../hooks/useBackButton';
 import Avatar from '../components/Avatar';
-import CallOverlay from '../components/CallOverlay';
-import IncomingCallDialog from '../components/IncomingCallDialog';
 import AIAssistant from '../components/AIAssistant';
+import UnifiedCallHost from '@shared/call/UnifiedCallHost';
 import apiClient from '../api/client';
 
 export default function WorkshopLayout() {
@@ -51,8 +48,6 @@ export default function WorkshopLayout() {
 
   useWorkshopWebSocket();
   useBackButton();
-  const { answerCall, rejectCall, hangUp, toggleMute } = useCallSignaling();
-  const callState = useCallStore();
 
   if (workshop?.isApproved === false && location.pathname !== '/pending-approval') {
     return <Navigate to="/pending-approval" replace />;
@@ -350,23 +345,14 @@ export default function WorkshopLayout() {
 
       {location.pathname === '/dashboard' && <AIAssistant />}
 
-      <IncomingCallDialog
-        isOpen={callState.status === 'ringing' && !callState.isOutgoing}
-        callerName={callState.peerName}
-        callerRole={callState.peerRole}
-        onAccept={answerCall}
-        onReject={rejectCall}
-      />
-
-      <CallOverlay
-        status={callState.status}
-        peerName={callState.peerName}
-        duration={callState.duration}
-        isOutgoing={callState.isOutgoing}
-        isMuted={false}
-        onHangUp={hangUp}
-        onToggleMute={toggleMute}
-      />
+      {workshop && useAuthStore.getState().token && (
+        <UnifiedCallHost
+          userId={workshop.id}
+          userName={workshop.name}
+          userRole="workshop"
+          token={useAuthStore.getState().token || ''}
+        />
+      )}
     </div>
   );
 }

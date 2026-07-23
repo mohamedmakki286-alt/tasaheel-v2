@@ -1,7 +1,28 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://api.salabaa.com/api';
+
+function isHtmlResponse(error: any): boolean {
+  const ct = error.response?.headers?.['content-type'] || '';
+  return ct.includes('text/html');
+}
+
+function isNetworkError(error: any): boolean {
+  return !error.response && (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || !error.code);
+}
+
+function friendlyError(error: any): string {
+  if (isHtmlResponse(error)) return 'تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت وحاول مرة أخرى.';
+  if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') return 'انتهت مهلة الاتصال. تحقق من اتصال الإنترنت.';
+  if (!error.response) return 'لا يوجد اتصال بالإنترنت. تحقق من الشبكة وحاول مرة أخرى.';
+  if (error.response?.status === 401) return 'بيانات الدخول غير صحيحة.';
+  if (error.response?.status === 403) return 'الحساب غير مفعل.';
+  if (error.response?.status >= 500) return 'الخادم غير متاح. حاول مرة أخرى لاحقاً.';
+  const msg = error.response?.data?.message;
+  if (typeof msg === 'string' && !msg.includes('<!') && !msg.includes('<html')) return msg;
+  return 'حدث خطأ غير متوقع. حاول مرة أخرى.';
+}
 
 const apiClient = axios.create({ baseURL: API_BASE, timeout: 60000 });
 
@@ -24,12 +45,17 @@ let failedQueue: Array<{ resolve: (t: string) => void; reject: (e: any) => void 
 apiClient.interceptors.response.use(
   (response) => {
     const d = response.data;
-    if (d && 'success' in d && 'data' in d) {
+    if (d && typeof d === 'object' && !Array.isArray(d) && 'success' in d && 'data' in d) {
       response.data = d.data;
     }
     return response;
   },
   async (error) => {
+    if (isHtmlResponse(error)) {
+      const err = new Error(friendlyError(error));
+      (err as any).isHtmlResponse = true;
+      return Promise.reject(err);
+    }
     const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/refresh' && originalRequest.url !== '/auth/login') {
       if (isRefreshing) {
@@ -47,9 +73,10 @@ apiClient.interceptors.response.use(
         const refreshToken = store.refreshToken;
         if (!refreshToken) throw new Error('No refresh token');
         const res = await axios.post(`${API_BASE}/auth/refresh`, { refreshToken });
-        const data = res.data.data || res.data;
-        const newToken = data.token;
-        const newRefreshToken = data.refreshToken;
+        const d = res.data;
+        const inner = d && d.data ? d.data : d;
+        const newToken = inner.token;
+        const newRefreshToken = inner.refreshToken;
         useAuthStore.getState().setAuth({
           token: newToken,
           refreshToken: newRefreshToken || refreshToken,
@@ -72,13 +99,14 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
     }
-    if (!error.response && (error.code === 'ECONNABORTED' || !error.code)) {
+    if (isNetworkError(error)) {
       const cfg = error.config;
       cfg.__retryCount = (cfg.__retryCount || 0) + 1;
       if (cfg.__retryCount <= 2) {
         return new Promise(resolve => setTimeout(resolve, 2000)).then(() => apiClient(cfg));
       }
     }
+    error.friendlyMessage = friendlyError(error);
     return Promise.reject(error);
   }
 );
