@@ -247,7 +247,7 @@
                                   "formSubtitle":  "Register with email",
                                   "namePlaceholder":  "Full Name",
                                   "emailPlaceholder":  "Email",
-                                  "phonePlaceholder":  "Phone (optional)",
+                                  "phonePlaceholder":  "Phone number",
                                   "cityPlaceholder":  "City (e.g. Riyadh)",
                                   "passwordPlaceholder":  "Password",
                                   "registerButton":  "Create Account",

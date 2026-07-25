@@ -1,14 +1,22 @@
 import apiClient from './client';
 import type { ServiceRequest, StatusUpdatePayload } from '../types';
 import { useAuthStore } from '../stores/authStore';
+import { parseApiDate } from '../utils/formatters';
+
+function newestFirst(requests: ServiceRequest[]): ServiceRequest[] {
+  return requests.sort(
+    (a, b) => parseApiDate(b.createdAt).getTime() - parseApiDate(a.createdAt).getTime()
+  );
+}
 
 export async function getNewRequests(): Promise<ServiceRequest[]> {
   const workshop = useAuthStore.getState().workshop;
   const response = await apiClient.get('/workshops/requests', { params: { city: workshop?.city || '' } });
   const list = Array.isArray(response.data) ? response.data : [];
-  return list.map((r: any) => ({
+  return newestFirst(list.map((r: any) => ({
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
+    customerName: r.customerName || '',
     car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
@@ -25,15 +33,16 @@ export async function getNewRequests(): Promise<ServiceRequest[]> {
     technicianName: r.technicianName || undefined,
     technicianPhone: r.technicianPhone || undefined,
     technicianSpecialty: r.technicianSpecialty || undefined,
-  }));
+  })));
 }
 
 export async function getMyRequests(): Promise<ServiceRequest[]> {
   const response = await apiClient.get('/workshops/my-requests');
   const list = Array.isArray(response.data) ? response.data : [];
-  return list.map((r: any) => ({
+  return newestFirst(list.map((r: any) => ({
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
+    customerName: r.customerName || '',
     car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
@@ -50,15 +59,16 @@ export async function getMyRequests(): Promise<ServiceRequest[]> {
     technicianName: r.technicianName || undefined,
     technicianPhone: r.technicianPhone || undefined,
     technicianSpecialty: r.technicianSpecialty || undefined,
-  }));
+  })));
 }
 
 export async function getRequestDetail(id: string): Promise<ServiceRequest> {
-  const response = await apiClient.get(`/requests/${id}`);
+  const response = await apiClient.get(`/workshops/requests/${id}`);
   const r = response.data;
   return {
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
+    customerName: r.customerName || '',
     car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
@@ -78,7 +88,22 @@ export async function getRequestDetail(id: string): Promise<ServiceRequest> {
     technicianName: r.technicianName || undefined,
     technicianPhone: r.technicianPhone || undefined,
     technicianSpecialty: r.technicianSpecialty || undefined,
+    media: Array.isArray(r.media) ? r.media.map((item: any) => ({
+      id: String(item.id),
+      type: item.type || 'image',
+      url: item.url,
+      thumbnailUrl: item.thumbnailUrl || undefined,
+      createdAt: item.createdAt || undefined,
+    })) : [],
   };
+}
+
+export async function markRequestViewed(id: string): Promise<void> {
+  await apiClient.put(`/workshops/requests/${id}/view`);
+}
+
+export async function declineRequest(id: string, reason?: string): Promise<void> {
+  await apiClient.post(`/workshops/requests/${id}/decline`, reason ? { reason } : {});
 }
 
 export async function updateRequestStatus(id: string, payload: StatusUpdatePayload): Promise<ServiceRequest> {

@@ -112,6 +112,15 @@ public class WorkshopController {
                 workshopService.getDispatchedRequest(id, user.getUserId())));
     }
 
+    @GetMapping("/requests/{id}/quotes")
+    @PreAuthorize("hasRole('WORKSHOP')")
+    public ResponseEntity<ApiResponse<List<QuoteDTO>>> getRequestQuotesForWorkshop(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id) {
+        List<QuoteDTO> quotes = workshopService.getRequestQuotesForWorkshop(id, user.getUserId());
+        return ResponseEntity.ok(ApiResponse.success(quotes));
+    }
+
     @PutMapping("/requests/{id}/view")
     @PreAuthorize("hasRole('WORKSHOP')")
     public ResponseEntity<ApiResponse<Void>> markRequestViewed(

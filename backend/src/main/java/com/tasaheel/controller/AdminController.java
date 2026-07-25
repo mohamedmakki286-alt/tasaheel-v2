@@ -210,6 +210,11 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(requests));
     }
 
+    @GetMapping("/requests/{id}")
+    public ResponseEntity<ApiResponse<MaintenanceRequestDTO>> getRequest(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getRequest(id)));
+    }
+
     @DeleteMapping("/requests/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteRequest(@PathVariable Long id) {
         Locale locale = LocaleContextHolder.getLocale();

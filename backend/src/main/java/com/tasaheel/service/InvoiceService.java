@@ -66,8 +66,12 @@ public class InvoiceService {
         if (items != null && !items.isEmpty()) {
             double itemsTotal = items.stream().mapToDouble(InvoiceItemDTO::getTotal).sum();
             safeTotalAmount = itemsTotal;
-            safeParts = itemsTotal;
-            safeLabor = 0.0;
+            if (partsTotal == null && laborTotal == null) {
+                safeParts = itemsTotal;
+                safeLabor = 0.0;
+            } else if (Math.abs((safeParts + safeLabor) - itemsTotal) > 0.01) {
+                throw new BadRequestException("Parts and labor totals must match invoice items total");
+            }
             if (grandTotal == null || grandTotal == 0) {
                 safeTax = itemsTotal * taxRate;
                 safeGrandTotal = itemsTotal + safeTax;

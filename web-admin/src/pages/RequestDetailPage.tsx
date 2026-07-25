@@ -147,7 +147,8 @@ export default function RequestDetailPage() {
     </div>
   );
 
-  const statusIdx = REQUEST_STATUSES.findIndex((s) => s.value === request.status);
+  const timelineStatuses = REQUEST_STATUSES.filter((s) => s.value !== 'cancelled');
+  const statusIdx = timelineStatuses.findIndex((s) => s.value === request.status);
   const currentTab = activeTab;
 
   return (
@@ -201,7 +202,7 @@ export default function RequestDetailPage() {
         <div className="relative">
           <div className="absolute top-5 right-[23px] bottom-5 w-0.5 bg-gray-100 hidden md:block" />
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-0 overflow-x-auto">
-            {REQUEST_STATUSES.map((s, idx) => {
+            {timelineStatuses.map((s, idx) => {
               const isCompleted = idx <= statusIdx && statusIdx >= 0;
               const isCurrent = s.value === request.status;
               return (
@@ -229,7 +230,7 @@ export default function RequestDetailPage() {
                       )}
                     </div>
                   </div>
-                  {idx < REQUEST_STATUSES.length - 1 && (
+                  {idx < timelineStatuses.length - 1 && (
                     <div className={clsx(
                       'hidden md:block flex-1 h-0.5 min-w-[40px]',
                       idx < statusIdx ? 'bg-emerald-400' : 'bg-gray-100'

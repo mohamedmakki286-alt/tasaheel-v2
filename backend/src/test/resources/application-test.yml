@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:tasaheel-test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+application:
+  upload:
+    dir: /tmp/tasaheel-test-uploads
+  public-url: http://localhost:8080
+  jwt:
+    secret: test-secret-key-for-jwt-token-generation-and-validation
+    expiration: 604800000
+  payment:
+    callback-base-url: http://localhost:8080
+  firebase:
+    config-path: classpath:firebase-service-account.json
+  ai:
+    gemini:
+      api-key: ""
+      model: gemini-1.5-flash
+    provider: gemini
+  sendgrid:
+    api-key: ""
+
+ALLOW_TEST_DATA_RESET: true
+
+logging:
+  level:
+    com.tasaheel: DEBUG

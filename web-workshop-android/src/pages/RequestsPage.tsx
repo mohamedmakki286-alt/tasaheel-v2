@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   ClipboardList,
@@ -13,9 +13,11 @@ import {
   Car,
   MessageCircle,
   Wrench,
+  XCircle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getNewRequests, getMyRequests } from '../api/requests.api';
+import { declineRequest, getNewRequests, getMyRequests } from '../api/requests.api';
+import toast from 'react-hot-toast';
 import { formatDate, timeAgo, formatPhone } from '../utils/formatters';
 import QuoteForm from '../components/QuoteForm';
 import InspectionReportForm from '../components/InspectionReportForm';
@@ -35,9 +37,10 @@ interface RequestCardProps {
   onStatusUpdate?: () => void;
   onInspectionReport?: () => void;
   onClick?: () => void;
+  onDecline?: () => void;
 }
 
-function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, onStatusUpdate, onInspectionReport, onClick }: RequestCardProps) {
+function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, onStatusUpdate, onInspectionReport, onClick, onDecline }: RequestCardProps) {
   const { t } = useTranslation();
   const statusColors: Record<string, string> = {
     pending: 'bg-accent-500/20 text-accent-500',
@@ -54,23 +57,23 @@ function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, 
       onClick={onClick}
       className="card p-4 cursor-pointer active:scale-[0.98] transition-all duration-200"
     >
-      <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2.5">
+      <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex min-w-0 items-center gap-2.5">
           <Avatar name={request.customer?.name} size="sm" />
-          <div>
-            <p className="font-semibold text-sm text-surface-900 dark:text-white">{request.customer?.name || t('pages.requests.customer')}</p>
-            <p className="text-[11px] text-surface-400 flex items-center gap-1 mt-0.5">
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-sm text-surface-900 dark:text-white">{request.customer?.name || t('pages.requests.customer')}</p>
+            <p className="truncate text-[11px] text-surface-400 flex items-center gap-1 mt-0.5">
               <Car size={11} />
               {request.car?.make} {request.car?.model} {request.car?.year}
             </p>
           </div>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[request.status] || 'bg-surface-100 dark:bg-surface-700 text-surface-500 dark:text-surface-400'}`}>
+        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[request.status] || 'bg-surface-100 dark:bg-surface-700 text-surface-500 dark:text-surface-400'}`}>
           {t('constants.statuses.' + request.status, request.status)}
         </span>
       </div>
 
-      <div className="flex items-center gap-3 text-[11px] text-surface-400 mb-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-surface-400 mb-3">
         <span className="flex items-center gap-1">
           <Calendar size={11} />
           {timeAgo(request.createdAt)}
@@ -103,10 +106,16 @@ function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, 
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {showQuoteButton && onQuote && (
           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuote(); }} className="btn-primary flex-1 text-xs py-2">
             {t('pages.requests.sendQuote')}
+          </button>
+        )}
+        {showQuoteButton && onDecline && (
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDecline(); }} className="btn-secondary px-3 text-xs py-2 text-danger-500">
+            <XCircle size={14} />
+            اعتذار
           </button>
         )}
         {showStatusUpdate && onStatusUpdate && (
@@ -133,6 +142,7 @@ function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, 
 export default function RequestsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const tabs = [
     { id: 'new' as TabType, label: t('pages.requests.tabs.new'), icon: ClipboardList },
     { id: 'mine' as TabType, label: t('pages.requests.tabs.mine'), icon: FileText },
@@ -145,6 +155,14 @@ export default function RequestsPage() {
   const [statusUpdateCurrentStatus, setStatusUpdateCurrentStatus] = useState<any>(null);
   const [inspectionRequestId, setInspectionRequestId] = useState<string | null>(null);
   const [inspectionRequest, setInspectionRequest] = useState<any>(null);
+  const declineMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => declineRequest(id, reason),
+    onSuccess: () => {
+      toast.success('تم الاعتذار عن الطلب');
+      queryClient.invalidateQueries({ queryKey: ['new-requests'] });
+    },
+    onError: () => toast.error('تعذر الاعتذار عن الطلب'),
+  });
 
   const { data: newRequests = [], isFetching: loadingNew } = useQuery({
     queryKey: ['new-requests'],
@@ -176,14 +194,14 @@ export default function RequestsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-surface-900 dark:text-white">{t('pages.requests.title')}</h1>
           <p className="text-surface-500 dark:text-surface-400 text-xs mt-0.5">{t('pages.requests.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-1.5 text-[11px] text-surface-400 dark:text-surface-500 bg-surface-100 dark:bg-surface-800 px-2.5 py-1 rounded-lg">
+        <div className="shrink-0 flex items-center gap-1.5 text-[11px] text-surface-400 dark:text-surface-500 bg-surface-100 dark:bg-surface-800 px-2.5 py-1 rounded-lg">
           <RefreshCw size={12} className="animate-spin-slow" />
-          <span>{t('pages.requests.autoRefresh')}</span>
+          <span className="hidden min-[390px]:inline">{t('pages.requests.autoRefresh')}</span>
         </div>
       </div>
 
@@ -250,6 +268,10 @@ export default function RequestsPage() {
               showQuoteButton={activeTab === 'new' && !request.hasQuote}
               showStatusUpdate={(activeTab === 'active' || (activeTab === 'mine' && (request.status === 'accepted' || request.status === 'in_progress')))}
               onQuote={() => setQuoteRequestId(request.id)}
+              onDecline={() => {
+                const reason = window.prompt('سبب الاعتذار (اختياري)') || undefined;
+                declineMutation.mutate({ id: request.id, reason });
+              }}
               onStatusUpdate={() => {
                 setStatusUpdateRequestId(request.id);
                 setStatusUpdateCurrentStatus(request.status);

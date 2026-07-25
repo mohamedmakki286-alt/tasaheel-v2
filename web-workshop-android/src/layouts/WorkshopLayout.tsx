@@ -35,12 +35,14 @@ import Avatar from '../components/Avatar';
 import AIAssistant from '../components/AIAssistant';
 import UnifiedCallHost from '@shared/call/UnifiedCallHost';
 import apiClient from '../api/client';
+import { timeAgo } from '../utils/formatters';
 
 export default function WorkshopLayout() {
   const { t, i18n } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread'>('all');
   const location = useLocation();
   const navigate = useNavigate();
   const { workshop, logout, isAuthenticated } = useAuthStore();
@@ -58,6 +60,9 @@ export default function WorkshopLayout() {
   }
 
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
+  const filteredNotifications = notificationFilter === 'unread'
+    ? notifications.filter((notification) => !notification.read)
+    : notifications;
 
   const sidebarLinks = [
     { path: '/dashboard', label: t('layout.sidebar.dashboard'), icon: LayoutDashboard },
@@ -82,18 +87,6 @@ export default function WorkshopLayout() {
     { path: '/profile', label: t('layout.bottomNav.account'), icon: UserCircle },
   ];
 
-  function timeAgo(dateStr: string): string {
-    const now = Date.now();
-    const diff = now - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return t('layout.timeAgo.now');
-    if (mins < 60) return t('layout.timeAgo.minutes', { count: mins });
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return t('layout.timeAgo.hours', { count: hours });
-    const days = Math.floor(hours / 24);
-    return t('layout.timeAgo.days', { count: days });
-  }
-
   useEffect(() => {
     document.documentElement.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = i18n.language;
@@ -117,13 +110,13 @@ export default function WorkshopLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-50 dark:bg-surface-950 flex transition-colors duration-200">
+    <div className="min-h-screen w-full overflow-x-hidden bg-surface-50 dark:bg-surface-950 flex transition-colors duration-200">
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       <aside
-        className={`fixed lg:sticky top-0 right-0 h-screen w-72 bg-white dark:bg-surface-900 border-l border-surface-200 dark:border-surface-800 z-50 transform transition-all duration-300 ease-out ${
+        className={`fixed lg:sticky top-0 right-0 h-screen w-[min(18rem,calc(100vw-2rem))] lg:w-72 bg-white dark:bg-surface-900 border-l border-surface-200 dark:border-surface-800 z-50 transform transition-all duration-300 ease-out ${
           sidebarOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full lg:translate-x-0'
         }`}
       >
@@ -177,9 +170,9 @@ export default function WorkshopLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 min-h-screen pb-20 lg:pb-0">
+      <main className="flex-1 min-w-0 w-full min-h-screen pb-20 lg:pb-0">
         <header className="sticky top-0 z-40 bg-white/80 dark:bg-surface-950/80 backdrop-blur-xl border-b border-surface-200/50 dark:border-surface-800/50">
-          <div className="flex items-center justify-between px-4 lg:px-6 py-3">
+          <div className="flex items-center justify-between gap-1 px-2 sm:px-4 lg:px-6 py-2.5 sm:py-3">
             <div className="flex items-center gap-3">
               <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
                 <Menu size={22} />
@@ -190,13 +183,13 @@ export default function WorkshopLayout() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-0.5 sm:gap-2">
               <button
                 onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
-                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-800 transition-all text-sm"
+                className="flex items-center gap-1.5 p-2.5 sm:px-3 rounded-xl text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-800 transition-all text-sm"
               >
                 <Globe size={16} />
-                <span>{i18n.language === 'ar' ? 'English' : 'العربية'}</span>
+                <span className="hidden sm:inline">{i18n.language === 'ar' ? 'English' : 'العربية'}</span>
               </button>
               <button
                 onClick={toggleTheme}
@@ -221,22 +214,33 @@ export default function WorkshopLayout() {
                 {showNotifications && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                    <div className="absolute left-0 top-full mt-2 w-80 bg-white dark:bg-surface-900 rounded-2xl shadow-xl border border-surface-200 dark:border-surface-800 z-50 animate-scale-in overflow-hidden">
-                      <div className="px-4 py-3 border-b border-surface-100 dark:border-surface-800 flex items-center justify-between">
-                        <p className="text-sm font-bold text-surface-900 dark:text-surface-100">{t('layout.header.notifications')}</p>
-                        <span className="text-xs text-surface-400">{unreadCount} {t('layout.header.unread')}</span>
+                    <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2 sm:w-[24rem] bg-white dark:bg-surface-900 rounded-2xl shadow-xl border border-surface-200 dark:border-surface-800 z-50 animate-scale-in overflow-hidden">
+                      <div className="px-4 py-3 border-b border-surface-100 dark:border-surface-800 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold text-surface-900 dark:text-surface-100">{t('layout.header.notifications')}</p>
+                          <span className="text-xs text-surface-400">{unreadCount} {t('layout.header.unread')}</span>
+                        </div>
+                        {unreadCount > 0 && (
+                          <button onClick={markAllAsRead} className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium">
+                            {t('layout.header.markAllRead')}
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex gap-2 px-4 py-2 border-b border-surface-100 dark:border-surface-800">
+                        <button onClick={() => setNotificationFilter('all')} className={notificationFilter === 'all' ? 'tab-item-active py-1.5 text-xs' : 'tab-item py-1.5 text-xs'}>الكل</button>
+                        <button onClick={() => setNotificationFilter('unread')} className={notificationFilter === 'unread' ? 'tab-item-active py-1.5 text-xs' : 'tab-item py-1.5 text-xs'}>غير المقروءة</button>
                       </div>
                       <div className="max-h-80 overflow-y-auto">
-                        {notifications.length === 0 ? (
+                        {filteredNotifications.length === 0 ? (
                           <div className="px-4 py-8 text-center text-sm text-surface-400 dark:text-surface-500">
-                            {t('layout.header.noNotifications')}
+                            {notificationFilter === 'unread' ? 'لا توجد إشعارات غير مقروءة' : t('layout.header.noNotifications')}
                           </div>
                         ) : (
-                          notifications.map((n) => (
+                          filteredNotifications.map((n) => (
                             <div
                               key={n.id}
                               onClick={() => { markAsRead(n.id); setShowNotifications(false); if (n.requestId) navigate(`/requests/${n.requestId}`); }}
-                              className={`flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer ${
+                              className={`flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer border-b border-surface-100 last:border-0 dark:border-surface-800 ${
                                 n.read
                                   ? 'hover:bg-surface-50 dark:hover:bg-surface-800'
                                   : 'bg-accent-50/50 dark:bg-accent-500/5 hover:bg-accent-50 dark:hover:bg-accent-500/10'
@@ -253,22 +257,20 @@ export default function WorkshopLayout() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-surface-800 dark:text-surface-200">{n.title}</p>
-                                {n.body && <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{n.body}</p>}
-                                <p className="text-[10px] text-surface-400 dark:text-surface-500 mt-1">{timeAgo(n.createdAt)}</p>
+                                {n.body && <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5 line-clamp-2">{n.body}</p>}
+                                <div className="mt-1 flex items-center gap-2 text-[10px] text-surface-400 dark:text-surface-500">
+                                  <span>{timeAgo(n.createdAt)}</span>
+                                  {n.requestId && <span>طلب #{n.requestId}</span>}
+                                </div>
                               </div>
                               {!n.read && <span className="w-2 h-2 rounded-full bg-accent-500 shrink-0 mt-2" />}
                             </div>
                           ))
                         )}
                       </div>
-                      <div className="px-4 py-3 border-t border-surface-100 dark:border-surface-800 flex items-center justify-between">
-                        {unreadCount > 0 && (
-                          <button onClick={markAllAsRead} className="text-sm text-accent-500 hover:text-accent-600 font-medium">
-                            {t('layout.header.markAllRead')}
-                          </button>
-                        )}
-                        <Link to="/requests" onClick={() => setShowNotifications(false)} className="text-sm text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-surface-200 font-medium mr-auto">
-                          {t('layout.header.viewAll')}
+                      <div className="px-4 py-3 border-t border-surface-100 dark:border-surface-800 flex items-center justify-end">
+                        <Link to="/requests" onClick={() => setShowNotifications(false)} className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium">
+                          مركز الطلبات
                         </Link>
                       </div>
                     </div>
@@ -279,7 +281,7 @@ export default function WorkshopLayout() {
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2.5 pr-3 border-r border-surface-200 dark:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-800 rounded-xl py-1.5 pl-2 transition-colors"
+                  className="flex items-center gap-2.5 p-1 sm:py-1.5 sm:pl-2 sm:pr-3 sm:border-r border-surface-200 dark:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-800 rounded-xl transition-colors"
                 >
                   <div className="text-left hidden sm:block">
                     <p className="text-sm font-semibold text-surface-900 dark:text-surface-100 leading-tight">{workshop?.name || t('layout.header.workshop')}</p>
@@ -292,7 +294,7 @@ export default function WorkshopLayout() {
                 {showUserMenu && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                    <div className="absolute left-0 top-full mt-2 w-56 bg-white dark:bg-surface-900 rounded-2xl shadow-xl border border-surface-200 dark:border-surface-800 z-50 py-2 animate-scale-in">
+                    <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2 sm:w-56 bg-white dark:bg-surface-900 rounded-2xl shadow-xl border border-surface-200 dark:border-surface-800 z-50 py-2 animate-scale-in">
                       <div className="px-4 py-3 border-b border-surface-100 dark:border-surface-800">
                         <p className="text-sm font-bold text-surface-900 dark:text-surface-100">{workshop?.name || t('common.guest')}</p>
                         <p className="text-xs text-surface-400 dark:text-surface-500">{workshop?.phone || ''}</p>
@@ -313,20 +315,20 @@ export default function WorkshopLayout() {
           </div>
         </header>
 
-        <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+        <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 lg:p-6">
           <Outlet />
         </div>
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-surface-900 border-t border-surface-200 dark:border-surface-800 lg:hidden safe-area-pb">
-        <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
+        <div className="grid h-16 max-w-lg grid-cols-6 mx-auto px-1">
           {bottomNavLinks.map((link) => {
             const active = isActive(link.path);
             return (
               <Link
                 key={link.path}
                 to={link.path}
-                className="relative flex flex-col items-center gap-0.5 py-1 px-3 min-w-[56px]"
+                className="relative min-w-0 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1"
               >
                 <div className="relative">
                   <link.icon size={22} strokeWidth={active ? 2.5 : 2} className={`transition-colors duration-200 ${active ? 'text-accent-500' : 'text-surface-400 dark:text-surface-500'}`} />
@@ -334,7 +336,7 @@ export default function WorkshopLayout() {
                     <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent-500" />
                   )}
                 </div>
-                <span className={`text-[10px] font-medium transition-colors duration-200 ${active ? 'text-accent-500' : 'text-surface-400 dark:text-surface-500'}`}>
+                <span className={`w-full truncate text-center text-[9px] min-[380px]:text-[10px] font-medium transition-colors duration-200 ${active ? 'text-accent-500' : 'text-surface-400 dark:text-surface-500'}`}>
                   {link.label}
                 </span>
               </Link>

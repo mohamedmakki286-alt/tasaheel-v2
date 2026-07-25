@@ -10,7 +10,10 @@ import LoginBottomSheet from '../components/LoginBottomSheet';
 import BottomNav from '../components/BottomNav';
 import SmartAssistantButton from '../components/SmartAssistantButton';
 import UnifiedCallHost from '@shared/call/UnifiedCallHost';
-import { requestNotificationPermission } from '../services/pushNotifications';
+import {
+  registerCustomerPushNotifications,
+  setupNotificationListeners,
+} from '../services/pushNotifications';
 
 const PAGE_TITLES: Record<string, string> = {
   '/services': 'الخدمات',
@@ -22,6 +25,7 @@ export default function PublicLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const customerId = useAuthStore((s) => s.customer?.id);
   const { showLoginSheet, closeSheet, requireAuth, pendingMessage } = useGuestGuard();
   const isSubPage = location.pathname !== '/';
   const [showNotifications, setShowNotifications] = useState(false);
@@ -30,8 +34,13 @@ export default function PublicLayout() {
   useCustomerWebSocket();
 
   useEffect(() => {
-    requestNotificationPermission().catch(() => {});
-  }, []);
+    if (!isAuthenticated || !customerId) return;
+
+    setupNotificationListeners(({ requestId, url }) => {
+      navigate(url || (requestId ? `/orders/${requestId}` : '/orders'));
+    });
+    registerCustomerPushNotifications().catch(() => {});
+  }, [isAuthenticated, customerId, navigate]);
 
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);

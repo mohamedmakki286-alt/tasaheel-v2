@@ -25,6 +25,7 @@ import {
   BookOpen,
   Globe,
   Gift,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useThemeStore } from '../stores/themeStore';
@@ -62,6 +63,7 @@ export default function AdminLayout() {
     { path: '/offers', label: 'الباقات والعروض', icon: Gift },
     { path: '/reports', label: t('layout.sidebar.reports'), icon: BarChart3 },
     { path: '/settings', label: t('layout.sidebar.settings'), icon: Cog },
+    { path: '/test-data-reset', label: 'إعادة تعيين البيانات', icon: ShieldAlert },
   ];
   const accountingItems = [
     { path: '/payments', label: 'سجل التحصيلات', icon: DollarSign },
@@ -86,6 +88,7 @@ export default function AdminLayout() {
     '/offers': 'الباقات والعروض',
     '/reports': t('layout.sidebar.reports'),
     '/settings': t('layout.sidebar.settings'),
+    '/test-data-reset': 'إعادة تعيين البيانات',
   };
 
   const toggleLang = () => {

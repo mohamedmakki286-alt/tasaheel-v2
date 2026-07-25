@@ -21,6 +21,7 @@ const ReviewsPage = lazy(() => import('./pages/ReviewsPage'));
 const TechniciansPage = lazy(() => import('./pages/TechniciansPage'));
 const TechnicianPage = lazy(() => import('./pages/TechnicianPage'));
 const TechnicianAccountPage = lazy(() => import('./pages/TechnicianAccountPage'));
+const TechnicianNotificationsPage = lazy(() => import('./pages/TechnicianNotificationsPage'));
 const TechnicianRequestDetailPage = lazy(() => import('./pages/TechnicianRequestDetailPage'));
 const HomeServicePage = lazy(() => import('./pages/HomeServicePage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
@@ -68,6 +69,7 @@ function AppRoutes() {
       <Route path="/technician" element={<TechnicianLayout />}>
         <Route index element={<TechnicianPage />} />
         <Route path="account" element={<TechnicianAccountPage />} />
+        <Route path="notifications" element={<TechnicianNotificationsPage />} />
         <Route path="requests/:id" element={<TechnicianRequestDetailPage />} />
       </Route>
       <Route path="/set-password" element={<SetPasswordPage />} />

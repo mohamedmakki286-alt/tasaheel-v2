@@ -1,52 +1,22 @@
-import { useState, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
-  ArrowRight,
-  MapPin,
-  Calendar,
-  User,
-  Car,
-  Phone,
-  PhoneCall,
-  Clock,
-  ClipboardList,
-  FileText,
-  CheckCircle2,
-  XCircle,
-  MessageCircle,
-  FileSignature,
-  FileSearch,
-  Receipt,
-  ChevronDown,
-  Pen,
-  Trash2,
-  Info,
-  Star,
-  Wrench,
-  Image,
+  ArrowLeft, ArrowRight, Building2, CalendarClock, Car, Check, CheckCircle2,
+  ChevronDown, ClipboardCheck, ClipboardList, Clock3, ExternalLink, FileCheck2,
+  FileSignature, Image, MapPin, MessageCircle, MoreHorizontal, Pencil, Phone,
+  PhoneCall, Receipt, Send, Trash2, UserRoundCog, Wrench, XCircle,
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { getRequestDetail } from '../api/requests.api';
 import { getRequestQuotes } from '../api/quotes.api';
 import { getReport } from '../api/inspection.api';
-import { getInvoice, deleteInvoice } from '../api/invoice.api';
-import { getRoom, getMessages } from '../api/chat.api';
-import {
-  getTechnicians,
-  assignTechnician,
-  unassignTechnician,
-} from '../api/technicians.api';
-import {
-  REQUEST_STATUS_COLORS,
-  QUOTE_STATUS_COLORS,
-  UPDATABLE_STATUSES,
-} from '../utils/constants';
-import { formatDate, formatCurrency, formatPhone, formatDateTime, timeAgo } from '../utils/formatters';
+import { deleteInvoice, getInvoice } from '../api/invoice.api';
+import { assignTechnician, getTechnicians, unassignTechnician } from '../api/technicians.api';
+import { REQUEST_STATUS_COLORS, UPDATABLE_STATUSES } from '../utils/constants';
+import { formatCurrency, formatDateTime, formatPhone, timeAgo } from '../utils/formatters';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
 import { useCallStore } from '@shared/call/callStore';
-import { type CallState } from '@shared/call/callStore';
 import QuoteForm from '../components/QuoteForm';
 import InspectionReportForm from '../components/InspectionReportForm';
 import InvoiceForm from '../components/InvoiceForm';
@@ -54,113 +24,146 @@ import StatusUpdateModal from '../components/StatusUpdateModal';
 import Avatar from '../components/Avatar';
 import Skeleton from '../components/Skeleton';
 
-type DetailTab = 'quotes' | 'inspection' | 'invoice' | 'chat';
+type WorkDocument = 'quote' | 'inspection' | 'invoice';
+
+const statusLabels: Record<string, string> = {
+  pending: 'بانتظار عرض السعر',
+  quoted: 'بانتظار قبول العرض',
+  accepted: 'بانتظار إسناد الفني',
+  inspection_report: 'بانتظار اعتماد الفحص',
+  customer_approved: 'جاهز لبدء التنفيذ',
+  in_progress: 'قيد التنفيذ',
+  awaiting_payment: 'بانتظار دفع الفاتورة',
+  completed: 'مكتمل',
+  cancelled: 'ملغي',
+};
+
+const journey = [
+  { status: 'pending', label: 'إنشاء الطلب' },
+  { status: 'quoted', label: 'عرض السعر' },
+  { status: 'accepted', label: 'قبول العرض' },
+  { status: 'inspection_report', label: 'تقرير الفحص' },
+  { status: 'customer_approved', label: 'اعتماد العميل' },
+  { status: 'in_progress', label: 'التنفيذ' },
+  { status: 'awaiting_payment', label: 'الفاتورة والدفع' },
+  { status: 'completed', label: 'الإغلاق' },
+];
 
 export default function RequestDetailPage() {
-  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const timelineEvents = [
-    { status: 'pending', icon: ClipboardList, label: t('pages.requests.detail.steps.created') },
-    { status: 'quoted', icon: FileText, label: t('pages.requests.detail.steps.quoted') },
-    { status: 'accepted', icon: CheckCircle2, label: t('pages.requests.detail.steps.accepted') },
-    { status: 'inspection_report', icon: FileSearch, label: t('pages.requests.detail.tabs.inspection') },
-    { status: 'customer_approved', icon: CheckCircle2, label: t('constants.requestStatuses.customer_approved') },
-    { status: 'in_progress', icon: Clock, label: t('pages.requests.detail.steps.inProgress') },
-    { status: 'awaiting_payment', icon: Receipt, label: t('constants.requestStatuses.awaiting_payment') },
-    { status: 'completed', icon: CheckCircle2, label: t('pages.requests.detail.steps.completed') },
-  ];
-  const [activeTab, setActiveTab] = useState<DetailTab>('chat');
+  const [openDocument, setOpenDocument] = useState<WorkDocument | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showTechnicianActions, setShowTechnicianActions] = useState(false);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [showInspectionForm, setShowInspectionForm] = useState(false);
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
-  const handleEvent = useCallback((eventType: string, payload: any) => {
+  const refreshRequest = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['request-detail', id] });
     queryClient.invalidateQueries({ queryKey: ['request-quotes', id] });
     queryClient.invalidateQueries({ queryKey: ['inspection-report', id] });
     queryClient.invalidateQueries({ queryKey: ['invoice', id] });
   }, [id, queryClient]);
 
-  useRequestWebSocket(id, handleEvent);
-  const [showInspectionForm, setShowInspectionForm] = useState(false);
-  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
+  useRequestWebSocket(id, refreshRequest);
 
   const { data: request, isLoading } = useQuery({
     queryKey: ['request-detail', id],
     queryFn: () => getRequestDetail(id!),
-    enabled: !!id,
+    enabled: Boolean(id),
   });
-
   const { data: quotes = [] } = useQuery({
     queryKey: ['request-quotes', id],
     queryFn: () => getRequestQuotes(id!),
-    enabled: !!id,
+    enabled: Boolean(id),
   });
-
   const { data: report } = useQuery({
     queryKey: ['inspection-report', id],
     queryFn: () => getReport(id!),
-    enabled: !!id && !!request?.hasReport,
+    enabled: Boolean(id && request?.hasReport),
   });
-
   const { data: invoice } = useQuery({
     queryKey: ['invoice', id],
     queryFn: () => getInvoice(id!).catch(() => null),
-    enabled: !!id,
+    enabled: Boolean(id),
   });
-
   const { data: technicians = [] } = useQuery({
     queryKey: ['technicians'],
-    queryFn: () => getTechnicians(),
+    queryFn: getTechnicians,
   });
 
   const assignMutation = useMutation({
     mutationFn: (technicianId: number) => assignTechnician(id!, technicianId),
     onSuccess: () => {
-      toast.success('تم تعيين الفنى بنجاح');
-      queryClient.invalidateQueries({ queryKey: ['request-detail', id] });
+      toast.success('تم إسناد الفني بنجاح');
+      setShowTechnicianActions(false);
+      refreshRequest();
     },
-    onError: () => toast.error('فشل تعيين الفنى'),
+    onError: () => toast.error('فشل إسناد الفني'),
   });
-
   const unassignMutation = useMutation({
     mutationFn: () => unassignTechnician(id!),
     onSuccess: () => {
-      toast.success('تم إلغاء تعيين الفنى');
-      queryClient.invalidateQueries({ queryKey: ['request-detail', id] });
+      toast.success('تم إلغاء إسناد الفني');
+      setShowTechnicianActions(false);
+      refreshRequest();
     },
-    onError: () => toast.error('فشل إلغاء التعيين'),
+    onError: () => toast.error('فشل إلغاء الإسناد'),
   });
 
-  const getDetailTabs = () => {
-    const tabs: { id: DetailTab; label: string; icon: any }[] = [];
-    if (request?.status === 'pending' || request?.status === 'quoted') {
-      tabs.push({ id: 'quotes', label: t('pages.requests.detail.tabs.quotes'), icon: FileSignature });
-    }
-    if (request?.status === 'accepted' || request?.status === 'in_progress' || request?.hasReport) {
-      tabs.push({ id: 'inspection', label: t('pages.requests.detail.tabs.inspection'), icon: FileSearch });
-    }
-    if (request?.status === 'awaiting_payment' || request?.status === 'completed' || (invoice && (invoice.status === 'rejected' || invoice.status === 'pending_approval' || invoice.status === 'approved' || invoice.status === 'paid'))) {
-      tabs.push({ id: 'invoice', label: t('pages.requests.detail.tabs.invoice'), icon: Receipt });
-    }
-    tabs.push({ id: 'chat', label: t('pages.requests.detail.tabs.chat'), icon: MessageCircle });
-    return tabs;
-  };
+  const currentIndex = Math.max(journey.findIndex((item) => item.status === request?.status), 0);
+  const progress = Math.max(((currentIndex + 1) / journey.length) * 100, 8);
+  const latestQuote = quotes[0];
+  const canUpdate = request ? UPDATABLE_STATUSES.includes(request.status) : false;
+  const customerName = request?.customer?.name || request?.customerName || 'عميل تساهيل';
+  const customerPhone = request?.customer?.phone || '';
+  const carName = [request?.car?.make, request?.car?.model, request?.car?.year && `(${request.car.year})`].filter(Boolean).join(' ');
+  const availableTechnicians = technicians.filter((technician) => technician.availabilityStatus === 'available' || technician.id === request?.technicianId);
+
+  const documentState = useMemo(() => {
+    const quoteComplete = Boolean(latestQuote);
+    const reportComplete = Boolean(report || request?.hasReport);
+    const invoiceComplete = Boolean(invoice);
+    return {
+      quote: {
+        complete: quoteComplete,
+        current: request?.status === 'pending' || request?.status === 'quoted',
+        badge: latestQuote ? (latestQuote.status === 'accepted' ? 'مقبول' : latestQuote.status === 'rejected' ? 'مرفوض' : 'مرسل') : 'مطلوب',
+      },
+      inspection: {
+        complete: reportComplete,
+        current: ['accepted', 'inspection_report', 'customer_approved'].includes(request?.status || ''),
+        badge: reportComplete ? 'جاهز' : ['accepted', 'inspection_report'].includes(request?.status || '') ? 'مطلوب' : 'لاحقاً',
+      },
+      invoice: {
+        complete: invoiceComplete,
+        current: ['awaiting_payment', 'completed'].includes(request?.status || ''),
+        badge: invoice ? (invoice.status === 'paid' ? 'مدفوعة' : invoice.status === 'approved' ? 'معتمدة' : invoice.status === 'rejected' ? 'مرفوضة' : 'مرسلة') : 'لاحقاً',
+      },
+    };
+  }, [invoice, latestQuote, report, request?.hasReport, request?.status]);
+
+  const primaryAction = useMemo(() => {
+    if (!request) return null;
+    if (request.status === 'pending' && !latestQuote) return { label: 'إرسال عرض السعر', icon: FileSignature, action: () => setShowQuoteForm(true) };
+    if (request.status === 'accepted' && !request.technicianId) return { label: 'إسناد فني', icon: UserRoundCog, action: () => setShowTechnicianActions(true) };
+    if (['accepted', 'inspection_report'].includes(request.status) && !request.hasReport) return { label: 'إنشاء تقرير الفحص', icon: ClipboardCheck, action: () => setShowInspectionForm(true) };
+    if (canUpdate) return { label: 'تحديث حالة الطلب', icon: Clock3, action: () => setShowStatusModal(true) };
+    if (request.status === 'awaiting_payment' && !invoice) return { label: 'إنشاء الفاتورة', icon: Receipt, action: () => setShowInvoiceForm(true) };
+    if (invoice) return { label: 'عرض الفاتورة', icon: Receipt, action: () => setOpenDocument('invoice') };
+    return null;
+  }, [canUpdate, invoice, latestQuote, request]);
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
-        <Skeleton variant="text" width="40%" height={32} />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Skeleton variant="card" height={200} />
-            <Skeleton variant="card" height={300} />
-          </div>
-          <div className="space-y-6">
-            <Skeleton variant="card" height={200} />
-            <Skeleton variant="card" height={200} />
-          </div>
+      <div className="mx-auto max-w-6xl space-y-5">
+        <Skeleton variant="card" height={220} />
+        <div className="grid gap-5 lg:grid-cols-3">
+          <div className="space-y-5 lg:col-span-2"><Skeleton variant="card" height={190} /><Skeleton variant="card" height={360} /></div>
+          <Skeleton variant="card" height={260} />
         </div>
       </div>
     );
@@ -168,581 +171,236 @@ export default function RequestDetailPage() {
 
   if (!request) {
     return (
-      <div className="text-center py-20 animate-fade-in">
-        <div className="w-20 h-20 rounded-2xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center mx-auto mb-4">
-          <XCircle size={40} className="text-surface-400" />
-        </div>
-        <p className="text-surface-500 dark:text-surface-400 font-semibold">{t('pages.requests.detail.notFound')}</p>
-        <Link to="/requests" className="text-primary-600 dark:text-primary-400 mt-3 inline-block font-semibold hover:underline">
-          {t('pages.requests.detail.backToRequests')}
-        </Link>
+      <div className="py-20 text-center">
+        <XCircle size={42} className="mx-auto text-surface-300" />
+        <p className="mt-4 font-bold text-surface-600">تعذر العثور على الطلب</p>
+        <Link to="/requests" className="mt-3 inline-block font-bold text-primary-600">العودة إلى الطلبات</Link>
       </div>
     );
   }
 
-  const currentStatusIndex = timelineEvents.findIndex((e) => e.status === request.status);
-  const canUpdate = UPDATABLE_STATUSES.includes(request.status);
-  const detailTabs = getDetailTabs();
+  const openChat = () => navigate(`/requests/${request.id}/chat?customerName=${encodeURIComponent(customerName)}`);
+  const openDocumentPanel = (document: WorkDocument) => setOpenDocument((current) => current === document ? null : document);
+  const media = request.media || [];
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center gap-3 animate-fade-in">
-        <Link to="/requests" className="text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-all">
-          <ArrowRight size={20} />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-100">{t('pages.requests.detail.requestDetails')}</h1>
-          <p className="text-sm text-surface-400 dark:text-surface-500 mt-0.5">{t('pages.requests.detail.serviceRequest')} {request.service}</p>
+    <div className="mx-auto max-w-6xl space-y-5 pb-24 lg:pb-8">
+      <section className="overflow-hidden rounded-[28px] border border-surface-200 bg-white shadow-sm dark:border-surface-800 dark:bg-surface-900">
+        <div className="flex flex-col gap-5 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <Link to="/requests" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-100 text-surface-500 transition hover:bg-surface-200 dark:bg-surface-800 dark:hover:bg-surface-700">
+              <ArrowRight size={19} />
+            </Link>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-primary-600 dark:text-primary-400">طلب #{request.id}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${REQUEST_STATUS_COLORS[request.status] || 'bg-surface-100 text-surface-600'}`}>{statusLabels[request.status] || request.status}</span>
+              </div>
+              <h1 className="mt-2 truncate text-xl font-black text-surface-950 dark:text-white sm:text-2xl">{request.service || 'طلب صيانة'}</h1>
+              <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-surface-400"><span>{customerName}</span><span>•</span><span>{carName || 'المركبة غير محددة'}</span><span>•</span><span>{timeAgo(request.createdAt)}</span></p>
+            </div>
+          </div>
         </div>
-        <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${REQUEST_STATUS_COLORS[request.status] || 'bg-surface-100 text-surface-600'}`}>
-          {t('constants.requestStatuses.' + request.status, request.status)}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-            <div className="p-5 border-b border-surface-100 dark:border-surface-800">
-              <h2 className="font-bold text-surface-900 dark:text-surface-100">{t('pages.requests.detail.customerVehicle')}</h2>
-            </div>
-            <div className="p-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
-                    <Avatar name={request.customer?.name} size="md" />
-                    <div>
-                      <p className="text-xs text-surface-400">{t('pages.requests.detail.customer')}</p>
-                      <p className="font-semibold text-surface-800 dark:text-surface-200">{request.customer?.name}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
-                    <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-500/20 flex items-center justify-center">
-                      <Phone size={18} className="text-primary-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-surface-400">{t('pages.requests.detail.phone')}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-surface-800 dark:text-surface-200" dir="ltr">{formatPhone(request.customer?.phone)}</span>
-                        <button
-                          onClick={() => {
-                            if (request.customer?.id) {
-                              useCallStore.getState().requestCall(Number(request.customer.id), request.customer.name || '', Number(request.id));
-                            }
-                          }}
-                          className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
-                          title="مكالمة صوتية"
-                        >
-                          <PhoneCall size={14} />
-                        </button>
-                        <a href={`tel:${request.customer?.phone}`} className="p-1.5 rounded-lg bg-primary-50 text-primary-600 hover:bg-primary-100 transition-colors">
-                          <Phone size={14} />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center">
-                      <Car size={18} className="text-indigo-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-surface-400">{t('pages.requests.detail.vehicle')}</p>
-                      <p className="font-semibold text-surface-800 dark:text-surface-200">{request.car?.make} {request.car?.model} ({request.car?.year})</p>
-                      {request.car?.plateNumber && <p className="text-xs text-surface-400">لوحة: {request.car.plateNumber}</p>}
-                      {request.car?.color && <p className="text-xs text-surface-400">اللون: {request.car.color}</p>}
-                      {request.car?.mileage != null && request.car.mileage > 0 && <p className="text-xs text-surface-400">الممشى: {request.car.mileage.toLocaleString()} كم</p>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
-                    <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
-                      <MapPin size={18} className="text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-surface-400">{t('pages.requests.detail.location')}</p>
-                      <p className="font-semibold text-surface-800 dark:text-surface-200">{request.location}</p>
-                      <p className="text-xs text-surface-400">{request.city}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="border-t border-surface-100 bg-surface-50/70 px-4 py-4 dark:border-surface-800 dark:bg-surface-950/30 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div><p className="text-[10px] font-semibold text-surface-400">المرحلة الحالية</p><p className="mt-1 text-sm font-black text-surface-900 dark:text-white">{journey[currentIndex]?.label}</p></div>
+            <button onClick={() => setShowHistory((value) => !value)} className="text-xs font-bold text-primary-600 dark:text-primary-400">{showHistory ? 'إخفاء سجل الحالات' : 'عرض سجل الحالات'}</button>
           </div>
-
-          <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-            <div className="p-5 border-b border-surface-100 dark:border-surface-800">
-              <h2 className="font-bold text-surface-900 dark:text-surface-100">{t('pages.requests.detail.serviceDescription')}</h2>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"><div className="h-full rounded-full bg-primary-500 transition-all" style={{ width: `${progress}%` }} /></div>
+          <div className="mt-2 flex items-center justify-between text-[10px] font-semibold text-surface-400"><span>{currentIndex + 1} من {journey.length}</span><span>{Math.round(progress)}%</span></div>
+          {showHistory && (
+            <div className="mt-4 grid gap-2 border-t border-surface-200 pt-4 dark:border-surface-700 sm:grid-cols-2 lg:grid-cols-4">
+              {journey.map((item, index) => (
+                <div key={item.status} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold ${index <= currentIndex ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300' : 'bg-white text-surface-400 dark:bg-surface-900'}`}>
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full ${index <= currentIndex ? 'bg-primary-500 text-white' : 'bg-surface-200 dark:bg-surface-700'}`}>{index < currentIndex ? <Check size={11} /> : index + 1}</span>
+                  {item.label}
+                </div>
+              ))}
             </div>
-            <div className="p-5">
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <span className="px-3 py-1.5 rounded-xl text-sm font-semibold bg-primary-50 text-primary-700">
-                  {request.service}
-                </span>
-                <span className="text-xs text-surface-400 flex items-center gap-1">
-                  <Calendar size={14} />
-                  {formatDate(request.createdAt)}
-                </span>
-              </div>
-              <p className="text-surface-600 dark:text-surface-400 leading-relaxed">{request.description}</p>
-            </div>
-          </div>
+          )}
+        </div>
+      </section>
 
-          {request.media && request.media.length > 0 && (
-            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-              <div className="p-5 border-b border-surface-100 dark:border-surface-800 flex items-center gap-2">
-                <Image size={19} className="text-primary-500" />
-                <h2 className="font-bold text-surface-900 dark:text-surface-100">مرفقات العميل</h2>
-                <span className="text-xs text-surface-400">({request.media.length})</span>
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,.75fr)]">
+        <main className="space-y-5">
+          <section className="grid gap-5 md:grid-cols-2">
+            <div className="rounded-3xl border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+              <div className="mb-4 flex items-center justify-between"><h2 className="font-black text-surface-950 dark:text-white">بيانات العميل</h2><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">متصل</span></div>
+              <div className="flex items-center gap-3"><Avatar name={customerName} size="md" /><div className="min-w-0 flex-1"><p className="truncate font-black">{customerName}</p><p dir="ltr" className="mt-1 w-fit text-xs text-surface-400">{formatPhone(customerPhone)}</p></div></div>
+              <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: 'minmax(0, 1fr) 44px' }}>
+                <button onClick={openChat} className="btn-primary min-h-10 justify-center gap-2"><MessageCircle size={16} /> محادثة العميل</button>
+                <button onClick={() => request.customer?.id && useCallStore.getState().requestCall(Number(request.customer.id), customerName, Number(request.id))} className="flex min-h-10 items-center justify-center rounded-xl border border-surface-200 bg-surface-50 text-surface-600 transition hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300" aria-label="اتصال بالعميل"><PhoneCall size={16} /></button>
               </div>
-              <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-3">
-                {request.media.map((item) => (
-                  <a key={item.id} href={item.url} target="_blank" rel="noreferrer"
-                    className="block overflow-hidden rounded-xl border border-surface-200 dark:border-surface-700 hover:border-primary-400 transition-colors">
-                    {item.type === 'image' ? (
-                      <img src={item.thumbnailUrl || item.url} alt="مرفق الطلب" className="w-full h-36 object-cover" />
-                    ) : (
-                      <div className="h-36 flex items-center justify-center bg-surface-50 dark:bg-surface-800 text-sm text-primary-600">
-                        عرض المرفق
-                      </div>
-                    )}
+            </div>
+
+            <div className="rounded-3xl border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+              <div className="mb-4 flex items-center justify-between"><h2 className="font-black text-surface-950 dark:text-white">بيانات المركبة</h2><Car size={19} className="text-primary-500" /></div>
+              <p className="font-black">{carName || 'غير محددة'}</p>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><p className="text-surface-400">اللوحة</p><p className="mt-1 font-bold">{request.car?.plateNumber || '—'}</p></div>
+                <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><p className="text-surface-400">الممشى</p><p className="mt-1 font-bold">{request.car?.mileage ? `${request.car.mileage.toLocaleString()} كم` : '—'}</p></div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+            <div className="flex items-center justify-between gap-3"><div><h2 className="font-black text-surface-950 dark:text-white">وصف المشكلة والمرفقات</h2><p className="mt-1 text-xs text-surface-400">المعلومات التي أرسلها العميل مع الطلب</p></div>{media.length ? <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[10px] font-bold text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">{media.length} مرفق</span> : null}</div>
+            <p className="mt-4 text-sm leading-7 text-surface-600 dark:text-surface-300">{request.description || 'لم يضف العميل وصفاً إضافياً.'}</p>
+            {media.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {media.map((item) => (
+                  <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="group relative h-28 overflow-hidden rounded-2xl bg-surface-100 dark:bg-surface-800">
+                    {item.type === 'image' ? <img src={item.thumbnailUrl || item.url} alt="مرفق الطلب" className="h-full w-full object-cover transition group-hover:scale-105" /> : <div className="flex h-full items-center justify-center"><Image size={24} className="text-surface-400" /></div>}
+                    <span className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/60 text-white"><ExternalLink size={13} /></span>
                   </a>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </section>
 
-          <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-            <div className="p-5 border-b border-surface-100 dark:border-surface-800 flex items-center justify-between">
-              <h2 className="font-bold text-surface-900 dark:text-surface-100">{t('pages.requests.detail.requestStatus')}</h2>
-              <span className="text-xs text-surface-400">{timeAgo(request.updatedAt || request.createdAt)}</span>
-            </div>
-            <div className="p-5">
-              <div className="relative pr-8">
-                {timelineEvents.map((event, idx) => {
-                  const isCompleted = idx <= currentStatusIndex;
-                  const isCurrent = idx === currentStatusIndex;
-                  return (
-                    <div key={event.status} className="relative pb-6 last:pb-0">
-                      {idx < timelineEvents.length - 1 && (
-                        <div className={`absolute right-[11px] top-5 w-0.5 h-full -translate-x-1/2 ${
-                          idx < currentStatusIndex ? 'bg-primary-500' : 'bg-surface-200'
-                        }`} />
-                      )}
-                      <div className="flex items-start gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                          isCompleted ? 'bg-primary-500 text-white shadow-md' : 'bg-surface-200 text-surface-400'
-                        } ${isCurrent ? 'ring-2 ring-primary-300 ring-offset-2' : ''}`}>
-                          <event.icon size={12} />
-                        </div>
-                        <div className="pt-0.5">
-                          <p className={`text-sm font-semibold ${isCompleted ? 'text-surface-800' : 'text-surface-400'}`}>
-                            {event.label}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          <section className="overflow-hidden rounded-3xl border border-surface-200 bg-white shadow-sm dark:border-surface-800 dark:bg-surface-900">
+            <div className="border-b border-surface-100 p-5 dark:border-surface-800"><h2 className="font-black text-surface-950 dark:text-white">ملف العمل</h2><p className="mt-1 text-xs text-surface-400">عرض السعر، تقرير الفحص، والفاتورة في تسلسل واحد</p></div>
 
-              <div className="flex flex-wrap gap-3 mt-6 pt-5 border-t border-surface-100 dark:border-surface-800">
-                {!request.hasQuote && request.status === 'pending' && (
-                  <button onClick={() => setShowQuoteForm(true)} className="btn-primary">
-                    <FileSignature size={18} />
-                    {t('pages.requests.submitQuote')}
-                  </button>
-                )}
-                {canUpdate && (
-                  <>
-                    <button onClick={() => setShowStatusModal(true)} className="btn-secondary">
-                      <Clock size={18} />
-                      {t('pages.requests.updateStatus')}
-                    </button>
-                    <button onClick={() => setShowInspectionForm(true)} className="btn-accent">
-                      <FileSearch size={18} />
-                      {t('pages.requests.inspectionReport')}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-            <div className="border-b border-surface-100 dark:border-surface-800">
-              <div className="flex overflow-x-auto scrollbar-hide">
-                {detailTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all duration-200 border-b-2 whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? 'border-primary-500 text-primary-500'
-                        : 'border-transparent text-surface-400 dark:text-surface-500 hover:text-surface-600 dark:hover:text-surface-300 hover:border-surface-300 dark:hover:border-surface-600'
-                    }`}
-                  >
-                    <tab.icon size={18} />
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="p-5">
-              {activeTab === 'quotes' && (
-                <div className="space-y-4">
-                  {quotes.length === 0 && (
-                    <p className="text-center text-surface-400 py-8">{t('pages.requests.detail.noQuotes')}</p>
-                  )}
-                  {quotes.map((quote) => (
-                    <div key={quote.id} className="p-4 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-lg font-bold text-surface-800 dark:text-surface-200">{formatCurrency(quote.price)}</span>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${QUOTE_STATUS_COLORS[quote.status]}`}>
-                          {t('constants.quoteStatuses.' + quote.status, quote.status)}
-                        </span>
-                      </div>
-                      {quote.notes && <p className="text-sm text-surface-500 mb-2">{quote.notes}</p>}
-                      <p className="text-xs text-surface-400">{formatDateTime(quote.createdAt)}</p>
-                    </div>
-                  ))}
-                  {(request.status === 'pending') && (
-                    <button onClick={() => setShowQuoteForm(true)} className="btn-primary w-full">
-                      {t('pages.requests.detail.addQuote')}
-                    </button>
-                  )}
+            <DocumentRow
+              icon={FileCheck2} title="عرض السعر"
+              subtitle={latestQuote ? `${formatCurrency(latestQuote.price)} • ${formatDateTime(latestQuote.createdAt)}` : 'لم يتم إرسال عرض سعر بعد'}
+              badge={documentState.quote.badge} complete={documentState.quote.complete} current={documentState.quote.current}
+              open={openDocument === 'quote'} onToggle={() => openDocumentPanel('quote')}
+            >
+              {latestQuote ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><span className="text-sm text-surface-500">قيمة العرض</span><strong>{formatCurrency(latestQuote.price)}</strong></div>
+                  {latestQuote.notes && <p className="text-sm leading-6 text-surface-500">{latestQuote.notes}</p>}
+                  {request.status === 'pending' && <button onClick={() => setShowQuoteForm(true)} className="btn-primary w-full justify-center">إرسال عرض جديد</button>}
                 </div>
+              ) : <button onClick={() => setShowQuoteForm(true)} className="btn-primary w-full justify-center"><Send size={16} /> إنشاء وإرسال العرض</button>}
+            </DocumentRow>
+
+            <DocumentRow
+              icon={ClipboardCheck} title="تقرير الفحص"
+              subtitle={report ? `${report.parts?.length || 0} قطع • ${report.labor?.length || 0} أعمال` : 'يُنشأ بعد قبول العرض وإسناد الفني'}
+              badge={documentState.inspection.badge} complete={documentState.inspection.complete} current={documentState.inspection.current}
+              open={openDocument === 'inspection'} onToggle={() => openDocumentPanel('inspection')}
+            >
+              {report ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3"><div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><p className="text-xs text-surface-400">البنود</p><p className="mt-1 font-black">{(report.parts?.length || 0) + (report.labor?.length || 0)}</p></div><div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><p className="text-xs text-surface-400">الإجمالي</p><p className="mt-1 font-black">{formatCurrency(report.grandTotal)}</p></div></div>
+                  {report.notes && <p className="text-sm leading-6 text-surface-500">{report.notes}</p>}
+                  <button onClick={() => setShowInspectionForm(true)} className="btn-secondary w-full justify-center"><Pencil size={15} /> عرض وتعديل التقرير</button>
+                </div>
+              ) : (
+                <button onClick={() => setShowInspectionForm(true)} disabled={!['accepted', 'inspection_report', 'customer_approved', 'in_progress'].includes(request.status)} className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"><ClipboardCheck size={16} /> إنشاء تقرير الفحص</button>
               )}
+            </DocumentRow>
 
-              {activeTab === 'inspection' && (
-                <div>
-                  {report ? (
-                    <div className="space-y-4">
-                      {report.notes && (
-                        <div className="p-4 rounded-xl bg-surface-50 dark:bg-surface-800">
-                          <p className="text-sm text-surface-600">{report.notes}</p>
-                        </div>
-                      )}
-                      {report.parts.length > 0 && (
-                        <div>
-                          <p className="text-sm font-bold text-surface-700 mb-2">{t('pages.requests.detail.inspection.parts')}</p>
-                          <div className="space-y-2">
-                            {report.parts.map((p, i) => (
-                              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
-                                <span className="text-sm text-surface-600">{p.name} x{p.quantity}</span>
-                                <span className="text-sm font-semibold text-surface-800">{formatCurrency(p.total)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {report.labor.length > 0 && (
-                        <div>
-                          <p className="text-sm font-bold text-surface-700 mb-2">{t('pages.requests.detail.inspection.labor')}</p>
-                          <div className="space-y-2">
-                            {report.labor.map((l, i) => (
-                              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
-                                <span className="text-sm text-surface-600">{l.description} ({l.minutes} دقيقة)</span>
-                                <span className="text-sm font-semibold text-surface-800">{formatCurrency(l.total)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div className="p-4 rounded-xl bg-primary-50 border border-primary-100">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-surface-500">{t('pages.requests.detail.inspection.tax')} ({report.taxPercent}%)</span>
-                          <span className="font-semibold">{formatCurrency(report.grandTotal - report.parts.reduce((s: number, p: any) => s + p.total, 0) - report.labor.reduce((s: number, l: any) => s + l.total, 0))}</span>
-                        </div>
-                        <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-primary-200">
-                          <span>{t('pages.requests.detail.inspection.total')}</span>
-                          <span className="text-primary-600 dark:text-primary-400">{formatCurrency(report.grandTotal)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-center text-surface-400 py-8">{t('pages.requests.detail.inspection.notReady')}</p>
-                  )}
+            <DocumentRow
+              icon={Receipt} title="الفاتورة والدفع"
+              subtitle={invoice ? `فاتورة #${invoice.invoiceNumber || invoice.id} • ${formatCurrency(invoice.grandTotal)}` : 'تُنشأ من تقرير الفحص المعتمد'}
+              badge={documentState.invoice.badge} complete={documentState.invoice.complete} current={documentState.invoice.current}
+              open={openDocument === 'invoice'} onToggle={() => openDocumentPanel('invoice')}
+            >
+              {invoice ? (
+                <div className="space-y-3">
+                  <div className="space-y-2 rounded-xl bg-surface-50 p-3 text-sm dark:bg-surface-800/60"><div className="flex justify-between"><span className="text-surface-500">المجموع</span><strong>{formatCurrency((invoice.partsTotal || 0) + (invoice.laborTotal || 0))}</strong></div><div className="flex justify-between"><span className="text-surface-500">الضريبة</span><strong>{formatCurrency(invoice.taxAmount || 0)}</strong></div><div className="flex justify-between border-t border-surface-200 pt-2 text-base dark:border-surface-700"><span className="font-bold">الإجمالي</span><strong className="text-primary-600">{formatCurrency(invoice.grandTotal)}</strong></div></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(invoice.status === 'pending_approval' || invoice.status === 'rejected') && <button onClick={() => setShowInvoiceForm(true)} className="btn-primary justify-center"><Pencil size={15} /> تعديل</button>}
+                    {(invoice.status === 'pending_approval' || invoice.status === 'rejected') && <button onClick={async () => { if (window.confirm('هل تريد حذف الفاتورة؟')) { try { await deleteInvoice(request.id); toast.success('تم حذف الفاتورة'); refreshRequest(); } catch { toast.error('فشل حذف الفاتورة'); } } }} className="btn-secondary justify-center text-danger-500"><Trash2 size={15} /> حذف</button>}
+                  </div>
                 </div>
+              ) : (
+                <button onClick={() => setShowInvoiceForm(true)} disabled={!report && request.status !== 'awaiting_payment'} className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"><Receipt size={16} /> إنشاء الفاتورة</button>
               )}
+            </DocumentRow>
+          </section>
+        </main>
 
-              {activeTab === 'invoice' && (
-                <div>
-                  {invoice ? (
-                    <div className="space-y-3">
-                      <div className="p-4 rounded-xl bg-surface-50 dark:bg-surface-800 space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-surface-500">{t('pages.requests.detail.invoice.subtotal')}</span>
-                          <span className="font-semibold">{formatCurrency(invoice.partsTotal + invoice.laborTotal)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-surface-500">{t('pages.requests.detail.invoice.tax')} ({invoice.taxPercent}%)</span>
-                          <span className="font-semibold">{formatCurrency(invoice.taxAmount ?? 0)}</span>
-                        </div>
-                        <div className="flex justify-between text-lg font-bold pt-2 border-t border-surface-200">
-                          <span>{t('pages.requests.detail.invoice.total')}</span>
-                          <span className="text-primary-600 dark:text-primary-400">{formatCurrency(invoice.grandTotal)}</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-surface-400">{formatDateTime(invoice.createdAt)}</p>
-                      {(invoice.status === 'pending_approval' || invoice.status === 'rejected') && (
-                        <div className="flex gap-2 pt-2">
-                          <button onClick={() => setShowInvoiceForm(true)} className="btn-primary flex-1">
-                            <Pen size={16} /> {t('pages.requests.detail.invoice.editInvoice')}
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (window.confirm(t('pages.requests.detail.invoice.deleteConfirm'))) {
-                                try {
-                                  await deleteInvoice(request.id);
-                                  toast.success(t('toast.success.invoiceDeleted'));
-                                  queryClient.invalidateQueries({ queryKey: ['invoice', id] });
-                                  queryClient.invalidateQueries({ queryKey: ['requests'] });
-                                } catch {
-                                  toast.error(t('toast.error.invoiceDeleteFailed'));
-                                }
-                              }
-                            }}
-                            className="btn-danger"
-                          >
-                            <Trash2 size={16} /> {t('pages.requests.detail.invoice.deleteInvoice')}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ) : request.status === 'awaiting_payment' ? (
-                    <div className="text-center py-8">
-                      <Receipt size={40} className="text-surface-300 mx-auto mb-3" />
-                      <p className="text-surface-500 mb-4">{t('pages.requests.detail.invoice.notCreated')}</p>
-                      <button onClick={() => setShowInvoiceForm(true)} className="btn-primary">
-                        {t('pages.requests.detail.invoice.createInvoice')}
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="text-center text-surface-400 py-8">{t('pages.requests.detail.invoice.notAvailable')}</p>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'chat' && (
-                <button onClick={() => navigate(`/requests/${request.id}/chat?customerName=${encodeURIComponent(request.customerName || 'العميل')}`)} className="flex w-full items-center justify-between rounded-2xl border border-primary-200 bg-primary-50/40 p-5 text-right transition hover:border-primary-400 dark:border-primary-500/20 dark:bg-primary-500/5">
-                  <span><span className="block font-black">تواصل مع العميل</span><span className="mt-1 block text-xs text-surface-500">{request.customerName || 'العميل'}</span></span><MessageCircle className="text-primary-600" size={24}/>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-          {request.technicianName && (
-            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-              <div className="p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar name={request.technicianName} size="sm" />
-                  <div className="flex-1">
-                    <p className="text-[10px] text-surface-400">الفني المسؤول عن الصيانة</p>
-                    <p className="font-semibold text-sm text-surface-800 dark:text-surface-200">{request.technicianName}</p>
-                    {request.technicianSpecialty && (
-                      <p className="text-[11px] text-surface-400">{request.technicianSpecialty}</p>
-                    )}
-                  </div>
-                </div>
+        <aside className="space-y-5">
+          <section className="rounded-3xl border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+            <div className="mb-4 flex items-center justify-between"><div><h2 className="font-black text-surface-950 dark:text-white">الفني المسؤول</h2><p className="mt-1 text-xs text-surface-400">الإسناد والتشغيل</p></div><button onClick={() => setShowTechnicianActions((value) => !value)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-surface-200 text-surface-500 dark:border-surface-700" aria-label="إدارة الفني"><MoreHorizontal size={17} /></button></div>
+            {request.technicianId ? (
+              <div className="flex items-center gap-3"><Avatar name={request.technicianName} size="md" /><div className="min-w-0 flex-1"><p className="truncate font-black">{request.technicianName}</p><p className="mt-1 text-xs text-surface-400">{request.technicianSpecialty || 'فني صيانة'} • مسند للطلب</p></div></div>
+            ) : (
+              <div className="flex items-center gap-3 rounded-2xl bg-amber-50 p-3 dark:bg-amber-500/10"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"><UserRoundCog size={19} /></span><div><p className="text-sm font-black">لم يتم إسناد فني</p><p className="mt-1 text-xs text-surface-500">اختر فنياً متاحاً لبدء العمل</p></div></div>
+            )}
+            {showTechnicianActions && (
+              <div className="mt-4 space-y-2 border-t border-surface-100 pt-4 dark:border-surface-800">
+                <select value="" onChange={(event) => event.target.value && assignMutation.mutate(Number(event.target.value))} className="input w-full" disabled={assignMutation.isPending}>
+                  <option value="">{request.technicianId ? 'تغيير الفني…' : 'اختيار فني…'}</option>
+                  {availableTechnicians.map((technician) => <option key={technician.id} value={technician.id}>{technician.name} — {technician.specialty}</option>)}
+                </select>
+                {request.technicianId && <button onClick={() => unassignMutation.mutate()} disabled={unassignMutation.isPending} className="btn-secondary w-full justify-center text-danger-500">إلغاء الإسناد</button>}
               </div>
-            </div>
+            )}
+            {!showTechnicianActions && <button onClick={() => setShowTechnicianActions(true)} className="btn-secondary mt-4 w-full justify-center"><UserRoundCog size={16} /> {request.technicianId ? 'تغيير الفني' : 'إسناد فني'}</button>}
+          </section>
+
+          {primaryAction && (
+            <section className="rounded-3xl bg-surface-950 p-5 text-white shadow-sm dark:bg-black">
+              <p className="text-xs font-bold text-white/50">الإجراء التالي</p>
+              <h2 className="mt-2 text-lg font-black">{primaryAction.label}</h2>
+              <p className="mt-2 text-xs leading-6 text-white/60">أكمل هذا الإجراء حتى ينتقل الطلب للمرحلة التالية.</p>
+              <button onClick={primaryAction.action} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 text-sm font-bold text-white transition hover:bg-primary-700"><primaryAction.icon size={17} /> {primaryAction.label}</button>
+            </section>
           )}
 
-          <div className="space-y-6">
-          {(request.status === 'accepted' || request.status === 'in_progress') && (
-            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-              <div className="p-5 border-b border-surface-100 dark:border-surface-800">
-                <h2 className="font-bold text-surface-900 dark:text-surface-100 flex items-center gap-2">
-                  <Wrench size={18} />
-                  تعيين فنى
-                </h2>
-              </div>
-              <div className="p-5 space-y-3">
-                {request.technicianId ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
-                      <Avatar name={request.technicianName} size="md" />
-                      <div className="flex-1">
-                        <p className="text-xs text-surface-400">الفنى المعين</p>
-                        <p className="font-semibold text-surface-800 dark:text-surface-200">{request.technicianName}</p>
-                        {request.technicianSpecialty && (
-                          <p className="text-xs text-surface-400">{request.technicianSpecialty}</p>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => unassignMutation.mutate()}
-                      disabled={unassignMutation.isPending}
-                      className="w-full py-2 px-4 rounded-xl text-sm font-semibold text-red-600 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                    >
-                      {unassignMutation.isPending ? 'جاري الإلغاء...' : 'إلغاء التعيين'}
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <select
-                      className="w-full px-4 py-3 rounded-xl border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-800 dark:text-surface-200 font-semibold text-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-500 transition-colors appearance-none"
-                      value=""
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          assignMutation.mutate(Number(e.target.value));
-                        }
-                      }}
-                    >
-                      <option value="">اختر فنى...</option>
-                      {technicians.filter(t => t.availabilityStatus === 'available').map((tech) => (
-                        <option key={tech.id} value={tech.id}>
-                          {tech.name} — {tech.specialty}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-surface-400 mt-2">اختر فنى لتعيينه على هذا الطلب</p>
-                  </div>
-                )}
-              </div>
+          <section className="rounded-3xl border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+            <div className="mb-4 flex items-center justify-between"><h2 className="font-black text-surface-950 dark:text-white">الموقع والموعد</h2><MapPin size={19} className="text-primary-500" /></div>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-3"><Building2 size={16} className="text-surface-400" /><span>{request.location || 'داخل الورشة'}</span></div>
+              <div className="flex items-center gap-3"><CalendarClock size={16} className="text-surface-400" /><span>{formatDateTime(request.createdAt)}</span></div>
+              <div className="flex items-center gap-3"><MapPin size={16} className="text-surface-400" /><span>{request.city || 'الموقع غير محدد'}</span></div>
             </div>
-          )}
-
-          <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-            <div className="p-4 border-b border-surface-100 dark:border-surface-800">
-              <h3 className="font-bold text-surface-800 dark:text-surface-200">{t('pages.requests.detail.location')}</h3>
-            </div>
-            <div className="p-4">
-              <div className="bg-gradient-to-br from-surface-100 to-surface-200 dark:from-surface-800 dark:to-surface-700 h-36 rounded-xl flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin size={36} className="text-surface-400 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-surface-600 dark:text-surface-300">{request.location || 'بدون عنوان'}</p>
-                  <p className="text-xs text-surface-400">{request.city}</p>
-                  {request.locationLat && request.locationLng && (
-                    <a href={`https://www.google.com/maps?q=${request.locationLat},${request.locationLng}`} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary-500 hover:text-primary-600">
-                      <MapPin size={12} /> فتح في خرائط قوقل
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {quotes.length > 0 && (
-            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-              <div className="p-4 border-b border-surface-100 dark:border-surface-800">
-                <h3 className="font-bold text-surface-800 dark:text-surface-200">{t('pages.requests.detail.tabs.quotes')}</h3>
-              </div>
-              <div className="p-4 space-y-3">
-                {quotes.map((quote) => (
-                  <div key={quote.id} className="p-3 rounded-xl bg-surface-50 dark:bg-surface-800">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-surface-800 dark:text-surface-200">{formatCurrency(quote.price)}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${QUOTE_STATUS_COLORS[quote.status]}`}>
-                        {t('constants.quoteStatuses.' + quote.status, quote.status)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-surface-400">{formatDateTime(quote.createdAt)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {invoice && (
-            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-              <div className="p-4 border-b border-surface-100 dark:border-surface-800">
-                <h3 className="font-bold text-surface-800 dark:text-surface-200">{t('pages.requests.detail.tabs.invoice')}</h3>
-              </div>
-              <div className="p-4 space-y-2 text-sm">
-                {request.technicianName && (
-                  <div className="flex items-center gap-2 pb-2 mb-2 border-b border-surface-100 dark:border-surface-700">
-                    <User size={14} className="text-primary-500" />
-                    <span className="text-surface-400">الفني المسؤول:</span>
-                    <span className="font-semibold text-surface-700 dark:text-surface-300">{request.technicianName}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-surface-400">{t('pages.requests.detail.invoice.subtotal')}</span>
-                  <span>{formatCurrency(invoice.partsTotal + invoice.laborTotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-surface-400">{t('pages.requests.detail.invoice.tax')} ({invoice.taxPercent}%)</span>
-                  <span>{formatCurrency(invoice.taxAmount ?? 0)}</span>
-                </div>
-                    <div className="flex justify-between font-bold pt-2 border-t border-surface-200 dark:border-surface-700">
-                  <span>{t('pages.requests.detail.invoice.total')}</span>
-                  <span className="text-primary-600">{formatCurrency(invoice.grandTotal)}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {report && (
-            <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 overflow-hidden">
-              <div className="p-4 border-b border-surface-100 dark:border-surface-800">
-                <h3 className="font-bold text-surface-800 dark:text-surface-200">{t('pages.requests.detail.tabs.inspection')}</h3>
-              </div>
-              <div className="p-4 text-sm">
-                {report.notes && <p className="text-surface-600 mb-3">{report.notes}</p>}
-                {report.parts.length > 0 && (
-                  <div className="mb-3">
-                    <p className="text-xs font-bold text-surface-500 mb-1">{t('pages.requests.detail.inspection.parts')}</p>
-                    {report.parts.map((p, i) => (
-                      <div key={i} className="flex justify-between text-xs text-surface-600 py-1">
-                        <span>{p.name} x{p.quantity}</span>
-                        <span>{formatCurrency(p.total)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {report.labor.length > 0 && (
-                  <div className="mb-3">
-                    <p className="text-xs font-bold text-surface-500 mb-1">{t('pages.requests.detail.inspection.labor')}</p>
-                    {report.labor.map((l, i) => (
-                      <div key={i} className="flex justify-between text-xs text-surface-600 py-1">
-                        <span>{l.description} ({l.minutes} دقيقة)</span>
-                        <span>{formatCurrency(l.total)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex justify-between font-bold pt-2 border-t border-surface-200 mt-2">
-                  <span>{t('pages.requests.detail.inspection.total')}</span>
-                  <span className="text-primary-600">{formatCurrency(report.grandTotal)}</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+            {request.locationLat && request.locationLng && <a href={`https://www.google.com/maps?q=${request.locationLat},${request.locationLng}`} target="_blank" rel="noreferrer" className="btn-secondary mt-4 flex w-full justify-center gap-2"><MapPin size={15} /> فتح الخريطة</a>}
+          </section>
+        </aside>
       </div>
 
-      {showQuoteForm && (
-        <QuoteForm requestId={request.id} onClose={() => setShowQuoteForm(false)} serviceTypes={request.serviceTypes} />
+      {primaryAction && (
+        <div className="fixed inset-x-3 bottom-[76px] z-30 lg:hidden">
+          <button onClick={primaryAction.action} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 font-bold text-white shadow-xl shadow-primary-600/20"><primaryAction.icon size={18} /> {primaryAction.label}</button>
+        </div>
       )}
-      {showInspectionForm && (
-        <InspectionReportForm requestId={request.id} request={request} existingReport={report} onClose={() => setShowInspectionForm(false)} />
-      )}
+
+      {showQuoteForm && <QuoteForm requestId={request.id} onClose={() => setShowQuoteForm(false)} serviceTypes={request.serviceTypes} />}
+      {showInspectionForm && <InspectionReportForm requestId={request.id} request={request} existingReport={report} onClose={() => setShowInspectionForm(false)} />}
       {showInvoiceForm && (
         <InvoiceForm
           requestId={request.id}
-          defaultItems={
-            invoice
-              ? invoice.items.map((i: any) => ({ name: i.name, quantity: i.quantity, unitPrice: i.unitPrice }))
-              : [
-                  ...(report?.parts || []).map((p: any) => ({ name: p.name, quantity: p.quantity, unitPrice: p.unitPrice })),
-                  ...(report?.labor || []).map((l: any) => ({ name: l.description, quantity: Math.ceil(l.hours), unitPrice: l.hourlyRate })),
-                ]
-          }
+          defaultItems={invoice ? invoice.items.map((item: any) => ({ name: item.name, quantity: item.quantity, unitPrice: item.unitPrice })) : [
+            ...(report?.parts || []).map((part: any) => ({ name: part.name, quantity: part.quantity, unitPrice: part.unitPrice, category: 'part' as const })),
+            ...(report?.labor || []).map((labor: any) => ({ name: labor.description, quantity: Math.ceil(labor.hours), unitPrice: labor.hourlyRate, category: 'labor' as const })),
+          ]}
           defaultTaxPercent={invoice ? (invoice.taxPercent || 15) : (report?.taxPercent || 15)}
           onClose={() => setShowInvoiceForm(false)}
         />
       )}
-      {showStatusModal && (
-        <StatusUpdateModal
-          requestId={request.id}
-          currentStatus={request.status}
-          onClose={() => setShowStatusModal(false)}
-        />
-      )}
+      {showStatusModal && <StatusUpdateModal requestId={request.id} currentStatus={request.status} onClose={() => setShowStatusModal(false)} />}
     </div>
   );
 }
 
-
+function DocumentRow({
+  icon: Icon, title, subtitle, badge, complete, current, open, onToggle, children,
+}: {
+  icon: typeof ClipboardList;
+  title: string;
+  subtitle: string;
+  badge: string;
+  complete: boolean;
+  current: boolean;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-b border-surface-100 last:border-b-0 dark:border-surface-800">
+      <button onClick={onToggle} className="flex w-full items-center gap-3 p-4 text-right transition hover:bg-surface-50 dark:hover:bg-surface-800/40 sm:p-5" aria-expanded={open}>
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${complete ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300' : current ? 'bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-300' : 'bg-surface-100 text-surface-400 dark:bg-surface-800'}`}>{complete ? <CheckCircle2 size={19} /> : <Icon size={19} />}</span>
+        <span className="min-w-0 flex-1"><strong className="block text-sm text-surface-900 dark:text-white">{title}</strong><span className="mt-1 block truncate text-xs text-surface-400">{subtitle}</span></span>
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${complete ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : current ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300' : 'bg-surface-100 text-surface-500 dark:bg-surface-800'}`}>{badge}</span>
+        <ChevronDown size={17} className={`shrink-0 text-surface-400 transition ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="px-4 pb-5 sm:pr-[76px] sm:pl-5">{children}</div>}
+    </div>
+  );
+}

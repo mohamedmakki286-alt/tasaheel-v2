@@ -61,7 +61,16 @@ export interface Car {
   mileage?: number;
 }
 
-export type RequestStatus = 'pending' | 'quoted' | 'accepted' | 'in_progress' | 'awaiting_payment' | 'completed' | 'cancelled';
+export type RequestStatus =
+  | 'pending'
+  | 'quoted'
+  | 'accepted'
+  | 'inspection_report'
+  | 'customer_approved'
+  | 'in_progress'
+  | 'awaiting_payment'
+  | 'completed'
+  | 'cancelled';
 export type QuoteStatus = 'pending' | 'accepted' | 'rejected';
 export type ReviewRating = 1 | 2 | 3 | 4 | 5;
 
@@ -302,11 +311,17 @@ export interface InvoiceItemPayload {
   name: string;
   quantity: number;
   unitPrice: number;
+  category?: 'part' | 'labor';
 }
 
 export interface InvoicePayload {
   items: InvoiceItemPayload[];
   taxPercent: number;
+  partsTotal?: number;
+  laborTotal?: number;
+  totalAmount?: number;
+  taxAmount?: number;
+  grandTotal?: number;
 }
 
 export interface StatusUpdatePayload {

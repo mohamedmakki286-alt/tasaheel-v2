@@ -40,15 +40,21 @@ public class FcmEventHandler {
         data.put("requestId", String.valueOf(event.getRequestId()));
         data.put("timestamp", event.getEventTimestamp().toString());
 
+        String actorRole = event.getActorRole() == null ? "" : event.getActorRole().trim().toLowerCase();
         Customer customer = request.getCustomer();
-        if (customer != null && customer.getFcmToken() != null && !customer.getFcmToken().isBlank()) {
+        if (!"customer".equals(actorRole)
+                && customer != null
+                && customer.getFcmToken() != null
+                && !customer.getFcmToken().isBlank()) {
             firebaseService.sendNotification(customer.getFcmToken(), title, body, data);
         }
 
-        for (Long workshopId : extractWorkshopIds(request, event)) {
-            Workshop workshop = workshopRepository.findById(workshopId).orElse(null);
-            if (workshop != null && workshop.getFcmToken() != null && !workshop.getFcmToken().isBlank()) {
-                firebaseService.sendNotification(workshop.getFcmToken(), title, body, data);
+        if (!"workshop".equals(actorRole)) {
+            for (Long workshopId : extractWorkshopIds(request, event)) {
+                Workshop workshop = workshopRepository.findById(workshopId).orElse(null);
+                if (workshop != null && workshop.getFcmToken() != null && !workshop.getFcmToken().isBlank()) {
+                    firebaseService.sendNotification(workshop.getFcmToken(), title, body, data);
+                }
             }
         }
     }
@@ -59,6 +65,9 @@ public class FcmEventHandler {
             if (val instanceof Number) {
                 return java.util.List.of(((Number) val).longValue());
             }
+        }
+        if ("workshop".equals(event.getActorRole()) && event.getActorId() != null) {
+            return java.util.List.of(event.getActorId());
         }
         return java.util.Collections.emptyList();
     }

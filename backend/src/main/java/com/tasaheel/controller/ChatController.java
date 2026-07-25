@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Locale;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -25,6 +26,12 @@ public class ChatController {
     private final ChatService chatService;
     private final MediaService mediaService;
     private final MessageSource msg;
+
+    @GetMapping("/rooms")
+    public ResponseEntity<ApiResponse<List<ChatRoomDTO>>> getRooms(
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        return ResponseEntity.ok(ApiResponse.success(chatService.getRooms(user)));
+    }
 
     @PostMapping("/room")
     public ResponseEntity<ApiResponse<ChatRoomDTO>> getOrCreateRoom(

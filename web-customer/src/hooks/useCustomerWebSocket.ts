@@ -3,7 +3,11 @@ import { Client } from '@stomp/stompjs';
 import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { playNotificationSound } from '../services/notificationSound';
-import { showLocalNotification } from '../services/pushNotifications';
+import {
+  ALERT_CHANNEL_ID,
+  shouldDeliverNativeAlert,
+  showLocalNotification,
+} from '../services/pushNotifications';
 import i18n from '../i18n/i18n';
 
 import { getWsUrl } from '../utils/ws';
@@ -83,14 +87,16 @@ function handleEvent(data: any, add: (n: any) => void) {
     createdAt: new Date().toISOString(),
   });
 
-  playNotificationSound(eventType);
+  if (shouldDeliverNativeAlert(eventType, requestId)) {
+    playNotificationSound(eventType);
 
-  showLocalNotification({
-    title,
-    body,
-    requestId,
-    channelId: 'workshop-general',
-  }).catch(() => {});
+    showLocalNotification({
+      title,
+      body,
+      requestId,
+      channelId: ALERT_CHANNEL_ID,
+    }).catch(() => {});
+  }
 }
 
 function buildBody(eventType: string, payload: any): string {

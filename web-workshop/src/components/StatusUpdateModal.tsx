@@ -26,9 +26,12 @@ export default function StatusUpdateModal({ requestId, currentStatus, onClose }:
     onSuccess: () => {
       toast.success(t('toast.success.statusUpdated'));
       queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['workshop-request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['workshop-chat-requests'] });
       onClose();
     },
-    onError: () => toast.error(t('toast.error.statusUpdateFailed')),
+    onError: (error: any) => toast.error(error?.friendlyMessage || error?.response?.data?.message || t('toast.error.statusUpdateFailed')),
   });
 
   const handleSubmit = (e: React.FormEvent) => {

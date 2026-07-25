@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   Wrench, Plus, Pencil, Trash2, Copy, Eye, EyeOff, CheckCircle2,
-  XCircle, Loader2, Search, X, AlertCircle, Package, ChevronLeft, Check
+  XCircle, Loader2, Search, X, AlertCircle, Package, ChevronLeft, Check, MoreHorizontal
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { serviceListingsApi, type ServiceListing, type ServiceCategory, type ServiceTemplate, type ServiceCatalogCategory, type CreateServiceListingRequest } from '../api/serviceListings.api';
@@ -31,6 +31,9 @@ function AddServiceModal({ catalog, onClose }: { catalog: ServiceCatalogCategory
 
   const mutation = useMutation({
     mutationFn: () => {
+      if (!Number.isFinite(form.price) || form.price <= 0) {
+        throw new Error('أدخل سعراً أكبر من صفر');
+      }
       const payload: CreateServiceListingRequest = {
         name: selectedTemplate?.name || customName,
         price: form.price,
@@ -49,7 +52,7 @@ function AddServiceModal({ catalog, onClose }: { catalog: ServiceCatalogCategory
       queryClient.invalidateQueries({ queryKey: ['myServiceListings'] });
       onClose();
     },
-    onError: () => toast.error(t('toast.error.failedSaveServices', 'فشل في حفظ الخدمة')),
+    onError: (err: any) => toast.error(err?.friendlyMessage || err?.message || t('toast.error.failedSaveServices', 'فشل في حفظ الخدمة')),
   });
 
   if (step === 'category') {
@@ -292,13 +295,18 @@ function EditServiceModal({ service, categories, onClose }: { service: ServiceLi
   });
 
   const mutation = useMutation({
-    mutationFn: () => serviceListingsApi.updateService(service.id, form),
+    mutationFn: () => {
+      if (!Number.isFinite(form.price) || form.price <= 0) {
+        throw new Error('أدخل سعراً أكبر من صفر');
+      }
+      return serviceListingsApi.updateService(service.id, form);
+    },
     onSuccess: () => {
       toast.success(t('toast.success.serviceUpdated', 'تم تحديث الخدمة'));
       queryClient.invalidateQueries({ queryKey: ['myServiceListings'] });
       onClose();
     },
-    onError: () => toast.error(t('toast.error.failedSaveServices', 'فشل في حفظ الخدمة')),
+    onError: (err: any) => toast.error(err?.friendlyMessage || err?.message || t('toast.error.failedSaveServices', 'فشل في حفظ الخدمة')),
   });
 
   return (
@@ -406,6 +414,7 @@ export default function ServicesPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingService, setEditingService] = useState<ServiceListing | null>(null);
   const [deletingService, setDeletingService] = useState<ServiceListing | null>(null);
+  const [openActionsId, setOpenActionsId] = useState<number | null>(null);
 
   const { data: categories = [] } = useQuery<ServiceCategory[]>({
     queryKey: ['serviceCategories'],
@@ -534,7 +543,7 @@ export default function ServicesPage() {
         </select>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
+      <div className="grid grid-cols-3 gap-3 text-center">
         <div className="card p-3 dark:bg-surface-900">
           <p className="text-2xl font-bold text-surface-900 dark:text-surface-100">{activeServices.length}</p>
           <p className="text-xs text-surface-400">{t('pages.services.totalServices', 'إجمالي الخدمات')}</p>
@@ -567,6 +576,7 @@ export default function ServicesPage() {
                 {catName}
                 <span className="text-[10px] font-normal text-surface-500">({catServices.length})</span>
               </h3>
+              <div className="grid gap-3 xl:grid-cols-2">
               {catServices.map((svc) => (
                 <div key={svc.id} className="card p-4 group relative overflow-hidden">
                   <div className="flex items-start gap-3">
@@ -607,7 +617,19 @@ export default function ServicesPage() {
                     </div>
                   </div>
 
-                  <div className="absolute top-2 left-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="mt-3 flex items-center gap-2 border-t border-surface-100 pt-3 dark:border-surface-800">
+                    <button onClick={() => setEditingService(svc)} className="flex min-h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-surface-100 px-3 text-xs font-bold text-surface-700 transition hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-200 dark:hover:bg-surface-700">
+                      <Pencil size={14} /> تعديل الخدمة
+                    </button>
+                    <button onClick={() => toggleAvailabilityMutation.mutate(svc)} className={`flex min-h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-bold ${svc.isAvailable ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300'}`}>
+                      {svc.isAvailable ? <CheckCircle2 size={14} /> : <XCircle size={14} />} {svc.isAvailable ? 'متاحة' : 'متوقفة'}
+                    </button>
+                    <button onClick={() => setOpenActionsId(openActionsId === svc.id ? null : svc.id)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-surface-200 text-surface-500 dark:border-surface-700" aria-label="المزيد من الإجراءات">
+                      <MoreHorizontal size={17} />
+                    </button>
+                  </div>
+
+                  <div className={`${openActionsId === svc.id ? 'flex' : 'hidden'} mt-2 items-center justify-end gap-1 rounded-xl bg-surface-50 p-2 dark:bg-surface-800/60`}>
                     <button onClick={() => toggleVisibilityMutation.mutate(svc)} className="p-1.5 rounded-lg bg-surface-800/90 hover:bg-surface-700 text-surface-400 hover:text-white transition-colors" title={svc.isVisible ? 'إخفاء' : 'إظهار'}>
                       {svc.isVisible ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
@@ -626,6 +648,7 @@ export default function ServicesPage() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           ))}
         </div>

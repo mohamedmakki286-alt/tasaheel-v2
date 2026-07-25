@@ -1,5 +1,11 @@
 import apiClient from './client';
 import type { Quote, SubmitQuotePayload } from '../types';
+import { parseApiDate } from '../utils/formatters';
+
+function normalizeQuotes(quotes: Quote[]): Quote[] {
+  return Array.from(new Map(quotes.map((quote) => [quote.id, quote])).values())
+    .sort((a, b) => parseApiDate(b.createdAt).getTime() - parseApiDate(a.createdAt).getTime());
+}
 
 export async function submitQuote(requestId: string, payload: SubmitQuotePayload): Promise<Quote> {
   const response = await apiClient.post('/workshops/quotes', { requestId, ...payload });
@@ -20,7 +26,7 @@ export async function submitQuote(requestId: string, payload: SubmitQuotePayload
 export async function getMyQuotes(): Promise<Quote[]> {
   const response = await apiClient.get('/workshops/quotes');
   const list = Array.isArray(response.data) ? response.data : [];
-  return list.map((q: any) => ({
+  return normalizeQuotes(list.map((q: any) => ({
     id: String(q.id),
     requestId: String(q.requestId || ''),
     workshopId: String(q.workshopId || ''),
@@ -34,13 +40,13 @@ export async function getMyQuotes(): Promise<Quote[]> {
     estimatedDays: q.estimatedDays || null,
     warrantyMonths: q.warrantyMonths || null,
     createdAt: q.createdAt || '',
-  }));
+  })));
 }
 
 export async function getRequestQuotes(requestId: string): Promise<Quote[]> {
-  const response = await apiClient.get(`/requests/${requestId}/quotes`);
+  const response = await apiClient.get(`/workshops/requests/${requestId}/quotes`);
   const list = Array.isArray(response.data) ? response.data : [];
-  return list.map((q: any) => ({
+  return normalizeQuotes(list.map((q: any) => ({
     id: String(q.id),
     requestId: String(q.requestId || requestId),
     workshopId: String(q.workshopId || ''),
@@ -50,5 +56,5 @@ export async function getRequestQuotes(requestId: string): Promise<Quote[]> {
     notes: q.notes || '',
     status: q.status || 'pending',
     createdAt: q.createdAt || '',
-  }));
+  })));
 }

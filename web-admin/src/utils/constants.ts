@@ -73,7 +73,10 @@ export const REQUEST_STATUSES = [
   { value: 'pending', label: 'قيد الانتظار' },
   { value: 'quoted', label: 'تم التسعير' },
   { value: 'accepted', label: 'مقبول' },
+  { value: 'inspection_report', label: 'بانتظار اعتماد تقرير الفحص' },
+  { value: 'customer_approved', label: 'اعتمد العميل التقرير' },
   { value: 'in_progress', label: 'قيد التنفيذ' },
+  { value: 'awaiting_payment', label: 'بانتظار الدفع' },
   { value: 'completed', label: 'مكتمل' },
   { value: 'cancelled', label: 'ملغي' },
 ];

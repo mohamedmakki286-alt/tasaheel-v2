@@ -8,7 +8,13 @@ export async function getInvoices(page = 0, size = 20): Promise<{ content: Invoi
 
 export async function getFinancialStats(): Promise<FinancialStats> {
   const { data } = await apiClient.get('/workshops/financial-stats');
-  return data.data;
+  return data?.data ?? data ?? {
+    totalRevenue: 0,
+    totalInvoices: 0,
+    paidCount: 0,
+    pendingCount: 0,
+    pendingAmount: 0,
+  };
 }
 
 export async function getFinancialDashboard(): Promise<WorkshopFinancialDashboard> {

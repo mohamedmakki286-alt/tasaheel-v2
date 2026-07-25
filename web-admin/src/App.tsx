@@ -24,6 +24,7 @@ import SettlementsPage from './pages/SettlementsPage';
 import AccountsPage from './pages/AccountsPage';
 import JournalEntriesPage from './pages/JournalEntriesPage';
 import OffersPage from './pages/OffersPage';
+import TestDataResetPage from './pages/TestDataResetPage';
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
 
@@ -66,6 +67,7 @@ function AppRoutes() {
         <Route path="services" element={<ServicesPage />} />
         <Route path="workshop-services" element={<WorkshopServiceListingsPage />} />
         <Route path="offers" element={<OffersPage />} />
+        <Route path="test-data-reset" element={<TestDataResetPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

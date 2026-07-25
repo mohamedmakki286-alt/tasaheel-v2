@@ -300,7 +300,7 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
 
   const readMutation = useMutation({
     mutationFn: () => markAsRead(room!.id),
-    onSuccess: () => {},
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['chat-rooms'] }),
   });
 
   useEffect(() => {

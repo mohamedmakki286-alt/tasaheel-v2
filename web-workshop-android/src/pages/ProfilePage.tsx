@@ -143,15 +143,18 @@ export default function ProfilePage() {
     setWorkingHours(prev => prev.map((h, i) => i === index ? { ...h, [field]: value } : h));
   };
 
+  const profilePayload = (overrides: { logoUrl?: string; coverImageUrl?: string } = {}) => ({
+    name, phone, address, city, workshopType: workshopType as any,
+    services: workshop?.services || [],
+    description, workingHours: JSON.stringify(workingHours),
+    whatsapp, website, tiktokUrl, snapchatUrl, facebookUrl, instagramUrl, xUrl, youtubeUrl,
+    features: features.join(','), latitude, longitude,
+    logoUrl: overrides.logoUrl ?? logoUrl,
+    coverImageUrl: overrides.coverImageUrl ?? coverImageUrl,
+  });
+
   const mutation = useMutation({
-    mutationFn: () => updateProfile({
-      name, phone, address, city, workshopType: workshopType as any,
-      services: workshop?.services || [],
-      description, workingHours: JSON.stringify(workingHours),
-      whatsapp, website, tiktokUrl, snapchatUrl, facebookUrl, instagramUrl, xUrl, youtubeUrl,
-      features: features.join(','), latitude, longitude,
-      logoUrl, coverImageUrl,
-    }),
+    mutationFn: () => updateProfile(profilePayload()),
     onSuccess: (data) => {
       updateWorkshop(data);
       toast.success(t('toast.success.profileUpdated'));
@@ -201,7 +204,9 @@ export default function ProfilePage() {
     setUploadingLogo(true);
     try {
       const url = await uploadImage(file, 'logo');
+      const savedProfile = await updateProfile(profilePayload({ logoUrl: url }));
       setLogoUrl(url);
+      updateWorkshop(savedProfile);
       toast.success('تم رفع الشعار بنجاح');
     } catch { toast.error('فشل رفع الشعار'); }
     setUploadingLogo(false);
@@ -214,7 +219,9 @@ export default function ProfilePage() {
     setUploadingCover(true);
     try {
       const url = await uploadImage(file, 'cover');
+      const savedProfile = await updateProfile(profilePayload({ coverImageUrl: url }));
       setCoverImageUrl(url);
+      updateWorkshop(savedProfile);
       toast.success('تم رفع صورة الغلاف بنجاح');
     } catch { toast.error('فشل رفع صورة الغلاف'); }
     setUploadingCover(false);

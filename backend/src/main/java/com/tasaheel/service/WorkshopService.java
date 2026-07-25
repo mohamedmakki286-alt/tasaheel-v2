@@ -164,6 +164,13 @@ public class WorkshopService {
                 .collect(Collectors.toList());
     }
 
+    public List<QuoteDTO> getRequestQuotesForWorkshop(Long requestId, Long workshopId) {
+        getDispatchedRequest(requestId, workshopId);
+        return quoteRepository.findByRequestIdOrderByCreatedAtAsc(requestId).stream()
+                .map(this::toQuoteDTO)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public QuoteDTO submitQuote(Long requestId, Long workshopId, Double price, String notes,
                                  Integer estimatedDays, Integer warrantyMonths, Long serviceTypeId) {
@@ -255,6 +262,7 @@ public class WorkshopService {
     }
 
     private static final java.util.Map<String, java.util.Set<String>> WORKSHOP_ALLOWED_TRANSITIONS = java.util.Map.of(
+        "accepted", java.util.Set.of("inspection_report"),
         "customer_approved", java.util.Set.of("in_progress"),
         "in_progress", java.util.Set.of("awaiting_payment")
     );
@@ -460,6 +468,8 @@ public class WorkshopService {
                 .carModel(r.getCar().getModel())
                 .carYear(r.getCar().getYear())
                 .carPlateNumber(r.getCar().getPlateNumber())
+                .carColor(r.getCar().getColor())
+                .carMileage(r.getCar().getMileage())
                 .serviceTypeId(primary != null ? primary.getId() : null)
                 .serviceTypeName(primary != null ? primary.getName() : null)
                 .serviceTypeIds(sts.stream().map(ServiceType::getId).collect(Collectors.toList()))
@@ -471,6 +481,7 @@ public class WorkshopService {
                 .city(r.getCity())
                 .status(r.getStatus())
                 .hasTransportRequest(r.getHasTransportRequest())
+                .executionMethod(r.getExecutionMethod())
                 .allowMultiWorkshop(r.getAllowMultiWorkshop())
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())

@@ -44,7 +44,9 @@ export const useNotificationStore = create<NotificationState>()(
       unreadCount: 0,
       addNotification: (n) =>
         set((s) => {
-          const updated = [n, ...s.notifications].slice(0, 50);
+          const updated = [n, ...s.notifications.filter((item) => item.id !== n.id)]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 50);
           return { notifications: updated, unreadCount: updated.filter((x) => !x.read).length };
         }),
       markAsRead: (id) =>
@@ -65,13 +67,14 @@ export const useNotificationStore = create<NotificationState>()(
       syncFromServer: async () => {
         try {
           const page = await notificationsApi.getAll(0, 50);
-          const items = (page.content || []).map(mapServerNotification);
-          if (items.length > 0) {
-            set({
-              notifications: items,
-              unreadCount: items.filter((n: NotificationItem) => !n.read).length,
-            });
-          }
+          const mapped: NotificationItem[] = (page.content || []).map(mapServerNotification);
+          const items: NotificationItem[] = Array.from(
+            new Map<string, NotificationItem>(mapped.map((item): [string, NotificationItem] => [item.id, item])).values()
+          ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          set({
+            notifications: items,
+            unreadCount: items.filter((n: NotificationItem) => !n.read).length,
+          });
         } catch {}
       },
       syncUnreadCount: async () => {

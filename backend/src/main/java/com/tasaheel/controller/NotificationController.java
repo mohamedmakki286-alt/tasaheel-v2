@@ -22,7 +22,7 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'WORKSHOP', 'DRIVER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'WORKSHOP', 'DRIVER', 'TECHNICIAN', 'ADMIN')")
     public ResponseEntity<ApiResponse<Page<NotificationDTO>>> getNotifications(
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestParam(defaultValue = "0") int page,
@@ -33,7 +33,7 @@ public class NotificationController {
     }
 
     @GetMapping("/unread-count")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'WORKSHOP', 'DRIVER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'WORKSHOP', 'DRIVER', 'TECHNICIAN', 'ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getUnreadCount(
             @AuthenticationPrincipal UserDetailsImpl user) {
         long count = notificationService.getUnreadCount(user.getUserId(), user.getRole());
@@ -41,11 +41,11 @@ public class NotificationController {
     }
 
     @PutMapping("/{id}/read")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'WORKSHOP', 'DRIVER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'WORKSHOP', 'DRIVER', 'TECHNICIAN', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> markAsRead(
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long id) {
-        boolean updated = notificationService.markAsRead(id, user.getUserId());
+        boolean updated = notificationService.markAsRead(id, user.getUserId(), user.getRole());
         if (updated) {
             return ResponseEntity.ok(ApiResponse.success(null));
         }
@@ -53,7 +53,7 @@ public class NotificationController {
     }
 
     @PutMapping("/read-all")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'WORKSHOP', 'DRIVER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'WORKSHOP', 'DRIVER', 'TECHNICIAN', 'ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Integer>>> markAllAsRead(
             @AuthenticationPrincipal UserDetailsImpl user) {
         int count = notificationService.markAllAsRead(user.getUserId(), user.getRole());

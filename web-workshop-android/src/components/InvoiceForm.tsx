@@ -25,7 +25,7 @@ export default function InvoiceForm({
   const [items, setItems] = useState<InvoiceItemPayload[]>(
     defaultItems && defaultItems.length > 0
       ? defaultItems
-      : [{ name: '', quantity: 1, unitPrice: 0 }]
+      : [{ name: '', quantity: 1, unitPrice: 0, category: 'part' }]
   );
   const [taxPercent, setTaxPercent] = useState(defaultTaxPercent.toString());
   const workshop = useAuthStore((s) => s.workshop);
@@ -36,17 +36,22 @@ export default function InvoiceForm({
   const itemsTotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
   const taxAmount = (itemsTotal * tPct) / 100;
   const grandTotal = itemsTotal + taxAmount;
+  const partsTotal = items.filter(i => i.category !== 'labor').reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+  const laborTotal = items.filter(i => i.category === 'labor').reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
   const updateItem = (index: number, field: keyof InvoiceItemPayload, value: string) => {
     setItems((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [field]: field === 'name' ? value : Number(value) || 0 };
+      next[index] = {
+        ...next[index],
+        [field]: field === 'name' || field === 'category' ? value : Number(value) || 0,
+      };
       return next;
     });
   };
 
   const addItem = () => {
-    setItems((prev) => [...prev, { name: '', quantity: 1, unitPrice: 0 }]);
+    setItems((prev) => [...prev, { name: '', quantity: 1, unitPrice: 0, category: 'part' }]);
   };
 
   const removeItem = (index: number) => {
@@ -61,8 +66,14 @@ export default function InvoiceForm({
           name: i.name,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
+          category: i.category,
         })),
         taxPercent: tPct,
+        partsTotal,
+        laborTotal,
+        totalAmount: itemsTotal,
+        taxAmount,
+        grandTotal,
       }),
     onSuccess: () => {
       toast.success(t('toast.success.invoiceCreated'));
@@ -123,6 +134,15 @@ export default function InvoiceForm({
             {items.map((item, index) => (
               <div key={index} className="p-3 rounded-xl bg-surface-50 border border-surface-200 space-y-2">
                 <div className="flex items-center gap-2">
+                  <select
+                    value={item.category || 'part'}
+                    onChange={(e) => updateItem(index, 'category', e.target.value)}
+                    className="input-field w-28 text-sm"
+                    aria-label="نوع البند"
+                  >
+                    <option value="part">قطعة</option>
+                    <option value="labor">أجرة عمل</option>
+                  </select>
                   <input
                     type="text"
                     value={item.name}

@@ -7,6 +7,8 @@ import { useThemeStore } from '../stores/themeStore';
 import { Camera, CheckCircle2, ChevronLeft, KeyRound, LogOut, Mail, MapPin, Moon, Save, ShieldCheck, Sun, UserRound, X, MessageCircle, Fingerprint } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getRooms } from '../api/chat.api';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -21,6 +23,8 @@ export function SettingsPage() {
   const [biometricEnabled, setBiometricEnabled] = useState(() => localStorage.getItem('tasaheel-biometric-enabled') === 'true');
   const fileInput = useRef<HTMLInputElement>(null);
   const isDark = theme === 'dark';
+  const { data: chatRooms = [] } = useQuery({ queryKey: ['chat-rooms'], queryFn: getRooms, refetchInterval: 15_000 });
+  const unreadMessages = chatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
 
   const handleAvatar = async (file?: File) => {
     if (!file) return;
@@ -75,7 +79,7 @@ export function SettingsPage() {
     </section>
 
     <section className="overflow-hidden rounded-3xl border border-surface-200 bg-white dark:border-surface-700 dark:bg-surface-900">
-      <button onClick={() => navigate('/chats')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 dark:bg-accent-500/10"><MessageCircle size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">محادثاتي</span><span className="block text-xs text-surface-500">محادثاتك مع الورش</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
+      <button onClick={() => navigate('/chats')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 dark:bg-accent-500/10"><MessageCircle size={20}/>{unreadMessages > 0 && <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-black text-white">{Math.min(unreadMessages, 99)}</span>}</span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">محادثاتي</span><span className="block text-xs text-surface-500">{unreadMessages > 0 ? `${unreadMessages} رسائل غير مقروءة` : 'محادثاتك مع الورش'}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
       <button onClick={() => setPanel('email')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10"><Mail size={20}/></span><span className="min-w-0 flex-1"><span className="block font-black text-surface-900 dark:text-white">البريد الإلكتروني</span><span className="block truncate text-xs text-surface-500">{customer?.email || 'غير مضاف'}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
       <button onClick={() => setPanel('password')} className="flex w-full items-center gap-3 p-4 text-right transition hover:bg-surface-50 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><KeyRound size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">كلمة المرور</span><span className="block text-xs text-surface-500">تغيير آمن عبر رابط التحقق</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
     </section>

@@ -44,8 +44,8 @@ public class NotificationService {
     }
 
     @Transactional
-    public boolean markAsRead(Long id, Long userId) {
-        return notificationRepository.markAsRead(id, userId) > 0;
+    public boolean markAsRead(Long id, Long userId, String userRole) {
+        return notificationRepository.markAsRead(id, userId, userRole) > 0;
     }
 
     @Transactional

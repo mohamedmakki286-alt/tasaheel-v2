@@ -1,14 +1,22 @@
 import apiClient from './client';
 import type { ServiceRequest, StatusUpdatePayload } from '../types';
 import { useAuthStore } from '../stores/authStore';
+import { parseApiDate } from '../utils/formatters';
+
+function newestFirst(requests: ServiceRequest[]): ServiceRequest[] {
+  return requests.sort(
+    (a, b) => parseApiDate(b.createdAt).getTime() - parseApiDate(a.createdAt).getTime()
+  );
+}
 
 export async function getNewRequests(): Promise<ServiceRequest[]> {
   const workshop = useAuthStore.getState().workshop;
   const response = await apiClient.get('/workshops/requests', { params: { city: workshop?.city || '' } });
   const list = Array.isArray(response.data) ? response.data : [];
-  return list.map((r: any) => ({
+  return newestFirst(list.map((r: any) => ({
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
+    customerName: r.customerName || '',
     car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
@@ -25,15 +33,16 @@ export async function getNewRequests(): Promise<ServiceRequest[]> {
     technicianName: r.technicianName || undefined,
     technicianPhone: r.technicianPhone || undefined,
     technicianSpecialty: r.technicianSpecialty || undefined,
-  }));
+  })));
 }
 
 export async function getMyRequests(): Promise<ServiceRequest[]> {
   const response = await apiClient.get('/workshops/my-requests');
   const list = Array.isArray(response.data) ? response.data : [];
-  return list.map((r: any) => ({
+  return newestFirst(list.map((r: any) => ({
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
+    customerName: r.customerName || '',
     car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
@@ -50,7 +59,7 @@ export async function getMyRequests(): Promise<ServiceRequest[]> {
     technicianName: r.technicianName || undefined,
     technicianPhone: r.technicianPhone || undefined,
     technicianSpecialty: r.technicianSpecialty || undefined,
-  }));
+  })));
 }
 
 export async function getRequestDetail(id: string): Promise<ServiceRequest> {
@@ -59,6 +68,7 @@ export async function getRequestDetail(id: string): Promise<ServiceRequest> {
   return {
     id: String(r.id),
     customer: { id: String(r.customerId), name: r.customerName || '', phone: r.customerPhone || '' },
+    customerName: r.customerName || '',
     car: { id: String(r.carId || ''), make: r.carMake || '', model: r.carModel || '', year: r.carYear || 0, plateNumber: r.carPlateNumber, color: r.carColor, mileage: r.carMileage },
     service: r.serviceTypeName || '',
     description: r.description || '',
@@ -98,7 +108,7 @@ export async function declineRequest(id: string, reason?: string): Promise<void>
 
 export async function updateRequestStatus(id: string, payload: StatusUpdatePayload): Promise<ServiceRequest> {
   const response = await apiClient.put(`/workshops/requests/${id}/status`, payload);
-  const r = response.data;
+  const r = response.data || {};
   return {
     id: String(r.id || id),
     customer: { id: '', name: '', phone: '' },

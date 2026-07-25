@@ -49,6 +49,7 @@ public class FirebaseService {
 
             Message.Builder messageBuilder = Message.builder()
                     .setToken(token)
+                    .setAndroidConfig(createAndroidConfig())
                     .setNotification(Notification.builder()
                             .setTitle(title)
                             .setBody(body)
@@ -69,6 +70,7 @@ public class FirebaseService {
         try {
             Message.Builder messageBuilder = Message.builder()
                     .setTopic(topic)
+                    .setAndroidConfig(createAndroidConfig())
                     .setNotification(Notification.builder()
                             .setTitle(title)
                             .setBody(body)
@@ -93,6 +95,7 @@ public class FirebaseService {
 
             MulticastMessage.Builder messageBuilder = MulticastMessage.builder()
                     .addAllTokens(tokens)
+                    .setAndroidConfig(createAndroidConfig())
                     .setNotification(Notification.builder()
                             .setTitle(title)
                             .setBody(body)
@@ -108,5 +111,15 @@ public class FirebaseService {
         } catch (FirebaseMessagingException e) {
             log.error("Failed to send multicast notification: {}", e.getMessage());
         }
+    }
+
+    private AndroidConfig createAndroidConfig() {
+        return AndroidConfig.builder()
+                .setPriority(AndroidConfig.Priority.HIGH)
+                .setNotification(AndroidNotification.builder()
+                        .setChannelId("tasaheel_alerts")
+                        .setSound("default")
+                        .build())
+                .build();
     }
 }

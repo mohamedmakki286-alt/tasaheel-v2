@@ -132,6 +132,12 @@ public class WorkshopServiceListingService {
     public WorkshopServiceListingDTO updateService(Long id, UpdateWorkshopServiceRequest req, Long userId) {
         WorkshopServiceListing service = serviceListingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Service", id));
+        if (!service.getWorkshop().getId().equals(userId)) {
+            throw new BadRequestException("You can only update services owned by your workshop");
+        }
+        if (req.getPrice() != null && req.getPrice() <= 0) {
+            throw new BadRequestException("Price must be greater than zero");
+        }
 
         if (req.getName() != null) {
             logAudit(id, service.getWorkshop().getId(), "UPDATE", "name", service.getName(), req.getName(), userId, "workshop");

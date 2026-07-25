@@ -1,14 +1,26 @@
 import client, { mapPage } from './client';
 import type { MaintenanceRequest, PaginatedResponse } from '../types';
 
+function mapRequest(r: any): MaintenanceRequest {
+  return {
+    ...r,
+    carPlate: r.carPlate ?? r.carPlateNumber ?? '',
+    serviceType: r.serviceType ?? r.serviceTypeName ?? '',
+    pickupAddress: r.pickupAddress ?? r.locationAddress ?? '',
+    workshopId: r.workshopId ?? 0,
+    workshopName: r.workshopName ?? '',
+  };
+}
+
 export async function getRequests(params?: Record<string, any>): Promise<PaginatedResponse<MaintenanceRequest>> {
   const { data } = await client.get<any>('/admin/requests', { params: { ...params, page: params?.page != null ? params.page - 1 : 0 } });
-  return mapPage(data);
+  const page = mapPage<MaintenanceRequest>(data);
+  return { ...page, data: page.data.map(mapRequest) };
 }
 
 export async function getRequest(id: number): Promise<MaintenanceRequest> {
-  const { data } = await client.get<MaintenanceRequest>(`/requests/${id}`);
-  return data;
+  const { data } = await client.get<MaintenanceRequest>(`/admin/requests/${id}`);
+  return mapRequest(data);
 }
 
 export async function deleteRequest(id: number): Promise<void> {

@@ -84,6 +84,8 @@ function handleEvent(data: any, add: (n: any) => void) {
     read: false,
     createdAt: new Date().toISOString(),
   });
+
+  playNotificationSound(eventType);
 }
 
 function buildBody(eventType: string, payload: any): string {

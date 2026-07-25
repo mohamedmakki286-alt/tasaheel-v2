@@ -115,7 +115,7 @@ function TechnicianChatSection({ requestId, customerName }: { requestId: number;
   const workshop = useAuthStore((s) => s.workshop);
   const userId = workshop?.id || useAuthStore((s) => s.technician?.id);
 
-  const { data: room } = useQuery({
+  const { data: room, isError: isRoomError, refetch: refetchRoom } = useQuery({
     queryKey: ['chat-room', requestId],
     queryFn: () => getRoom(String(requestId)),
     enabled: !!requestId,
@@ -183,6 +183,19 @@ function TechnicianChatSection({ requestId, customerName }: { requestId: number;
     setPreviewFile(file);
     e.target.value = '';
   };
+
+  if (isRoomError) {
+    return (
+      <div className="rounded-2xl border border-surface-200 bg-white p-6 text-center shadow-sm dark:border-surface-700 dark:bg-surface-900">
+        <MessageCircle size={36} className="mx-auto mb-3 text-surface-300 dark:text-surface-600" />
+        <h3 className="font-bold text-surface-900 dark:text-white">تعذر فتح المحادثة</h3>
+        <p className="mt-1 text-sm text-surface-500 dark:text-surface-400">أعد المحاولة لتجهيز محادثة العميل.</p>
+        <button type="button" onClick={() => refetchRoom()} className="mt-4 rounded-xl bg-accent-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-accent-700">
+          إعادة المحاولة
+        </button>
+      </div>
+    );
+  }
 
   if (!room) {
     return (
@@ -303,6 +316,7 @@ export default function TechnicianRequestDetailPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const requestCall = useCallStore((s) => s.requestCall);
   const [showReport, setShowReport] = useState(false);
+  const chatSectionRef = useRef<HTMLDivElement>(null);
 
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['technician-requests'],
@@ -390,7 +404,7 @@ export default function TechnicianRequestDetailPage() {
   const canWriteReport = request.status === 'in_progress' || request.status === 'accepted';
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA]">
+    <div className="technician-request-detail min-h-screen bg-[#F7F8FA] dark:bg-surface-950">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -422,11 +436,22 @@ export default function TechnicianRequestDetailPage() {
                   <p className="font-semibold text-[#111827] text-sm">{request.customerName}</p>
                 </div>
               </div>
-              {request.customerPhone && (
-                <button onClick={() => requestCall(request.customerId, request.customerName, request.id)} className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
-                  <Phone size={18} />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => chatSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="flex items-center gap-2 rounded-xl bg-[#E31B23] px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#c9161e]"
+                  aria-label="محادثة العميل"
+                >
+                  <MessageCircle size={17} />
+                  <span className="hidden sm:inline">محادثة</span>
                 </button>
-              )}
+                {request.customerPhone && (
+                  <button onClick={() => requestCall(request.customerId, request.customerName, request.id)} className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors dark:bg-green-500/10 dark:text-green-400" aria-label="الاتصال بالعميل">
+                    <Phone size={18} />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Vehicle */}
@@ -532,7 +557,9 @@ export default function TechnicianRequestDetailPage() {
         </div>
 
         {/* Chat */}
-        <TechnicianChatSection requestId={request.id} customerName={request.customerName} />
+        <div ref={chatSectionRef} className="scroll-mt-20">
+          <TechnicianChatSection requestId={request.id} customerName={request.customerName} />
+        </div>
       </div>
 
       {/* Inspection Report Form */}

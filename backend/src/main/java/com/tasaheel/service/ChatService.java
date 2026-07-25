@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +49,11 @@ public class ChatService {
         }
 
         if (existingRoom != null) {
-            return toChatRoomDTO(existingRoom);
+            if (existingRoom.getTechnician() == null && existingRoom.getRequest().getTechnician() != null) {
+                existingRoom.setTechnician(existingRoom.getRequest().getTechnician());
+                existingRoom = chatRoomRepository.save(existingRoom);
+            }
+            return toChatRoomDTO(existingRoom, "customer", customerId);
         }
 
         MaintenanceRequest request = requestRepository.findById(requestId)
@@ -70,10 +75,11 @@ public class ChatService {
                 .customer(customer)
                 .workshop(workshop)
                 .driver(driver)
+                .technician(request.getTechnician())
                 .build();
 
         room = chatRoomRepository.save(room);
-        return toChatRoomDTO(room);
+        return toChatRoomDTO(room, "customer", customerId);
     }
 
     @Transactional
@@ -176,11 +182,53 @@ public class ChatService {
         return messages.map(this::toChatMessageDTO);
     }
 
+    @Transactional
     public ChatRoomDTO getRoomByRequestId(Long requestId, UserDetailsImpl user) {
-        ChatRoom room = chatRoomRepository.findByRequestId(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("ChatRoom for request", requestId));
+        ChatRoom room = chatRoomRepository.findByRequestId(requestId).orElse(null);
+        MaintenanceRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
+
+        if (room == null && "technician".equalsIgnoreCase(user.getRole())
+                && request.getTechnician() != null
+                && request.getTechnician().getId().equals(user.getUserId())) {
+            room = chatRoomRepository.save(ChatRoom.builder()
+                    .request(request)
+                    .customer(request.getCustomer())
+                    .workshop(request.getTechnician().getWorkshop())
+                    .technician(request.getTechnician())
+                    .build());
+        }
+
+        if (room == null) {
+            throw new ResourceNotFoundException("ChatRoom for request", requestId);
+        }
+
+        if (room.getTechnician() == null && request.getTechnician() != null) {
+            room.setTechnician(request.getTechnician());
+            room = chatRoomRepository.save(room);
+        }
         requireRoomParticipant(room, user);
-        return toChatRoomDTO(room);
+        return toChatRoomDTO(room, user.getRole(), user.getUserId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatRoomDTO> getRooms(UserDetailsImpl user) {
+        String role = user.getRole().toLowerCase();
+        List<ChatRoom> rooms = switch (role) {
+            case "customer" -> chatRoomRepository.findByCustomerIdOrderByCreatedAtDesc(user.getUserId());
+            case "workshop" -> chatRoomRepository.findByWorkshopIdOrderByCreatedAtDesc(user.getUserId());
+            case "technician" -> chatRoomRepository.findByTechnicianIdOrderByCreatedAtDesc(user.getUserId());
+            case "driver" -> chatRoomRepository.findByDriverIdOrderByCreatedAtDesc(user.getUserId());
+            default -> List.of();
+        };
+        return rooms.stream()
+                .map(room -> toChatRoomDTO(room, role, user.getUserId()))
+                .sorted((a, b) -> {
+                    java.time.LocalDateTime at = a.getLastMessage() != null ? a.getLastMessage().getCreatedAt() : a.getCreatedAt();
+                    java.time.LocalDateTime bt = b.getLastMessage() != null ? b.getLastMessage().getCreatedAt() : b.getCreatedAt();
+                    return bt.compareTo(at);
+                })
+                .toList();
     }
 
     @Transactional
@@ -200,16 +248,15 @@ public class ChatService {
         if (!permitted) throw new BadRequestException("لست مشاركاً في هذه المحادثة");
     }
 
-    private ChatRoomDTO toChatRoomDTO(ChatRoom room) {
+    private ChatRoomDTO toChatRoomDTO(ChatRoom room, String viewerRole, Long viewerId) {
         Page<ChatMessage> lastPage = chatMessageRepository
                 .findByRoomIdOrderByCreatedAtAsc(room.getId(), PageRequest.of(0, 1,
                         org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
 
         ChatMessage lastMsg = lastPage.isEmpty() ? null : lastPage.getContent().get(0);
 
-        long unreadCount = lastMsg != null
-                ? chatMessageRepository.countByRoomIdAndIsReadFalseAndSenderIdNot(room.getId(), lastMsg.getSenderId())
-                : 0;
+        long unreadCount = chatMessageRepository
+                .countByRoomIdAndIsReadFalseAndSenderIdNot(room.getId(), viewerId);
 
         ChatMessageDTO lastMessageDTO = lastMsg != null ? toChatMessageDTO(lastMsg) : null;
 

@@ -13,7 +13,7 @@ import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
 import { useCallStore } from '@shared/call/callStore';
 
 const statusSteps = [
-  'pending', 'quoted', 'accepted', 'inspection_report', 'customer_approved', 'in_progress', 'awaiting_payment', 'completed', 'cancelled',
+  'pending', 'quoted', 'accepted', 'inspection_report', 'customer_approved', 'in_progress', 'awaiting_payment', 'completed',
 ];
 
 export function RequestDetailPage() {
@@ -31,9 +31,8 @@ export function RequestDetailPage() {
     Promise.all([
       requestsApi.getById(id),
       requestsApi.getQuotes(id).catch(() => ({ data: [] })),
-      invoicesApi.getByRequest(id).then((res: any) => {
-        const data = res?.data;
-        setInvoice(data?.id && typeof data.grandTotal === 'number' ? data : null);
+      invoicesApi.getByRequest(id).then((data) => {
+        setInvoice(data.id && Number.isFinite(data.grandTotal) ? data : null);
       }).catch(() => setInvoice(null)),
     ]).then(([requestResponse, quotesResponse]) => {
       const loadedRequest = (requestResponse as any).data || requestResponse;

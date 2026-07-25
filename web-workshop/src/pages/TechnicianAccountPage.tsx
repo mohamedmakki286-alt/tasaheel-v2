@@ -10,6 +10,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { RINGTONE_OPTIONS, previewRingtone } from '../services/notificationSound';
 import apiClient from '../api/client';
+import { TechnicianBottomNav, TechnicianHeader } from './TechnicianPage';
 
 const SPECIALTY_MAP: Record<string, string> = {
   PAINTER: 'فني سمكرة ودهان',
@@ -304,8 +305,9 @@ function AccountContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] pb-8">
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
+    <div className="technician-account-page min-h-screen bg-surface-50 pb-24 dark:bg-surface-950 lg:pb-8">
+      <TechnicianHeader />
+      <header className="hidden">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate('/technician')} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
             <ArrowRight size={20} className="text-gray-500" />
@@ -314,7 +316,7 @@ function AccountContent() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+      <div className="mx-auto max-w-4xl space-y-4 px-4 py-5 sm:px-6">
         {/* Avatar & Name */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100/50 text-center">
           <div className="w-20 h-20 rounded-full bg-[#E31B23]/10 flex items-center justify-center mx-auto mb-3">
@@ -480,7 +482,7 @@ function AccountContent() {
         </div>
 
         {/* Sound Settings */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100/50 overflow-hidden">
+        <div className="hidden">
           <div className="px-4 py-3 border-b border-gray-100">
             <h3 className="font-bold text-sm text-[#111827] flex items-center gap-2">
               <Bell size={16} className="text-[#E31B23]" />
@@ -565,6 +567,7 @@ function AccountContent() {
       {/* Modals */}
       {showEmailModal && <ChangeEmailModal currentEmail={displayEmail} onClose={() => setShowEmailModal(false)} />}
       {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
+      <TechnicianBottomNav active="account" />
     </div>
   );
 }

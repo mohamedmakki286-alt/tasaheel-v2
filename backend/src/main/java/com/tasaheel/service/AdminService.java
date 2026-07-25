@@ -396,6 +396,11 @@ public class AdminService {
         return requests.map(this::toMaintenanceRequestDTO);
     }
 
+    public MaintenanceRequestDTO getRequest(Long id) {
+        return toMaintenanceRequestDTO(requestRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Request", id)));
+    }
+
     @Transactional
     public void deleteRequest(Long id) {
         MaintenanceRequest request = requestRepository.findById(id)
@@ -427,6 +432,8 @@ public class AdminService {
                 .carModel(r.getCar().getModel())
                 .carYear(r.getCar().getYear())
                 .carPlateNumber(r.getCar().getPlateNumber())
+                .carColor(r.getCar().getColor())
+                .carMileage(r.getCar().getMileage())
                 .serviceTypeId(primary != null ? primary.getId() : null)
                 .serviceTypeName(primary != null ? primary.getName() : null)
                 .serviceTypeIds(sts.stream().map(ServiceType::getId).collect(Collectors.toList()))
@@ -438,7 +445,14 @@ public class AdminService {
                 .city(r.getCity())
                 .status(r.getStatus())
                 .hasTransportRequest(r.getHasTransportRequest())
+                .executionMethod(r.getExecutionMethod())
                 .allowMultiWorkshop(r.getAllowMultiWorkshop())
+                .technicianId(r.getTechnician() != null ? r.getTechnician().getId() : null)
+                .technicianName(r.getTechnician() != null ? r.getTechnician().getName() : null)
+                .technicianPhone(r.getTechnician() != null ? r.getTechnician().getPhone() : null)
+                .technicianSpecialty(r.getTechnician() != null ? r.getTechnician().getSpecialty() : null)
+                .workshopName(r.getTechnician() != null && r.getTechnician().getWorkshop() != null
+                        ? r.getTechnician().getWorkshop().getName() : null)
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .build();

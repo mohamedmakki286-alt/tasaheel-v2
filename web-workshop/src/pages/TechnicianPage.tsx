@@ -1,518 +1,187 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
-  Wrench, CheckCircle2, MapPin, Phone, User, LogOut, Clock,
-  Home, ClipboardList, UserCircle,
-  Play, Package, Star,
-  Settings, Car,
+  Bell, Car, CheckCircle2, ChevronLeft, ClipboardList, Clock3, Home,
+  LogOut, MapPin, MessageCircle, Moon, Package, Settings, Sun, UserCircle,
+  UserRound, Wrench,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuthStore } from '../stores/authStore';
 import apiClient from '../api/client';
-import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
+import { useNotificationStore } from '../stores/notificationStore';
 import { useTechnicianWebSocket } from '../hooks/useTechnicianWebSocket';
-import { useCallStore } from '@shared/call/callStore';
-
-const SPECIALTY_MAP: Record<string, string> = {
-  PAINTER: 'فني سمكرة ودهان',
-  MECHANIC: 'فني ميكانيكا',
-  ELECTRICIAN: 'فني كهرباء',
-  AC_TECHNICIAN: 'فني تكييف',
-  TRANSMISSION_TECHNICIAN: 'فني قير',
-  GENERAL_TECHNICIAN: 'فني شامل',
-  BODYWORK: 'فني سمكرة',
-  PAINTING: 'فني دهان',
-  BRAKES: 'فني فرامل',
-  ENGINE: 'فني محرك',
-  SUSPENSION: 'فني تعليق',
-  EXHAUST: 'فني عادم',
-  BATTERY: 'فني بطارية',
-  DIAGNOSTICS: 'فني فحص كمبيوتر',
-};
-
-function translateSpecialty(raw?: string): string {
-  if (!raw) return '';
-  const upper = raw.trim().toUpperCase().replace(/\s+/g, '_');
-  if (SPECIALTY_MAP[upper]) return SPECIALTY_MAP[upper];
-  const found = Object.entries(SPECIALTY_MAP).find(([k]) =>
-    upper.includes(k) || k.includes(upper)
-  );
-  return found ? found[1] : raw;
-}
-
-const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  pending: { label: 'قيد الانتظار', color: 'text-gray-700', bg: 'bg-gray-100' },
-  quoted: { label: 'تم تقديم عرض', color: 'text-blue-700', bg: 'bg-blue-50' },
-  accepted: { label: 'مقبول', color: 'text-green-700', bg: 'bg-green-50' },
-  in_progress: { label: 'قيد التنفيذ', color: 'text-orange-700', bg: 'bg-orange-50' },
-  awaiting_payment: { label: 'بانتظار الدفع', color: 'text-amber-700', bg: 'bg-amber-50' },
-  completed: { label: 'مكتمل', color: 'text-emerald-700', bg: 'bg-emerald-50' },
-  cancelled: { label: 'ملغي', color: 'text-red-700', bg: 'bg-red-50' },
-};
-
-const TECHNICIAN_NEXT_ACTION: Record<string, { label: string; nextStatus: string }> = {
-  accepted: { label: 'بدء العمل', nextStatus: 'in_progress' },
-  customer_approved: { label: 'بدء العمل', nextStatus: 'in_progress' },
-  in_progress: { label: 'إكمال العمل', nextStatus: 'awaiting_payment' },
-};
+import { useThemeStore } from '../stores/themeStore';
+import { timeAgo } from '../utils/formatters';
 
 interface TechnicianRequest {
   id: number;
-  customerId: number;
   customerName: string;
-  customerPhone: string;
   carMake: string;
   carModel: string;
-  carPlateNumber: string;
-  carColor: string;
   serviceTypeName: string;
-  description: string;
-  locationLat: number;
-  locationLng: number;
   locationAddress: string;
   city: string;
   status: string;
-  technicianId: number | null;
-  technicianName: string | null;
   createdAt: string;
 }
 
-function timeAgo(dateString: string): string {
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffMins < 1) return 'الآن';
-  if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
-  if (diffHours < 24) return `منذ ${diffHours} ساعة`;
-  if (diffDays < 7) return `منذ ${diffDays} يوم`;
-  return date.toLocaleDateString('ar-SA');
-}
+const specialtyLabels: Record<string, string> = {
+  MECHANIC: 'فني ميكانيكا', ELECTRICIAN: 'فني كهرباء', ENGINE: 'فني محركات',
+  BRAKES: 'فني فرامل', GENERAL_TECHNICIAN: 'فني شامل', AC_TECHNICIAN: 'فني تكييف',
+};
 
-// ===== Stats Card =====
-function StatCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
-  return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50">
-      <div className={`w-9 h-9 rounded-xl ${color} flex items-center justify-center mb-2.5`}>
-        <Icon size={18} />
-      </div>
-      <p className="text-2xl font-bold text-[#111827]">{value}</p>
-      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-    </div>
-  );
-}
+const statusLabels: Record<string, string> = {
+  pending: 'بانتظار البدء', accepted: 'مقبول', customer_approved: 'جاهز للتنفيذ',
+  in_progress: 'قيد التنفيذ', awaiting_payment: 'تحتاج إجراء', completed: 'مكتمل', cancelled: 'ملغي',
+};
 
-// ===== Request Card =====
-function RequestCard({
-  request,
-  onNavigate,
-}: {
-  request: TechnicianRequest;
-  onNavigate?: () => void;
-}) {
-  const statusInfo = STATUS_LABELS[request.status] || { label: request.status, color: 'text-gray-700', bg: 'bg-gray-100' };
-  const requestCall = useCallStore((s) => s.requestCall);
-
-  return (
-    <div onClick={onNavigate} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50 cursor-pointer active:scale-[0.98] transition-all">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-            <Wrench size={18} className="text-blue-600" />
-          </div>
-          <div className="min-w-0">
-            <p className="font-semibold text-[#111827] text-sm truncate">{request.serviceTypeName || 'خدمة صيانة'}</p>
-            <p className="text-xs text-gray-500 truncate">{request.carMake} {request.carModel}</p>
-          </div>
-        </div>
-        <span className={`px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 ${statusInfo.bg} ${statusInfo.color}`}>
-          {statusInfo.label}
-        </span>
-      </div>
-
-      <div className="space-y-1.5 mb-3">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <User size={13} className="shrink-0" />
-          <span className="truncate">{request.customerName}</span>
-          <button onClick={(e) => { e.stopPropagation(); requestCall(request.customerId, request.customerName, request.id); }} className="mr-auto text-[#E31B23] shrink-0 p-1 rounded-lg hover:bg-red-50 transition-colors">
-            <Phone size={14} />
-          </button>
-        </div>
-        {request.carPlateNumber && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Car size={13} className="shrink-0" />
-            <span>لوحة: {request.carPlateNumber}</span>
-          </div>
-        )}
-        {request.locationAddress && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <MapPin size={13} className="shrink-0" />
-            <span className="truncate">{request.locationAddress}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          <Clock size={13} className="shrink-0" />
-          <span>{timeAgo(request.createdAt)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ===== Main Dashboard =====
-function TechnicianDashboard() {
-  const [activeTab, setActiveTab] = useState<'current' | 'upcoming' | 'review' | 'completed'>('current');
-  const [mobileNav, setMobileNav] = useState<'home' | 'account'>('home');
-  const queryClient = useQueryClient();
-  const technician = useAuthStore((s) => s.technician);
-  const logout = useAuthStore((s) => s.logout);
+export function TechnicianHeader() {
   const navigate = useNavigate();
+  const technician = useAuthStore((state) => state.technician);
+  const logout = useAuthStore((state) => state.logout);
+  const { theme, toggle: toggleTheme } = useThemeStore();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, syncFromServer } = useNotificationStore();
+  const [open, setOpen] = useState(false);
 
-  useTechnicianWebSocket();
+  useEffect(() => { syncFromServer(); }, [syncFromServer]);
 
-  const { data: requests = [], isLoading } = useQuery({
-    queryKey: ['technician-requests'],
-    queryFn: async () => {
-      const response = await apiClient.get('/technician/requests');
-      return (response.data || []) as TechnicianRequest[];
-    },
-    refetchInterval: 30000,
-  });
-
-  const { data: profile } = useQuery({
-    queryKey: ['technician-profile'],
-    queryFn: async () => {
-      const response = await apiClient.get('/technician/profile');
-      return response.data;
-    },
-  });
-
-  const availabilityMutation = useMutation({
-    mutationFn: async (status: string) => {
-      const response = await apiClient.put('/technician/availability', { status });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      const updateTechnician = useAuthStore.getState().updateTechnician;
-      if (data?.availabilityStatus) {
-        updateTechnician({ availabilityStatus: data.availabilityStatus });
-      }
-      toast.success('تم تحديث التوفر');
-    },
-    onError: () => toast.error('فشل تحديث التوفر'),
-  });
-
-  const hasInProgress = requests.some(r => r.status === 'in_progress');
-  const effectiveAvailability = hasInProgress ? 'busy' : (technician?.availabilityStatus || 'available');
-
-  const categorized = useMemo(() => {
-    const current = requests.filter(r => ['accepted', 'customer_approved', 'in_progress'].includes(r.status));
-    const upcoming = requests.filter(r => r.status === 'pending');
-    const review = requests.filter(r => r.status === 'awaiting_payment');
-    const completed = requests.filter(r => r.status === 'completed' || r.status === 'cancelled');
-    return { current, upcoming, review, completed };
-  }, [requests]);
-
-  const stats = useMemo(() => {
-    const today = new Date().toDateString();
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-    return {
-      todayCount: requests.filter(r => new Date(r.createdAt).toDateString() === today).length,
-      inProgress: categorized.current.length,
-      awaitingReview: categorized.review.length,
-      completedMonth: categorized.completed.filter(r => {
-        const d = new Date(r.createdAt);
-        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-      }).length,
-    };
-  }, [requests, categorized]);
-
-  const currentRequest = categorized.current[0];
-
-  const tabCounts = {
-    current: categorized.current.length,
-    upcoming: categorized.upcoming.length,
-    review: categorized.review.length,
-    completed: categorized.completed.length,
-  };
-
-  const displayList = activeTab === 'current' ? categorized.current
-    : activeTab === 'upcoming' ? categorized.upcoming
-    : activeTab === 'review' ? categorized.review
-    : categorized.completed;
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
-
-  const displayName = technician?.name || 'الفني';
-  const displaySpecialty = translateSpecialty(technician?.specialty || profile?.specialty);
+  const name = technician?.name || 'الفني';
+  const initials = name.split(' ').map((part) => part[0]).join('').slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] pb-20 lg:pb-0">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
-        <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-full bg-[#E31B23]/10 flex items-center justify-center shrink-0">
-              <span className="text-[#E31B23] font-bold text-sm">
-                {displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2)}
-              </span>
-            </div>
-            <div className="min-w-0">
-              <h1 className="font-bold text-[#111827] text-sm truncate">مرحباً، {displayName}</h1>
-              <p className="text-[11px] text-gray-500 truncate">{displaySpecialty}</p>
-              {technician?.workshopName && (
-                <p className="text-[10px] text-gray-400 truncate">{technician.workshopName}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => navigate('/technician/account')}
-              className="p-2 rounded-lg text-gray-400 hover:text-[#111827] hover:bg-gray-100 transition-colors"
-              title="حسابي"
-            >
-              <Settings size={20} />
+    <header className="sticky top-0 z-40 border-b border-surface-200 bg-white/95 backdrop-blur dark:border-surface-800 dark:bg-surface-950/95">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <button onClick={() => navigate('/technician/account')} className="flex min-w-0 items-center gap-3 text-right">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 font-black text-accent-700 dark:bg-accent-500/15 dark:text-accent-300">{initials}</span>
+          <span className="min-w-0"><strong className="block truncate text-sm text-surface-950 dark:text-white">مرحباً، {name}</strong><span className="mt-0.5 block truncate text-[11px] text-surface-400">{specialtyLabels[technician?.specialty?.toUpperCase() || ''] || technician?.specialty || 'فني صيانة'}{technician?.workshopName ? ` • ${technician.workshopName}` : ''}</span></span>
+        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={toggleTheme} className="flex h-10 w-10 items-center justify-center rounded-xl text-surface-500 transition hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800" aria-label="تغيير المظهر">{theme === 'light' ? <Moon size={19} /> : <Sun size={19} />}</button>
+          <div className="relative">
+            <button onClick={() => setOpen((value) => !value)} className="relative flex h-10 w-10 items-center justify-center rounded-xl text-surface-500 transition hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800" aria-label="الإشعارات" aria-expanded={open}>
+              <Bell size={20} />
+              {unreadCount > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent-600 px-1 text-[10px] font-black text-white">{Math.min(unreadCount, 99)}</span>}
             </button>
-            <button onClick={handleLogout} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="تسجيل الخروج">
-              <LogOut size={20} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-2xl lg:max-w-4xl mx-auto px-4 py-4 space-y-4">
-        {/* Availability */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${
-                effectiveAvailability === 'available' ? 'bg-green-500' :
-                effectiveAvailability === 'busy' ? 'bg-orange-500' : 'bg-gray-400'
-              }`} />
-              <div>
-                <p className="text-sm font-semibold text-[#111827]">
-                  {effectiveAvailability === 'available' ? 'متاح لاستقبال الطلبات' :
-                   effectiveAvailability === 'busy' ? 'مشغول حالياً' : 'غير متاح'}
-                </p>
-                <p className="text-[11px] text-gray-500">
-                  {effectiveAvailability === 'available' ? 'يمكن للورشة إسناد طلبات جديدة إليك' :
-                   effectiveAvailability === 'busy' ? 'أنت مشغول حالياً بتنفيذ طلب' :
-                   'لن يتم إسناد طلبات جديدة إليك'}
-                </p>
-              </div>
-            </div>
-            {effectiveAvailability !== 'busy' && (
-              <button
-                onClick={() => {
-                  const next = effectiveAvailability === 'available' ? 'offline' : 'available';
-                  availabilityMutation.mutate(next);
-                }}
-                disabled={availabilityMutation.isPending}
-                className="relative w-12 h-7 rounded-full transition-colors disabled:opacity-50 shrink-0"
-                style={{
-                  backgroundColor: effectiveAvailability === 'available' ? '#22C55E' : '#D1D5DB',
-                }}
-              >
-                <span
-                  className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all"
-                  style={{
-                    right: effectiveAvailability === 'available' ? '22px' : '2px',
-                  }}
-                />
-              </button>
+            {open && (
+              <>
+                <button className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} aria-label="إغلاق الإشعارات" />
+                <div className="fixed left-3 right-3 top-16 z-50 overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-xl dark:border-surface-800 dark:bg-surface-900 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2 sm:w-[24rem]">
+                  <div className="flex items-center justify-between border-b border-surface-100 px-4 py-3 dark:border-surface-800">
+                    <div><p className="text-sm font-black">الإشعارات</p><p className="mt-0.5 text-xs text-surface-400">{unreadCount} غير مقروءة</p></div>
+                    {unreadCount > 0 && <button onClick={markAllAsRead} className="text-xs font-bold text-accent-600 dark:text-accent-400">تحديد الكل كمقروء</button>}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-10 text-center text-sm text-surface-400">لا توجد إشعارات</div>
+                    ) : notifications.slice(0, 5).map((notification) => (
+                      <button key={notification.id} onClick={() => { markAsRead(notification.id); setOpen(false); if (notification.requestId) navigate(`/technician/requests/${notification.requestId}`); }} className={`flex w-full items-start gap-3 border-b border-surface-100 px-4 py-3 text-right last:border-0 dark:border-surface-800 ${notification.read ? 'hover:bg-surface-50 dark:hover:bg-surface-800' : 'bg-accent-50/50 dark:bg-accent-500/5'}`}>
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600 dark:bg-accent-500/10 dark:text-accent-300"><ClipboardList size={15} /></span>
+                        <span className="min-w-0 flex-1"><strong className="block text-sm">{notification.title}</strong>{notification.body && <span className="mt-0.5 block line-clamp-2 text-xs text-surface-500">{notification.body}</span>}<span className="mt-1 block text-[10px] text-surface-400">{timeAgo(notification.createdAt)}</span></span>
+                        {!notification.read && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent-500" />}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => { setOpen(false); navigate('/technician/notifications'); }} className="flex w-full items-center justify-center gap-2 border-t border-surface-100 px-4 py-3 text-sm font-bold text-accent-600 dark:border-surface-800 dark:text-accent-400">عرض كل الإشعارات <ChevronLeft size={16} /></button>
+                </div>
+              </>
             )}
           </div>
+          <button onClick={() => navigate('/technician/account')} className="hidden h-10 w-10 items-center justify-center rounded-xl text-surface-500 transition hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800 sm:flex" aria-label="الحساب"><Settings size={19} /></button>
+          <button onClick={() => { logout(); navigate('/login', { replace: true }); }} className="hidden h-10 w-10 items-center justify-center rounded-xl text-surface-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 sm:flex" aria-label="تسجيل الخروج"><LogOut size={19} /></button>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {isLoading ? (
-            <>
-              {[1,2,3,4].map(i => (
-                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-pulse">
-                  <div className="w-9 h-9 rounded-xl bg-gray-200 mb-2.5" />
-                  <div className="h-7 bg-gray-200 rounded w-12 mb-1" />
-                  <div className="h-3 bg-gray-200 rounded w-20" />
-                </div>
-              ))}
-            </>
-          ) : (
-            <>
-              <StatCard icon={ClipboardList} label="طلبات اليوم" value={stats.todayCount} color="bg-blue-50 text-blue-600" />
-              <StatCard icon={Wrench} label="قيد التنفيذ" value={stats.inProgress} color="bg-orange-50 text-orange-600" />
-              <StatCard icon={Star} label="بانتظار المراجعة" value={stats.awaitingReview} color="bg-purple-50 text-purple-600" />
-              <StatCard icon={CheckCircle2} label="مكتملة هذا الشهر" value={stats.completedMonth} color="bg-emerald-50 text-emerald-600" />
-            </>
-          )}
-        </div>
-
-        {/* Current Request Hero */}
-        {currentRequest && (
-          <div className="bg-gradient-to-br from-[#E31B23] to-[#c9161e] rounded-2xl p-4 shadow-lg text-white">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
-                <Wrench size={14} />
-              </div>
-              <p className="text-sm font-bold">الطلب الحالي</p>
-              <span className="mr-auto px-2 py-0.5 rounded-md bg-white/20 text-[11px] font-medium">
-                #{currentRequest.id}
-              </span>
-            </div>
-            <p className="font-bold text-lg mb-1">{currentRequest.serviceTypeName || 'خدمة صيانة'}</p>
-            <p className="text-white/80 text-sm mb-3">{currentRequest.carMake} {currentRequest.carModel}</p>
-
-            <div className="space-y-1.5 mb-4">
-              {currentRequest.carPlateNumber && (
-                <div className="flex items-center gap-2 text-xs text-white/70">
-                  <Car size={13} />
-                  <span>لوحة: {currentRequest.carPlateNumber}</span>
-                </div>
-              )}
-              {currentRequest.locationAddress && (
-                <div className="flex items-center gap-2 text-xs text-white/70">
-                  <MapPin size={13} />
-                  <span className="truncate">{currentRequest.locationAddress}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-xs text-white/70">
-                <Clock size={13} />
-                <span>{timeAgo(currentRequest.createdAt)}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              {TECHNICIAN_NEXT_ACTION[currentRequest.status] && (
-                <button
-                  onClick={() => navigate(`/technician/requests/${currentRequest.id}`)}
-                  className="flex-1 py-2.5 rounded-xl bg-white text-[#E31B23] text-sm font-bold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-                >
-                  {currentRequest.status === 'in_progress' ? <CheckCircle2 size={16} /> : <Play size={16} />}
-                  {TECHNICIAN_NEXT_ACTION[currentRequest.status]?.label}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="flex bg-white rounded-xl p-1 shadow-sm border border-gray-100/50">
-          {([
-            { key: 'current' as const, label: 'الحالية' },
-            { key: 'upcoming' as const, label: 'القادمة' },
-            { key: 'review' as const, label: 'بانتظار المراجعة' },
-            { key: 'completed' as const, label: 'المكتملة' },
-          ]).map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
-                activeTab === tab.key
-                  ? 'bg-[#E31B23] text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label} {tabCounts[tab.key] > 0 && `(${tabCounts[tab.key]})`}
-            </button>
-          ))}
-        </div>
-
-        {/* Request List */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-pulse">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-gray-200" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
-                    <div className="h-3 bg-gray-200 rounded w-1/2" />
-                  </div>
-                </div>
-                <div className="h-3 bg-gray-200 rounded w-2/3 mb-2" />
-                <div className="h-3 bg-gray-200 rounded w-1/2" />
-              </div>
-            ))}
-          </div>
-        ) : displayList.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100/50">
-            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-              <Package size={24} className="text-gray-400" />
-            </div>
-            <p className="text-gray-600 font-medium text-sm mb-1">
-              {effectiveAvailability === 'offline'
-                ? 'حالتك غير متاحة حالياً'
-                : 'لا توجد طلبات مسندة إليك حالياً'}
-            </p>
-            <p className="text-gray-400 text-xs">
-              {effectiveAvailability === 'offline'
-                ? 'غيّر حالتك إلى متاح لاستقبال طلبات جديدة'
-                : 'سنرسل لك إشعاراً عند إسناد طلب جديد'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {displayList.map((request) => (
-              <RequestCard
-                key={request.id}
-                request={request}
-                onNavigate={() => navigate(`/technician/requests/${request.id}`)}
-              />
-            ))}
-          </div>
-        )}
       </div>
+    </header>
+  );
+}
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-100 z-40 lg:hidden">
-        <div className="max-w-2xl mx-auto flex">
-          <button
-            onClick={() => setMobileNav('home')}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors ${
-              mobileNav === 'home' ? 'text-[#E31B23]' : 'text-gray-400'
-            }`}
-          >
-            <Home size={20} />
-            <span className="text-[10px] font-medium">الرئيسية</span>
-          </button>
-          <button
-            onClick={() => navigate('/technician/account')}
-            className="flex-1 flex flex-col items-center gap-1 py-3 text-gray-400 transition-colors"
-          >
-            <UserCircle size={20} />
-            <span className="text-[10px] font-medium">حسابي</span>
-          </button>
-        </div>
-      </nav>
+function TechnicianDashboard() {
+  const navigate = useNavigate();
+  const technician = useAuthStore((state) => state.technician);
+  const updateTechnician = useAuthStore((state) => state.updateTechnician);
+  const [tab, setTab] = useState<'current' | 'upcoming' | 'action' | 'completed'>('current');
+  useTechnicianWebSocket();
+
+  const { data: requests = [], isLoading } = useQuery<TechnicianRequest[]>({
+    queryKey: ['technician-requests'],
+    queryFn: async () => (await apiClient.get('/technician/requests')).data || [],
+    refetchInterval: 30000,
+  });
+  const availabilityMutation = useMutation({
+    mutationFn: async (status: string) => (await apiClient.put('/technician/availability', { status })).data,
+    onSuccess: (data) => { updateTechnician({ availabilityStatus: data?.availabilityStatus }); toast.success('تم تحديث حالة التوفر'); },
+    onError: () => toast.error('فشل تحديث حالة التوفر'),
+  });
+
+  const grouped = useMemo(() => ({
+    current: requests.filter((request) => ['accepted', 'customer_approved', 'in_progress'].includes(request.status)),
+    upcoming: requests.filter((request) => request.status === 'pending'),
+    action: requests.filter((request) => request.status === 'awaiting_payment'),
+    completed: requests.filter((request) => ['completed', 'cancelled'].includes(request.status)),
+  }), [requests]);
+  const activeRequest = grouped.current[0];
+  const hasInProgress = requests.some((request) => request.status === 'in_progress');
+  const availability = hasInProgress ? 'busy' : (technician?.availabilityStatus || 'available');
+  const list = grouped[tab];
+
+  return (
+    <div className="min-h-screen bg-surface-50 pb-24 dark:bg-surface-950 lg:pb-8">
+      <TechnicianHeader />
+      <main className="mx-auto max-w-6xl space-y-4 px-4 py-5 sm:px-6">
+        <section className="flex items-center justify-between gap-4 rounded-3xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900 sm:p-5">
+          <div className="flex items-start gap-3"><span className={`mt-1.5 h-2.5 w-2.5 rounded-full ${availability === 'available' ? 'bg-emerald-500' : availability === 'busy' ? 'bg-orange-500' : 'bg-surface-400'}`} /><div><h1 className="font-black text-surface-950 dark:text-white">{availability === 'available' ? 'متاح لاستقبال الطلبات' : availability === 'busy' ? 'مشغول بمهمة حالية' : 'غير متاح حالياً'}</h1><p className="mt-1 text-xs text-surface-500">{availability === 'available' ? 'يمكن للورشة إسناد مهمة جديدة إليك.' : availability === 'busy' ? 'تعمل حالياً على طلب نشط.' : 'لن يتم إسناد مهام جديدة حتى تعود متاحاً.'}</p></div></div>
+          {availability !== 'busy' && <button onClick={() => availabilityMutation.mutate(availability === 'available' ? 'offline' : 'available')} disabled={availabilityMutation.isPending} className={`relative h-7 w-12 shrink-0 rounded-full transition ${availability === 'available' ? 'bg-emerald-500' : 'bg-surface-300 dark:bg-surface-700'}`} aria-label="تغيير حالة التوفر"><span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${availability === 'available' ? 'right-[22px]' : 'right-0.5'}`} /></button>}
+        </section>
+
+        <section className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'المهمة الحالية', value: grouped.current.length, icon: Wrench },
+            { label: 'بانتظار البدء', value: grouped.upcoming.length, icon: Clock3 },
+            { label: 'مكتمل اليوم', value: grouped.completed.length, icon: CheckCircle2 },
+          ].map((item) => <div key={item.label} className="rounded-2xl border border-surface-200 bg-white p-3 shadow-sm dark:border-surface-800 dark:bg-surface-900 sm:p-4"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-50 text-accent-600 dark:bg-accent-500/10 dark:text-accent-300"><item.icon size={17} /></span><p className="mt-3 text-2xl font-black">{item.value}</p><p className="mt-1 text-[11px] text-surface-400 sm:text-xs">{item.label}</p></div>)}
+        </section>
+
+        {activeRequest && (
+          <section className="rounded-3xl bg-surface-950 p-5 text-white shadow-sm dark:bg-black sm:p-6">
+            <div className="flex items-start justify-between gap-3"><div><p className="text-xs text-white/50">المهمة الحالية • #{activeRequest.id}</p><h2 className="mt-2 text-xl font-black">{activeRequest.serviceTypeName || 'خدمة صيانة'}</h2><p className="mt-1 text-sm text-white/60">{activeRequest.carMake} {activeRequest.carModel}</p></div><span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">{statusLabels[activeRequest.status] || activeRequest.status}</span></div>
+            <div className="mt-5 flex flex-wrap gap-3 text-xs text-white/60"><span className="flex items-center gap-1.5"><UserRound size={14} /> {activeRequest.customerName}</span><span className="flex items-center gap-1.5"><MapPin size={14} /> {activeRequest.locationAddress || activeRequest.city || 'داخل الورشة'}</span></div>
+            <button onClick={() => navigate(`/technician/requests/${activeRequest.id}`)} className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent-600 px-4 text-sm font-black text-white">متابعة المهمة <ChevronLeft size={17} /></button>
+          </section>
+        )}
+
+        <nav className="grid grid-cols-4 gap-1 rounded-2xl border border-surface-200 bg-white p-1 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+          {[
+            ['current', 'الحالية'], ['upcoming', 'القادمة'], ['action', 'تحتاج إجراء'], ['completed', 'المكتملة'],
+          ].map(([key, label]) => <button key={key} onClick={() => setTab(key as typeof tab)} className={`rounded-xl px-2 py-2.5 text-[11px] font-bold transition sm:text-xs ${tab === key ? 'bg-accent-600 text-white' : 'text-surface-500 hover:bg-surface-50 dark:hover:bg-surface-800'}`}>{label}{grouped[key as typeof tab].length > 0 ? ` (${grouped[key as typeof tab].length})` : ''}</button>)}
+        </nav>
+
+        {isLoading ? <div className="h-44 animate-pulse rounded-3xl bg-surface-200 dark:bg-surface-800" /> : list.length === 0 ? (
+          <section className="rounded-3xl border border-surface-200 bg-white px-4 py-14 text-center shadow-sm dark:border-surface-800 dark:bg-surface-900"><Package size={30} className="mx-auto text-surface-300" /><p className="mt-3 font-bold">لا توجد مهام في هذا القسم</p><p className="mt-1 text-xs text-surface-400">ستظهر المهمة هنا عند وصول تحديث جديد.</p></section>
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {list.map((request) => <button key={request.id} onClick={() => navigate(`/technician/requests/${request.id}`)} className="rounded-2xl border border-surface-200 bg-white p-4 text-right shadow-sm transition hover:-translate-y-0.5 hover:border-accent-200 dark:border-surface-800 dark:bg-surface-900"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-accent-600 dark:text-accent-400">طلب #{request.id}</p><h3 className="mt-1 font-black">{request.serviceTypeName || 'خدمة صيانة'}</h3></div><span className="rounded-full bg-surface-100 px-2.5 py-1 text-[10px] font-bold dark:bg-surface-800">{statusLabels[request.status] || request.status}</span></div><div className="mt-4 flex flex-wrap gap-3 text-xs text-surface-500"><span className="flex items-center gap-1"><Car size={13} /> {request.carMake} {request.carModel}</span><span className="flex items-center gap-1"><UserRound size={13} /> {request.customerName}</span></div><div className="mt-4 flex items-center justify-between border-t border-surface-100 pt-3 text-xs dark:border-surface-800"><span className="text-surface-400">{timeAgo(request.createdAt)}</span><span className="font-bold text-accent-600 dark:text-accent-400">فتح المهمة</span></div></button>)}
+          </div>
+        )}
+      </main>
+      <TechnicianBottomNav active="home" />
     </div>
+  );
+}
+
+export function TechnicianBottomNav({ active }: { active: 'home' | 'notifications' | 'account' }) {
+  const navigate = useNavigate();
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900 lg:hidden">
+      <div className="mx-auto grid max-w-md grid-cols-3">
+        {[{ key: 'home', label: 'مهامي', icon: Home, path: '/technician' }, { key: 'notifications', label: 'الإشعارات', icon: Bell, path: '/technician/notifications' }, { key: 'account', label: 'حسابي', icon: UserCircle, path: '/technician/account' }].map((item) => <button key={item.key} onClick={() => navigate(item.path)} className={`flex flex-col items-center gap-1 py-3 text-[10px] font-bold ${active === item.key ? 'text-accent-600 dark:text-accent-400' : 'text-surface-400'}`}><item.icon size={20} />{item.label}</button>)}
+      </div>
+    </nav>
   );
 }
 
 export default function TechnicianPage() {
-  const role = useAuthStore((s) => s.role);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
-  if (!isAuthenticated || role !== 'technician') {
-    return (
-      <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
-            <Wrench size={28} className="text-[#E31B23]" />
-          </div>
-          <p className="text-gray-500 mb-4">يجب تسجيل الدخول كفني للوصول لهذه الصفحة</p>
-          <a href="/login" className="px-6 py-2.5 rounded-xl bg-[#E31B23] text-white text-sm font-medium inline-block">
-            تسجيل الدخول
-          </a>
-        </div>
-      </div>
-    );
-  }
-
+  const role = useAuthStore((state) => state.role);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  if (!isAuthenticated || role !== 'technician') return <div className="flex min-h-screen items-center justify-center"><a href="/login" className="btn-primary">تسجيل الدخول كفني</a></div>;
   return <TechnicianDashboard />;
 }

@@ -125,33 +125,43 @@ export default function MyQuotesPage() {
           />
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
           {filteredQuotes.map((quote, idx) => (
             <div
               key={quote.id}
-              className="card p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group animate-slide-up"
+              className="card p-4 hover:shadow-md transition-all duration-300 cursor-pointer group animate-slide-up"
               style={{ animationDelay: `${idx * 0.05}s` }}
               onClick={() => navigate(`/requests/${quote.requestId}`)}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-accent-500/10 flex items-center justify-center">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="w-9 h-9 shrink-0 rounded-xl bg-accent-500/10 flex items-center justify-center">
                     <DollarSign size={18} className="text-accent-500" />
                   </div>
-                  <div>
-                    <p className="font-bold text-lg text-surface-900 dark:text-white">{formatCurrency(quote.price)}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-surface-900 dark:text-white">
+                      {quote.serviceTypeName || `${t('pages.myQuotes.requestNo')} ${quote.requestId}`}
+                    </p>
+                    <p className="text-xs text-surface-400 dark:text-surface-500">
+                      {t('pages.myQuotes.requestNo')} #{quote.requestId}
+                    </p>
                   </div>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${QUOTE_STATUS_COLORS[quote.status]}`}>
-                  {t('constants.quoteStatuses.' + quote.status, quote.status)}
-                </span>
+                <div className="shrink-0 text-left">
+                  <p className="font-bold text-base text-surface-900 dark:text-white">{formatCurrency(quote.price)}</p>
+                  <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${QUOTE_STATUS_COLORS[quote.status]}`}>
+                    {t('constants.quoteStatuses.' + quote.status, quote.status)}
+                  </span>
+                </div>
               </div>
               {quote.notes && (
-                <p className="text-sm text-surface-500 dark:text-surface-400 mb-3 line-clamp-2">{quote.notes}</p>
+                <p className="mt-2 pr-12 text-xs text-surface-500 dark:text-surface-400 line-clamp-1">{quote.notes}</p>
               )}
-              <div className="flex items-center justify-between pt-3 border-t border-surface-100 dark:border-surface-700">
-                <span className="text-xs text-surface-400 dark:text-surface-500">{t('pages.myQuotes.requestNo')} {quote.requestId.slice(0, 8)}...</span>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-surface-100 pt-2 dark:border-surface-700">
                 <span className="text-xs text-surface-400 dark:text-surface-500">{formatDateTime(quote.createdAt)}</span>
+                <span className="text-xs font-medium text-primary-600 dark:text-primary-400">
+                  {t('common.viewDetails', 'عرض التفاصيل')}
+                </span>
               </div>
             </div>
           ))}

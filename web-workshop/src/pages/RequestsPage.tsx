@@ -57,23 +57,23 @@ function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, 
       onClick={onClick}
       className="card p-4 cursor-pointer active:scale-[0.98] transition-all duration-200"
     >
-      <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2.5">
+      <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex min-w-0 items-center gap-2.5">
           <Avatar name={request.customer?.name} size="sm" />
-          <div>
-            <p className="font-semibold text-sm text-surface-900 dark:text-white">{request.customer?.name || t('pages.requests.customer')}</p>
-            <p className="text-[11px] text-surface-400 flex items-center gap-1 mt-0.5">
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-sm text-surface-900 dark:text-white">{request.customer?.name || t('pages.requests.customer')}</p>
+            <p className="truncate text-[11px] text-surface-400 flex items-center gap-1 mt-0.5">
               <Car size={11} />
               {request.car?.make} {request.car?.model} {request.car?.year}
             </p>
           </div>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[request.status] || 'bg-surface-100 dark:bg-surface-700 text-surface-500 dark:text-surface-400'}`}>
+        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[request.status] || 'bg-surface-100 dark:bg-surface-700 text-surface-500 dark:text-surface-400'}`}>
           {t('constants.statuses.' + request.status, request.status)}
         </span>
       </div>
 
-      <div className="flex items-center gap-3 text-[11px] text-surface-400 mb-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-surface-400 mb-3">
         <span className="flex items-center gap-1">
           <Calendar size={11} />
           {timeAgo(request.createdAt)}
@@ -106,7 +106,7 @@ function RequestCardView({ request, showQuoteButton, showStatusUpdate, onQuote, 
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {showQuoteButton && onQuote && (
           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuote(); }} className="btn-primary flex-1 text-xs py-2">
             {t('pages.requests.sendQuote')}
@@ -194,14 +194,14 @@ export default function RequestsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-surface-900 dark:text-white">{t('pages.requests.title')}</h1>
           <p className="text-surface-500 dark:text-surface-400 text-xs mt-0.5">{t('pages.requests.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-1.5 text-[11px] text-surface-400 dark:text-surface-500 bg-surface-100 dark:bg-surface-800 px-2.5 py-1 rounded-lg">
+        <div className="shrink-0 flex items-center gap-1.5 text-[11px] text-surface-400 dark:text-surface-500 bg-surface-100 dark:bg-surface-800 px-2.5 py-1 rounded-lg">
           <RefreshCw size={12} className="animate-spin-slow" />
-          <span>{t('pages.requests.autoRefresh')}</span>
+          <span className="hidden min-[390px]:inline">{t('pages.requests.autoRefresh')}</span>
         </div>
       </div>
 

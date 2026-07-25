@@ -25,6 +25,22 @@ export interface ChatPaginatedResult {
   totalElements: number;
 }
 
+export async function getRooms(): Promise<ChatRoom[]> {
+  const { data } = await client.get('/chat/rooms');
+  const rooms = Array.isArray(data) ? data : [];
+  return rooms.map((r: any) => ({
+    id: String(r.id),
+    requestId: String(r.requestId),
+    customerId: String(r.customerId),
+    customerName: r.customerName || '',
+    workshopId: r.workshopId ? String(r.workshopId) : undefined,
+    workshopName: r.workshopName || undefined,
+    lastMessage: r.lastMessage ? mapMessage(r.lastMessage, String(r.id)) : undefined,
+    unreadCount: Number(r.unreadCount || 0),
+    createdAt: r.createdAt || '',
+  }));
+}
+
 export async function getOrCreateRoom(requestId: number, customerId: number, workshopId?: number): Promise<ChatRoom> {
   const body: Record<string, number> = { requestId, customerId };
   if (workshopId) body.workshopId = workshopId;

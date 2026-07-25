@@ -3,6 +3,8 @@ export const REQUEST_STATUS_LABELS: Record<string, string> = {
   pending: 'قيد الانتظار',
   quoted: 'تم التسعير',
   accepted: 'مقبول',
+  inspection_report: 'بانتظار اعتماد تقرير الفحص',
+  customer_approved: 'اعتمد العميل التقرير',
   in_progress: 'قيد التنفيذ',
   completed: 'مكتمل',
   cancelled: 'ملغي',
@@ -19,6 +21,8 @@ export const REQUEST_STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   quoted: 'bg-blue-100 text-blue-800',
   accepted: 'bg-green-100 text-green-800',
+  inspection_report: 'bg-violet-100 text-violet-800',
+  customer_approved: 'bg-cyan-100 text-cyan-800',
   in_progress: 'bg-indigo-100 text-indigo-800',
   completed: 'bg-emerald-100 text-emerald-800',
   cancelled: 'bg-red-100 text-red-800',
@@ -93,12 +97,14 @@ export const CITIES = [
 
 export const STATUS_TRANSITIONS: Record<string, string[]> = {
   awaiting_payment: [],
-  pending: ['quoted'],
-  quoted: ['accepted'],
-  accepted: ['in_progress', 'cancelled'],
-  in_progress: ['completed', 'cancelled'],
+  pending: [],
+  quoted: [],
+  accepted: ['inspection_report'],
+  inspection_report: [],
+  customer_approved: ['in_progress'],
+  in_progress: ['awaiting_payment'],
   completed: [],
   cancelled: [],
 };
 
-export const UPDATABLE_STATUSES = ['accepted', 'in_progress'];
+export const UPDATABLE_STATUSES = ['customer_approved', 'in_progress'];

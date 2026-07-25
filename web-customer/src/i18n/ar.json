@@ -247,7 +247,7 @@
                                   "formSubtitle":  "التسجيل بالبريد الإلكتروني",
                                   "namePlaceholder":  "الاسم الكامل",
                                   "emailPlaceholder":  "البريد الإلكتروني",
-                                  "phonePlaceholder":  "رقم الجوال (اختياري)",
+                                  "phonePlaceholder":  "رقم الجوال",
                                   "cityPlaceholder":  "المدينة (مثال: الرياض)",
                                   "passwordPlaceholder":  "كلمة المرور",
                                   "registerButton":  "إنشاء حساب",

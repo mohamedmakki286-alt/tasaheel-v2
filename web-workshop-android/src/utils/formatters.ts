@@ -1,5 +1,11 @@
 import i18n from '../i18n/i18n';
 
+export function parseApiDate(dateString: string): Date {
+  if (!dateString) return new Date(NaN);
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(dateString);
+  return new Date(hasTimezone ? dateString : `${dateString}Z`);
+}
+
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
     style: 'currency',
@@ -10,7 +16,7 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+  const date = parseApiDate(dateString);
   return new Intl.DateTimeFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
     year: 'numeric',
     month: 'short',
@@ -19,7 +25,7 @@ export function formatDate(dateString: string): string {
 }
 
 export function formatDateTime(dateString: string): string {
-  const date = new Date(dateString);
+  const date = parseApiDate(dateString);
   return new Intl.DateTimeFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
     year: 'numeric',
     month: 'short',
@@ -41,9 +47,10 @@ export function formatPhone(phone: string): string {
 
 export function timeAgo(dateString: string): string {
   const now = new Date();
-  const date = new Date(dateString);
+  const date = parseApiDate(dateString);
   const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
+  if (!Number.isFinite(diffMs)) return '';
+  const diffMins = Math.max(0, Math.floor(diffMs / 60000));
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 

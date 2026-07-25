@@ -1,6 +1,37 @@
 import apiClient from './client';
 import type { ChatRoom, ChatMessage } from '../types';
 
+function mapRoom(r: any): ChatRoom {
+  return {
+    id: String(r.id || ''),
+    requestId: String(r.requestId || ''),
+    customerId: String(r.customerId || ''),
+    customerName: r.customerName || '',
+    workshopId: String(r.workshopId || ''),
+    workshopName: r.workshopName || '',
+    participants: [],
+    unreadCount: Number(r.unreadCount || 0),
+    lastMessage: r.lastMessage ? {
+      id: String(r.lastMessage.id || ''),
+      roomId: String(r.lastMessage.roomId || r.id || ''),
+      senderId: String(r.lastMessage.senderId || ''),
+      senderName: r.lastMessage.senderName || '',
+      senderRole: r.lastMessage.senderRole || 'customer',
+      content: r.lastMessage.content || '',
+      type: (r.lastMessage.type || 'text').toLowerCase(),
+      mediaUrl: r.lastMessage.mediaUrl,
+      isRead: r.lastMessage.isRead,
+      createdAt: r.lastMessage.createdAt || '',
+    } : undefined,
+    createdAt: r.createdAt || '',
+  };
+}
+
+export async function getRooms(): Promise<ChatRoom[]> {
+  const response = await apiClient.get('/chat/rooms');
+  return (Array.isArray(response.data) ? response.data : []).map(mapRoom);
+}
+
 export async function getRoom(requestId: string): Promise<ChatRoom> {
   const response = await apiClient.get(`/chat/room/${requestId}`);
   const r = response.data;
