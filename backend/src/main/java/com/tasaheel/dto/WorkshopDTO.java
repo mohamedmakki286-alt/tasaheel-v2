@@ -32,6 +32,7 @@ public class WorkshopDTO {
     private String email;
 
     @Size(min = 6, message = "Password must be at least 6 characters")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @NotBlank(message = "Address is required")

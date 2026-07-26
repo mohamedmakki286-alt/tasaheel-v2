@@ -3,13 +3,20 @@ package com.tasaheel.controller;
 import com.tasaheel.dto.ApiResponse;
 import com.tasaheel.dto.ServiceCatalogDTO;
 import com.tasaheel.dto.ServiceTemplateDTO;
-import com.tasaheel.entity.ServiceType;
-import com.tasaheel.repository.ServiceTypeRepository;
+import com.tasaheel.entity.ServiceCategory;
+import com.tasaheel.entity.ServiceTemplate;
+import com.tasaheel.exception.ResourceNotFoundException;
+import com.tasaheel.repository.ServiceCategoryRepository;
+import com.tasaheel.repository.ServiceTemplateRepository;
+import com.tasaheel.repository.WorkshopServiceListingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @RestController
@@ -18,74 +25,31 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*")
 public class ServiceCatalogController {
 
-    private final ServiceTypeRepository serviceTypeRepository;
-
-    private static final LinkedHashMap<String, String[]> CATEGORY_META = new LinkedHashMap<>();
-    static {
-        CATEGORY_META.put("periodic", new String[]{"الصيانة الدورية", "periodic", "🚗"});
-        CATEGORY_META.put("mechanical", new String[]{"الميكانيكا", "mechanical", "🔧"});
-        CATEGORY_META.put("electrical", new String[]{"الكهرباء", "electrical", "⚡"});
-        CATEGORY_META.put("ac", new String[]{"التكييف", "ac", "❄️"});
-        CATEGORY_META.put("suspension", new String[]{"الإطارات والتعليق", "suspension", "🛞"});
-        CATEGORY_META.put("bodywork", new String[]{"السمكرة والدهان", "bodywork", "🎨"});
-        CATEGORY_META.put("emergency", new String[]{"الطوارئ", "emergency", "🚨"});
-        CATEGORY_META.put("inspection", new String[]{"الفحص والتقييم", "inspection", "🔍"});
-    }
+    private final ServiceCategoryRepository categoryRepository;
+    private final ServiceTemplateRepository templateRepository;
+    private final WorkshopServiceListingRepository listingRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ServiceCatalogDTO>>> getCatalog(
             @RequestParam(required = false) String search) {
-        List<ServiceType> types = search != null && !search.isBlank()
-                ? serviceTypeRepository.findByIsActiveTrue().stream()
-                    .filter(t -> t.getName().contains(search) || (t.getNameEn() != null && t.getNameEn().contains(search)))
-                    .collect(Collectors.toList())
-                : serviceTypeRepository.findByIsActiveTrue();
-
-        Map<String, List<ServiceType>> grouped = types.stream()
-                .filter(t -> t.getCategory() != null)
-                .collect(Collectors.groupingBy(ServiceType::getCategory, LinkedHashMap::new, Collectors.toList()));
-
-        List<ServiceCatalogDTO> result = new ArrayList<>();
-        int order = 0;
-        for (Map.Entry<String, List<ServiceType>> entry : grouped.entrySet()) {
-            String catKey = entry.getKey();
-            String[] meta = CATEGORY_META.getOrDefault(catKey, new String[]{catKey, catKey, "🔧"});
-            List<ServiceType> catTypes = entry.getValue();
-            result.add(ServiceCatalogDTO.builder()
-                    .categoryId((long) (order + 1))
-                    .categoryName(meta[0])
-                    .categoryNameEn(meta[1])
-                    .categoryIcon(meta[2])
-                    .displayOrder(order++)
-                    .templates(catTypes.stream().map(this::toTemplateDTO).collect(Collectors.toList()))
-                    .workshopCount(catTypes.size())
-                    .build());
-        }
+        String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        List<ServiceCatalogDTO> result = categoryRepository.findByIsActiveTrueOrderByDisplayOrderAsc().stream()
+                .map(category -> toCatalogDTO(category, normalizedSearch))
+                .filter(dto -> normalizedSearch.isBlank()
+                        || dto.getCategoryName().toLowerCase(Locale.ROOT).contains(normalizedSearch)
+                        || (dto.getCategoryNameEn() != null
+                            && dto.getCategoryNameEn().toLowerCase(Locale.ROOT).contains(normalizedSearch))
+                        || !dto.getTemplates().isEmpty())
+                .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     @GetMapping("/{categoryId}")
     public ResponseEntity<ApiResponse<ServiceCatalogDTO>> getCategoryTemplates(@PathVariable Long categoryId) {
-        int idx = categoryId.intValue() - 1;
-        List<String> keys = new ArrayList<>(CATEGORY_META.keySet());
-        if (idx < 0 || idx >= keys.size()) {
-            throw new com.tasaheel.exception.ResourceNotFoundException("Category", categoryId);
-        }
-        String catKey = keys.get(idx);
-        String[] meta = CATEGORY_META.get(catKey);
-        List<ServiceType> types = serviceTypeRepository.findByIsActiveTrue().stream()
-                .filter(t -> catKey.equals(t.getCategory()))
-                .collect(Collectors.toList());
-        ServiceCatalogDTO dto = ServiceCatalogDTO.builder()
-                .categoryId(categoryId)
-                .categoryName(meta[0])
-                .categoryNameEn(meta[1])
-                .categoryIcon(meta[2])
-                .displayOrder(idx)
-                .templates(types.stream().map(this::toTemplateDTO).collect(Collectors.toList()))
-                .workshopCount(types.size())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success(dto));
+        ServiceCategory category = categoryRepository.findById(categoryId)
+                .filter(ServiceCategory::getIsActive)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId));
+        return ResponseEntity.ok(ApiResponse.success(toCatalogDTO(category, "")));
     }
 
     @GetMapping("/customer/services")
@@ -95,10 +59,10 @@ public class ServiceCatalogController {
 
     @GetMapping("/templates/{templateId}")
     public ResponseEntity<ApiResponse<ServiceTemplateDTO>> getTemplateById(@PathVariable Long templateId) {
-        ServiceType st = serviceTypeRepository.findById(templateId)
-                .filter(ServiceType::getIsActive)
-                .orElseThrow(() -> new com.tasaheel.exception.ResourceNotFoundException("ServiceTemplate", templateId));
-        return ResponseEntity.ok(ApiResponse.success(toTemplateDTO(st)));
+        ServiceTemplate template = templateRepository.findById(templateId)
+                .filter(ServiceTemplate::getIsActive)
+                .orElseThrow(() -> new ResourceNotFoundException("ServiceTemplate", templateId));
+        return ResponseEntity.ok(ApiResponse.success(toTemplateDTO(template)));
     }
 
     @GetMapping("/templates/{templateId}/workshops")
@@ -106,21 +70,45 @@ public class ServiceCatalogController {
             @PathVariable Long templateId,
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng) {
+        templateRepository.findById(templateId)
+                .filter(ServiceTemplate::getIsActive)
+                .orElseThrow(() -> new ResourceNotFoundException("ServiceTemplate", templateId));
         return ResponseEntity.ok(ApiResponse.success(new ArrayList<>()));
     }
 
-    private ServiceTemplateDTO toTemplateDTO(ServiceType t) {
+    private ServiceCatalogDTO toCatalogDTO(ServiceCategory category, String search) {
+        List<ServiceTemplateDTO> templates = templateRepository
+                .findByCategory_IdAndIsActiveTrueOrderByIdAsc(category.getId()).stream()
+                .filter(template -> search.isBlank()
+                        || template.getName().toLowerCase(Locale.ROOT).contains(search)
+                        || (template.getNameEn() != null
+                            && template.getNameEn().toLowerCase(Locale.ROOT).contains(search)))
+                .map(this::toTemplateDTO)
+                .collect(Collectors.toList());
+        return ServiceCatalogDTO.builder()
+                .categoryId(category.getId())
+                .categoryName(category.getName())
+                .categoryNameEn(category.getNameEn())
+                .categoryIcon(category.getIcon())
+                .displayOrder(category.getDisplayOrder())
+                .templates(templates)
+                .workshopCount(Math.toIntExact(
+                        listingRepository.countWorkshopsByCategoryId(category.getId())))
+                .build();
+    }
+
+    private ServiceTemplateDTO toTemplateDTO(ServiceTemplate template) {
         return ServiceTemplateDTO.builder()
-                .id(t.getId())
-                .name(t.getName())
-                .nameEn(t.getNameEn())
-                .categoryId(0L)
-                .categoryName(t.getCategory())
-                .categoryIcon(null)
-                .defaultDuration(t.getEstimatedDuration())
-                .description(t.getDescription())
-                .icon(t.getIcon())
-                .isActive(t.getIsActive())
+                .id(template.getId())
+                .name(template.getName())
+                .nameEn(template.getNameEn())
+                .categoryId(template.getCategory().getId())
+                .categoryName(template.getCategory().getName())
+                .categoryIcon(template.getCategory().getIcon())
+                .defaultDuration(template.getDefaultDuration())
+                .description(template.getDescription())
+                .icon(template.getIcon())
+                .isActive(template.getIsActive())
                 .build();
     }
 }

@@ -8,6 +8,8 @@ import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const testDataResetEnabled =
+  import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_DATA_RESET === 'true';
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CustomersPage = lazy(() => import('./pages/CustomersPage'));
 const CustomerDetailPage = lazy(() => import('./pages/CustomerDetailPage'));
@@ -76,7 +78,9 @@ function AppRoutes() {
         <Route path="services" element={<ServicesPage />} />
         <Route path="workshop-services" element={<WorkshopServiceListingsPage />} />
         <Route path="offers" element={<OffersPage />} />
-        <Route path="test-data-reset" element={<TestDataResetPage />} />
+        {testDataResetEnabled && (
+          <Route path="test-data-reset" element={<TestDataResetPage />} />
+        )}
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

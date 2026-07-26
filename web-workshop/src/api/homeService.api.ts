@@ -40,6 +40,8 @@ export async function assignTechnician(assignmentId: number, technicianId: numbe
 }
 
 export async function updateAssignmentStatus(assignmentId: number, status: string): Promise<HomeServiceAssignment> {
-  const response = await apiClient.put(`/workshops/home-service/${assignmentId}/status`, { status });
+  const response = await apiClient.put(`/workshops/home-service/${assignmentId}/status`, null, {
+    params: { status },
+  });
   return response.data;
 }
