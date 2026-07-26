@@ -110,7 +110,7 @@ export default function InspectionReportForm({ requestId, request, existingRepor
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col" dir="rtl">
+    <div className="fixed inset-0 z-[80] bg-white dark:bg-surface-950 flex flex-col" dir="rtl">
       {/* Header */}
       <header className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
@@ -340,15 +340,15 @@ export default function InspectionReportForm({ requestId, request, existingRepor
       </main>
 
       {/* Footer — Fixed */}
-      <footer className="flex items-center justify-between px-4 md:px-6 py-3 border-t border-gray-100 bg-white shrink-0">
-        <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+      <footer className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 dark:border-surface-800 dark:bg-surface-900 sm:flex-row sm:items-center sm:justify-between md:px-6 shrink-0">
+        <button onClick={onClose} className="hidden px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors sm:block">
           إلغاء
         </button>
-        <div className="flex items-center gap-3">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-3">
           <button
             onClick={() => handleSubmit('draft')}
             disabled={mutation.isPending}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 px-2 py-2.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 sm:px-4 sm:text-sm"
           >
             <Save size={16} />
             حفظ كمسودة
@@ -356,7 +356,7 @@ export default function InspectionReportForm({ requestId, request, existingRepor
           <button
             onClick={() => handleSubmit('pending_approval')}
             disabled={mutation.isPending}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#E31B23] text-white text-sm font-bold hover:bg-[#c9161e] transition-colors disabled:opacity-50"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#E31B23] px-2 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#c9161e] disabled:opacity-50 sm:px-6 sm:text-sm"
           >
             {mutation.isPending ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

@@ -108,7 +108,7 @@ export async function declineRequest(id: string, reason?: string): Promise<void>
 
 export async function updateRequestStatus(id: string, payload: StatusUpdatePayload): Promise<ServiceRequest> {
   const response = await apiClient.put(`/workshops/requests/${id}/status`, payload);
-  const r = response.data;
+  const r = response.data || {};
   return {
     id: String(r.id || id),
     customer: { id: '', name: '', phone: '' },

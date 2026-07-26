@@ -7,6 +7,7 @@ import { playNotificationSound } from './notificationSound';
 const ALERT_CHANNEL_ID = 'tasaheel_alerts';
 let registrationPromise: Promise<void> | null = null;
 let listenersReady = false;
+let tokenOwner: 'workshop' | 'technician' = 'workshop';
 
 async function configureNotificationChannel() {
   await PushNotifications.createChannel({
@@ -30,8 +31,10 @@ async function configureNotificationChannel() {
   });
 }
 
-export async function registerPushNotifications(workshopId: string) {
+export async function registerPushNotifications(workshopId: string, owner: 'workshop' | 'technician' = 'workshop') {
   if (!Capacitor.isNativePlatform()) return;
+  if (tokenOwner !== owner) registrationPromise = null;
+  tokenOwner = owner;
   if (registrationPromise) return registrationPromise;
 
   registrationPromise = (async () => {
@@ -104,7 +107,7 @@ export async function registerPushNotifications(workshopId: string) {
 
 async function sendTokenToBackend(fcmToken: string) {
   try {
-    await client.put('/workshops/profile', {
+    await client.put(tokenOwner === 'technician' ? '/technician/profile' : '/workshops/profile', {
       fcmToken: fcmToken,
     });
   } catch (err) {

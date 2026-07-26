@@ -1,5 +1,6 @@
 package com.tasaheel.security;
 
+import com.tasaheel.repository.TechnicianRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,7 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final TechnicianRepository technicianRepository;
 
     @Override
     protected void doFilterInternal(
@@ -39,7 +41,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             final Long userId = jwtService.extractUserId(jwt);
             final String role = jwtService.extractRole(jwt);
 
-            if (userId != null && jwtService.isTokenValid(jwt)
+            boolean accountAllowed = userId != null && (!"technician".equalsIgnoreCase(role)
+                    || technicianRepository.findById(userId)
+                            .map(technician -> Boolean.TRUE.equals(technician.getIsActive()))
+                            .orElse(false));
+
+            if (userId != null && accountAllowed && jwtService.isTokenValid(jwt)
                     && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 List<SimpleGrantedAuthority> authorities = List.of(

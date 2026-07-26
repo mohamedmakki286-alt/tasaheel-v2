@@ -116,6 +116,7 @@ public class WorkshopService {
         return toWorkshopDTO(workshop);
     }
 
+    @Transactional
     public WorkshopDTO updateProfile(Long id, WorkshopDTO dto) {
         Workshop workshop = workshopRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", id));
@@ -125,6 +126,7 @@ public class WorkshopService {
         if (dto.getPhone() != null) workshop.setPhone(dto.getPhone());
         if (dto.getAddress() != null) workshop.setAddress(dto.getAddress());
         if (dto.getCity() != null) workshop.setCity(dto.getCity());
+        if (dto.getWorkshopType() != null) workshop.setWorkshopType(dto.getWorkshopType());
         if (dto.getLatitude() != null) workshop.setLatitude(dto.getLatitude());
         if (dto.getLongitude() != null) workshop.setLongitude(dto.getLongitude());
         if (dto.getServices() != null) workshop.setServices(dto.getServices());

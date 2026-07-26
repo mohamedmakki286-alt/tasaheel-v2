@@ -159,7 +159,7 @@ export default function ProfilePage() {
       updateWorkshop(data);
       toast.success(t('toast.success.profileUpdated'));
     },
-    onError: () => toast.error(t('toast.error.profileUpdateFailed')),
+    onError: (error: any) => toast.error(error?.friendlyMessage || error?.response?.data?.message || t('toast.error.profileUpdateFailed')),
   });
 
   const handleSubmit = () => mutation.mutate();

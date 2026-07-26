@@ -432,6 +432,13 @@ public class AuthService {
                 .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
         if (rt.getRevoked()) throw new UnauthorizedException("Refresh token revoked");
         if (rt.getExpiresAt().isBefore(LocalDateTime.now())) throw new UnauthorizedException("Refresh token expired");
+        if ("technician".equalsIgnoreCase(rt.getUserRole())) {
+            Technician technician = technicianRepository.findById(rt.getUserId())
+                    .orElseThrow(() -> new UnauthorizedException("Technician account no longer exists"));
+            if (!Boolean.TRUE.equals(technician.getIsActive())) {
+                throw new UnauthorizedException("Account is deactivated");
+            }
+        }
 
         rt.setRevoked(true);
         refreshTokenRepository.save(rt);

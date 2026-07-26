@@ -10,7 +10,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 
 @Service
@@ -20,28 +23,67 @@ public class FirebaseService {
     @Value("${application.firebase.config-path}")
     private String firebaseConfigPath;
 
+    @Value("${application.firebase.credentials-base64:}")
+    private String firebaseCredentialsBase64;
+
+    @Value("${application.firebase.credentials-json:}")
+    private String firebaseCredentialsJson;
+
+    @Value("${application.firebase.project-id:}")
+    private String firebaseProjectId;
+
+    private volatile boolean initialized;
+
     @PostConstruct
     public void initialize() {
         try {
             if (FirebaseApp.getApps().isEmpty()) {
-                ClassPathResource resource = new ClassPathResource("firebase-service-account.json");
-                if (resource.exists()) {
-                    FirebaseOptions options = FirebaseOptions.builder()
-                            .setCredentials(GoogleCredentials.fromStream(resource.getInputStream()))
-                            .build();
-                    FirebaseApp.initializeApp(options);
-                    log.info("Firebase initialized successfully");
-                } else {
-                    log.warn("Firebase config file not found at: {}", firebaseConfigPath);
+                GoogleCredentials credentials = loadCredentials();
+                if (credentials == null) {
+                    log.warn("Firebase credentials are not configured; push notifications are disabled");
+                    return;
                 }
+
+                FirebaseOptions.Builder options = FirebaseOptions.builder().setCredentials(credentials);
+                if (firebaseProjectId != null && !firebaseProjectId.isBlank()) {
+                    options.setProjectId(firebaseProjectId.trim());
+                }
+                FirebaseApp.initializeApp(options.build());
             }
-        } catch (IOException e) {
+            initialized = !FirebaseApp.getApps().isEmpty();
+            log.info("Firebase initialized successfully for project {}", firebaseProjectId);
+        } catch (Exception e) {
+            initialized = false;
             log.error("Failed to initialize Firebase: {}", e.getMessage());
+        }
+    }
+
+    private GoogleCredentials loadCredentials() throws IOException {
+        if (firebaseCredentialsBase64 != null && !firebaseCredentialsBase64.isBlank()) {
+            byte[] decoded = Base64.getDecoder().decode(firebaseCredentialsBase64.replaceAll("\\s", ""));
+            return GoogleCredentials.fromStream(new ByteArrayInputStream(decoded));
+        }
+        if (firebaseCredentialsJson != null && !firebaseCredentialsJson.isBlank()) {
+            return GoogleCredentials.fromStream(new ByteArrayInputStream(
+                    firebaseCredentialsJson.getBytes(StandardCharsets.UTF_8)));
+        }
+        ClassPathResource resource = new ClassPathResource("firebase-service-account.json");
+        if (resource.exists()) {
+            return GoogleCredentials.fromStream(resource.getInputStream());
+        }
+        try {
+            return GoogleCredentials.getApplicationDefault();
+        } catch (IOException ignored) {
+            return null;
         }
     }
 
     public void sendNotification(String token, String title, String body, Map<String, String> data) {
         try {
+            if (!initialized) {
+                log.warn("Cannot send notification: Firebase is not initialized");
+                return;
+            }
             if (token == null || token.isEmpty()) {
                 log.warn("Cannot send notification: token is null or empty");
                 return;

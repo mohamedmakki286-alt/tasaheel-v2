@@ -20,7 +20,8 @@ export const notificationsApi = {
   },
   getUnreadCount: async () => {
     const response = await apiClient.get('/notifications/unread-count');
-    return response.data.count as number;
+    const data = response.data as number | { count?: number };
+    return Number(typeof data === 'number' ? data : data?.count ?? 0);
   },
   markAsRead: async (id: number) => {
     const response = await apiClient.put(`/notifications/${id}/read`);

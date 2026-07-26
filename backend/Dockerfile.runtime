@@ -1,0 +1,12 @@
+FROM eclipse-temurin:17-jre-jammy
+WORKDIR /app
+
+RUN groupadd -r tasaheel && useradd -r -g tasaheel tasaheel \
+    && mkdir -p /tmp/tasaheel/uploads \
+    && chown -R tasaheel:tasaheel /tmp/tasaheel
+
+COPY app-new.bin app.jar
+
+USER tasaheel
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

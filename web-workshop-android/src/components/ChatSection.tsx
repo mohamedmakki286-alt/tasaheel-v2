@@ -89,7 +89,7 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
 
   const readMutation = useMutation({
     mutationFn: () => markAsRead(room!.id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['chat-rooms'] }); },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['chat-rooms'] }),
   });
 
   useEffect(() => {

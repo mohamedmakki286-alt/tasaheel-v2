@@ -1,34 +1,42 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
 import LoginPage from './pages/LoginPage';
 import AdminLayout from './layouts/AdminLayout';
-import DashboardPage from './pages/DashboardPage';
-import CustomersPage from './pages/CustomersPage';
-import CustomerDetailPage from './pages/CustomerDetailPage';
-import WorkshopsPage from './pages/WorkshopsPage';
-import WorkshopDetailPage from './pages/WorkshopDetailPage';
-import DriversPage from './pages/DriversPage';
-import DriverDetailPage from './pages/DriverDetailPage';
-import TechniciansPage from './pages/TechniciansPage';
-import RequestsPage from './pages/RequestsPage';
-import RequestDetailPage from './pages/RequestDetailPage';
-import PaymentsPage from './pages/PaymentsPage';
-import ServicesPage from './pages/ServicesPage';
-import WorkshopServiceListingsPage from './pages/WorkshopServiceListingsPage';
-import ReportsPage from './pages/ReportsPage';
-import SettingsPage from './pages/SettingsPage';
-import FinancialDashboardPage from './pages/FinancialDashboardPage';
-import SettlementsPage from './pages/SettlementsPage';
-import AccountsPage from './pages/AccountsPage';
-import JournalEntriesPage from './pages/JournalEntriesPage';
-import OffersPage from './pages/OffersPage';
-import TestDataResetPage from './pages/TestDataResetPage';
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const CustomersPage = lazy(() => import('./pages/CustomersPage'));
+const CustomerDetailPage = lazy(() => import('./pages/CustomerDetailPage'));
+const WorkshopsPage = lazy(() => import('./pages/WorkshopsPage'));
+const WorkshopDetailPage = lazy(() => import('./pages/WorkshopDetailPage'));
+const DriversPage = lazy(() => import('./pages/DriversPage'));
+const DriverDetailPage = lazy(() => import('./pages/DriverDetailPage'));
+const TechniciansPage = lazy(() => import('./pages/TechniciansPage'));
+const RequestsPage = lazy(() => import('./pages/RequestsPage'));
+const RequestDetailPage = lazy(() => import('./pages/RequestDetailPage'));
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
+const ServicesPage = lazy(() => import('./pages/ServicesPage'));
+const WorkshopServiceListingsPage = lazy(() => import('./pages/WorkshopServiceListingsPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const FinancialDashboardPage = lazy(() => import('./pages/FinancialDashboardPage'));
+const SettlementsPage = lazy(() => import('./pages/SettlementsPage'));
+const AccountsPage = lazy(() => import('./pages/AccountsPage'));
+const JournalEntriesPage = lazy(() => import('./pages/JournalEntriesPage'));
+const OffersPage = lazy(() => import('./pages/OffersPage'));
+const TestDataResetPage = lazy(() => import('./pages/TestDataResetPage'));
+
+function PageLoader() {
+  return (
+    <div className="min-h-[45vh] grid place-items-center" role="status" aria-label="جاري تحميل الصفحة">
+      <div className="w-10 h-10 rounded-full border-4 border-gray-200 border-t-amber-500 animate-spin" />
+    </div>
+  );
+}
 
 function AuthInit({ children }: { children: React.ReactNode }) {
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -46,6 +54,7 @@ function AppRoutes() {
   return (
     <GoogleOAuthProvider clientId={googleClientId || ''}>
     <AuthInit>
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
       <Route path="/" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
@@ -71,7 +80,9 @@ function AppRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
     </AuthInit>
     </GoogleOAuthProvider>
   );

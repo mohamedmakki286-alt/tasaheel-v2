@@ -37,6 +37,7 @@ public class AdminService {
     private final InvoiceRepository invoiceRepository;
     private final MediaService mediaService;
     private final PasswordEncoder passwordEncoder;
+    private final TechnicianService technicianService;
     private final RequestStatusHistoryRepository statusHistoryRepository;
     private final EventPublisher eventPublisher;
 
@@ -377,10 +378,7 @@ public class AdminService {
                 driverRepository.save(driver);
             }
             case "technician" -> {
-                Technician technician = technicianRepository.findById(userId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Technician", userId));
-                technician.setIsActive(false);
-                technicianRepository.save(technician);
+                technicianService.deleteTechnicianAsAdmin(userId);
             }
             default -> throw new IllegalArgumentException("Invalid user type: " + userType);
         }

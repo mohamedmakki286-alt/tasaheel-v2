@@ -3,10 +3,12 @@ package com.tasaheel.event;
 import com.tasaheel.entity.Customer;
 import com.tasaheel.entity.MaintenanceRequest;
 import com.tasaheel.entity.Workshop;
+import com.tasaheel.entity.Technician;
 import com.tasaheel.integration.FirebaseService;
 import com.tasaheel.repository.CustomerRepository;
 import com.tasaheel.repository.MaintenanceRequestRepository;
 import com.tasaheel.repository.WorkshopRepository;
+import com.tasaheel.repository.TechnicianRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -24,6 +26,7 @@ public class FcmEventHandler {
     private final MaintenanceRequestRepository requestRepository;
     private final CustomerRepository customerRepository;
     private final WorkshopRepository workshopRepository;
+    private final TechnicianRepository technicianRepository;
 
     @EventListener
     public void handleDomainEvent(DomainEvent event) {
@@ -57,10 +60,22 @@ public class FcmEventHandler {
                 }
             }
         }
+
+        Object technicianValue = event.getPayload() == null ? null : event.getPayload().get("technicianId");
+        Long technicianId = technicianValue instanceof Number
+                ? ((Number) technicianValue).longValue()
+                : request.getTechnician() == null ? null : request.getTechnician().getId();
+        if (technicianId != null && !"technician".equals(actorRole)) {
+            Technician technician = technicianRepository.findById(technicianId).orElse(null);
+            if (technician != null && technician.getFcmToken() != null && !technician.getFcmToken().isBlank()) {
+                firebaseService.sendNotification(technician.getFcmToken(), "تم إسناد مهمة جديدة",
+                        "تم إسناد طلب جديد إليك", data);
+            }
+        }
     }
 
     private java.util.List<Long> extractWorkshopIds(MaintenanceRequest request, DomainEvent event) {
-        if (event.getPayload().containsKey("workshopId")) {
+        if (event.getPayload() != null && event.getPayload().containsKey("workshopId")) {
             Object val = event.getPayload().get("workshopId");
             if (val instanceof Number) {
                 return java.util.List.of(((Number) val).longValue());

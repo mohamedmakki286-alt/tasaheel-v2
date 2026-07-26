@@ -36,6 +36,8 @@ import AIAssistant from '../components/AIAssistant';
 import UnifiedCallHost from '@shared/call/UnifiedCallHost';
 import apiClient from '../api/client';
 import { timeAgo } from '../utils/formatters';
+import { useQuery } from '@tanstack/react-query';
+import { getRooms } from '../api/chat.api';
 
 export default function WorkshopLayout() {
   const { t, i18n } = useTranslation();
@@ -47,6 +49,8 @@ export default function WorkshopLayout() {
   const navigate = useNavigate();
   const { workshop, logout, isAuthenticated } = useAuthStore();
   const { theme, toggle: toggleTheme } = useThemeStore();
+  const { data: chatRooms = [] } = useQuery({ queryKey: ['chat-rooms'], queryFn: getRooms, enabled: !!workshop, refetchInterval: 15_000 });
+  const unreadMessages = chatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
 
   useWorkshopWebSocket();
   useBackButton();
@@ -157,6 +161,7 @@ export default function WorkshopLayout() {
               >
                 <link.icon size={20} strokeWidth={isActive(link.path) ? 2.5 : 2} />
                 <span>{link.label}</span>
+                {link.path === '/chats' && unreadMessages > 0 && <span className="mr-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[10px] font-black text-white">{Math.min(unreadMessages, 99)}</span>}
               </Link>
             ))}
           </nav>
@@ -332,6 +337,7 @@ export default function WorkshopLayout() {
               >
                 <div className="relative">
                   <link.icon size={22} strokeWidth={active ? 2.5 : 2} className={`transition-colors duration-200 ${active ? 'text-accent-500' : 'text-surface-400 dark:text-surface-500'}`} />
+                  {link.path === '/chats' && unreadMessages > 0 && <span className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent-500 px-1 text-[9px] font-black text-white">{Math.min(unreadMessages, 99)}</span>}
                   {active && (
                     <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent-500" />
                   )}

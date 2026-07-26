@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -109,8 +110,33 @@ public class TechnicianService {
     public void deleteTechnician(Long id, Long workshopId) {
         Technician tech = technicianRepository.findByIdAndWorkshopId(id, workshopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Technician", id));
-        tech.setIsActive(false);
-        technicianRepository.save(tech);
+        deleteTechnicianPermanently(tech);
+    }
+
+    @Transactional
+    public void deleteTechnicianAsAdmin(Long id) {
+        Technician tech = technicianRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Technician", id));
+        deleteTechnicianPermanently(tech);
+    }
+
+    private void deleteTechnicianPermanently(Technician tech) {
+        maintenanceRequestRepository.findByTechnicianIdOrderByCreatedAtDesc(tech.getId()).forEach(request -> {
+            request.setTechnician(null);
+            maintenanceRequestRepository.save(request);
+        });
+        assignmentRepository.findByTechnicianId(tech.getId()).forEach(assignment -> {
+            assignment.setTechnician(null);
+            if (!List.of("completed", "cancelled").contains(assignment.getStatus())) {
+                assignment.setStatus("pending_assignment");
+            }
+            assignmentRepository.save(assignment);
+        });
+        chatRoomRepository.findByTechnicianIdOrderByCreatedAtDesc(tech.getId()).forEach(room -> {
+            room.setTechnician(null);
+            chatRoomRepository.save(room);
+        });
+        technicianRepository.delete(tech);
     }
 
     // ---- Home Service Assignments ----
@@ -202,6 +228,7 @@ public class TechnicianService {
         if (body.containsKey("email")) tech.setEmail((String) body.get("email"));
         if (body.containsKey("specialty")) tech.setSpecialty((String) body.get("specialty"));
         if (body.containsKey("profileImageUrl")) tech.setProfileImageUrl((String) body.get("profileImageUrl"));
+        if (body.containsKey("fcmToken")) tech.setFcmToken((String) body.get("fcmToken"));
         if (body.containsKey("latitude")) tech.setLatitude(((Number) body.get("latitude")).doubleValue());
         if (body.containsKey("longitude")) tech.setLongitude(((Number) body.get("longitude")).doubleValue());
         tech = technicianRepository.save(tech);
@@ -368,6 +395,10 @@ public class TechnicianService {
             room.setTechnician(tech);
             chatRoomRepository.save(room);
         });
+
+        eventPublisher.publish(this, EventType.WORKSHOP_ASSIGNED, requestId, "workshop", workshopId,
+                Map.of("workshopId", workshopId, "technicianId", technicianId,
+                        "technicianName", tech.getName()));
 
         return toRequestDTO(request);
     }

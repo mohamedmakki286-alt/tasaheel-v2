@@ -61,7 +61,7 @@ public class WorkshopController {
     @PreAuthorize("hasRole('WORKSHOP')")
     public ResponseEntity<ApiResponse<WorkshopDTO>> updateProfile(
             @AuthenticationPrincipal UserDetailsImpl user,
-            @Valid @RequestBody WorkshopDTO dto) {
+            @RequestBody WorkshopDTO dto) {
         WorkshopDTO profile = workshopService.updateProfile(user.getUserId(), dto);
         Locale locale = LocaleContextHolder.getLocale();
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("workshop.profile.updated", null, locale), profile));

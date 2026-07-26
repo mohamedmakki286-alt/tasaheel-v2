@@ -37,19 +37,15 @@ public class WorkshopServiceListingService {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", workshopId));
 
-        ServiceCategory category = null;
-        if (req.getCategoryId() != null) {
-            category = categoryRepository.findById(req.getCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Category", req.getCategoryId()));
-        }
-
         com.tasaheel.entity.ServiceTemplate template = null;
         if (req.getServiceTemplateId() != null) {
             template = templateRepository.findById(req.getServiceTemplateId())
                     .orElseThrow(() -> new ResourceNotFoundException("ServiceTemplate", req.getServiceTemplateId()));
-            if (category == null && template.getCategory() != null) {
-                category = template.getCategory();
-            }
+        }
+        ServiceCategory category = template != null ? template.getCategory() : null;
+        if (category == null && req.getCategoryId() != null) {
+            category = categoryRepository.findById(req.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Category", req.getCategoryId()));
         }
 
         Integer maxOrder = serviceListingRepository.findMaxDisplayOrder(workshopId);

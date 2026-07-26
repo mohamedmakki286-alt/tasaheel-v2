@@ -5,6 +5,8 @@ import { useNotificationStore } from '../stores/notificationStore';
 import { playNotificationSound } from '../services/notificationSound';
 import { getWsUrl } from '../utils/ws';
 import i18n from '../i18n/i18n';
+import { useQueryClient } from '@tanstack/react-query';
+import { registerPushNotifications } from '../services/pushNotifications';
 
 const WS_URL = getWsUrl();
 
@@ -76,11 +78,11 @@ export function useTechnicianWebSocket() {
   const addNotification = useNotificationStore((s) => s.addNotification);
   const syncFromServer = useNotificationStore((s) => s.syncFromServer);
   const clientRef = useRef<Client | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!technician?.workshopId) return;
-
-    const workshopId = technician.workshopId;
+    registerPushNotifications(String(technician.id), 'technician');
 
     const client = new Client({
       brokerURL: WS_URL,
@@ -90,12 +92,15 @@ export function useTechnicianWebSocket() {
       onConnect: () => {
         syncFromServer();
 
-        client.subscribe(`/topic/workshop/${workshopId}`, (message) => {
-          try {
-            const data = JSON.parse(message.body);
-            handleEvent(data, addNotification);
-          } catch {}
-        });
+        if (technician.id) {
+          client.subscribe(`/topic/technician/${technician.id}`, (message) => {
+            try {
+              const data = JSON.parse(message.body);
+              handleEvent(data, addNotification);
+              queryClient.invalidateQueries({ queryKey: ['technician-requests'] });
+            } catch {}
+          });
+        }
       },
       onStompError: (frame) => {
         console.error('STOMP error:', frame.headers['message']);
@@ -108,7 +113,7 @@ export function useTechnicianWebSocket() {
     return () => {
       client.deactivate();
     };
-  }, [technician?.workshopId, addNotification, syncFromServer]);
+  }, [technician?.id, technician?.workshopId, addNotification, syncFromServer, queryClient]);
 
   return null;
 }

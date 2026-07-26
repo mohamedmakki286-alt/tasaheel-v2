@@ -52,7 +52,7 @@ function AddServiceModal({ catalog, onClose }: { catalog: ServiceCatalogCategory
       queryClient.invalidateQueries({ queryKey: ['myServiceListings'] });
       onClose();
     },
-    onError: (err: any) => toast.error(err?.friendlyMessage || err?.message || t('toast.error.failedSaveServices', 'فشل في حفظ الخدمة')),
+    onError: (error: any) => toast.error(error?.friendlyMessage || error?.response?.data?.message || error?.message || t('toast.error.failedSaveServices', 'فشل في حفظ الخدمة')),
   });
 
   if (step === 'category') {
@@ -296,9 +296,7 @@ function EditServiceModal({ service, categories, onClose }: { service: ServiceLi
 
   const mutation = useMutation({
     mutationFn: () => {
-      if (!Number.isFinite(form.price) || form.price <= 0) {
-        throw new Error('أدخل سعراً أكبر من صفر');
-      }
+      if (!Number.isFinite(form.price) || form.price <= 0) throw new Error('أدخل سعراً أكبر من صفر');
       return serviceListingsApi.updateService(service.id, form);
     },
     onSuccess: () => {
@@ -306,7 +304,7 @@ function EditServiceModal({ service, categories, onClose }: { service: ServiceLi
       queryClient.invalidateQueries({ queryKey: ['myServiceListings'] });
       onClose();
     },
-    onError: (err: any) => toast.error(err?.friendlyMessage || err?.message || t('toast.error.failedSaveServices', 'فشل في حفظ الخدمة')),
+    onError: (error: any) => toast.error(error?.friendlyMessage || error?.response?.data?.message || error?.message || t('toast.error.failedSaveServices', 'فشل في حفظ الخدمة')),
   });
 
   return (

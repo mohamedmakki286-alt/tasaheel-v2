@@ -47,6 +47,9 @@ public class WebSocketEventBroadcaster {
                 messagingTemplate.convertAndSend(statusTopic, message);
             }
 
+            MaintenanceRequest affectedRequest = event.getRequestId() == null
+                    ? null : requestRepository.findById(event.getRequestId()).orElse(null);
+
             // Broadcast to workshop-specific topic
             Long workshopId = null;
             if (event.getPayload() != null) {
@@ -56,8 +59,22 @@ public class WebSocketEventBroadcaster {
             if (workshopId == null && "workshop".equals(event.getActorRole())) {
                 workshopId = event.getActorId();
             }
-            if (workshopId != null) {
+            if (workshopId != null && !"workshop".equalsIgnoreCase(event.getActorRole())) {
                 messagingTemplate.convertAndSend("/topic/workshop/" + workshopId, message);
+            }
+            Long technicianId = null;
+            if (event.getPayload() != null) {
+                Object tid = event.getPayload().get("technicianId");
+                if (tid instanceof Number) technicianId = ((Number) tid).longValue();
+            }
+            if (technicianId == null && affectedRequest != null && affectedRequest.getTechnician() != null) {
+                technicianId = affectedRequest.getTechnician().getId();
+            }
+            if (technicianId != null && !"technician".equalsIgnoreCase(event.getActorRole())) {
+                messagingTemplate.convertAndSend("/topic/technician/" + technicianId, message);
+                notificationService.save(technicianId, "technician", event.getEventType().name(),
+                        "تم إسناد مهمة جديدة", "تم إسناد طلب جديد إليك",
+                        event.getRequestId(), event.getEventType().name());
             }
 
             // Broadcast to customer-specific topic
@@ -69,13 +86,12 @@ public class WebSocketEventBroadcaster {
             if (customerId == null && "customer".equals(event.getActorRole())) {
                 customerId = event.getActorId();
             }
-            if (customerId == null && event.getRequestId() != null) {
-                MaintenanceRequest request = requestRepository.findById(event.getRequestId()).orElse(null);
-                if (request != null && request.getCustomer() != null) {
-                    customerId = request.getCustomer().getId();
+            if (customerId == null && affectedRequest != null) {
+                if (affectedRequest.getCustomer() != null) {
+                    customerId = affectedRequest.getCustomer().getId();
                 }
             }
-            if (customerId != null) {
+            if (customerId != null && !"customer".equalsIgnoreCase(event.getActorRole())) {
                 messagingTemplate.convertAndSend("/topic/customer/" + customerId, message);
             }
 
