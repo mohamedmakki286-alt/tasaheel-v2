@@ -11,12 +11,16 @@ import com.tasaheel.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -135,6 +139,7 @@ public class ChatService {
         if (contentType != null) {
             if (contentType.startsWith("image/")) messageType = MessageType.IMAGE;
             else if (contentType.startsWith("audio/")) messageType = MessageType.AUDIO;
+            else if (contentType.startsWith("video/")) messageType = MessageType.VIDEO;
             else messageType = MessageType.FILE;
         }
 
@@ -173,13 +178,20 @@ public class ChatService {
         return dto;
     }
 
-    public Page<ChatMessageDTO> getMessages(Long roomId, UserDetailsImpl user, int page, int size) {
+    @Transactional(readOnly = true)
+    public Page<ChatMessageDTO> getMessages(Long roomId, UserDetailsImpl user, int page, int size, String direction) {
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("ChatRoom", roomId));
         requireRoomParticipant(room, user);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction)
+                ? Sort.Direction.DESC : Sort.Direction.ASC;
         Page<ChatMessage> messages = chatMessageRepository
-                .findByRoomIdOrderByCreatedAtAsc(roomId, PageRequest.of(page, size));
-        return messages.map(this::toChatMessageDTO);
+                .findByRoomId(roomId, PageRequest.of(Math.max(page, 0), safeSize,
+                        Sort.by(sortDirection, "createdAt").and(Sort.by(sortDirection, "id"))));
+        Map<String, String> senderNames = loadSenderNames(messages.getContent());
+        return messages.map(message -> toChatMessageDTO(message,
+                senderNames.getOrDefault(senderKey(message), "")));
     }
 
     @Transactional
@@ -250,7 +262,7 @@ public class ChatService {
 
     private ChatRoomDTO toChatRoomDTO(ChatRoom room, String viewerRole, Long viewerId) {
         Page<ChatMessage> lastPage = chatMessageRepository
-                .findByRoomIdOrderByCreatedAtAsc(room.getId(), PageRequest.of(0, 1,
+                .findByRoomId(room.getId(), PageRequest.of(0, 1,
                         org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
 
         ChatMessage lastMsg = lastPage.isEmpty() ? null : lastPage.getContent().get(0);
@@ -322,5 +334,56 @@ public class ChatService {
                 .clientMessageId(msg.getClientMessageId())
                 .attachment(attachmentDTO)
                 .build();
+    }
+
+    private ChatMessageDTO toChatMessageDTO(ChatMessage msg, String senderName) {
+        ChatAttachment att = msg.getAttachment();
+        ChatMessageDTO.AttachmentDTO attachmentDTO = att == null ? null
+                : ChatMessageDTO.AttachmentDTO.builder()
+                .id(att.getId())
+                .url(att.getFileUrl())
+                .mimeType(att.getMimeType())
+                .fileSize(att.getFileSize())
+                .originalFileName(att.getOriginalFileName())
+                .durationSeconds(att.getDurationSeconds())
+                .width(att.getWidth())
+                .height(att.getHeight())
+                .build();
+        return ChatMessageDTO.builder()
+                .id(msg.getId())
+                .roomId(msg.getRoom().getId())
+                .senderId(msg.getSenderId())
+                .senderRole(msg.getSenderRole())
+                .senderName(senderName)
+                .content(msg.getContent())
+                .type(msg.getType() != null ? msg.getType().name() : "TEXT")
+                .mediaUrl(msg.getMediaUrl())
+                .isRead(msg.getIsRead())
+                .createdAt(msg.getCreatedAt())
+                .clientMessageId(msg.getClientMessageId())
+                .attachment(attachmentDTO)
+                .build();
+    }
+
+    private Map<String, String> loadSenderNames(List<ChatMessage> messages) {
+        Map<String, Set<Long>> idsByRole = new HashMap<>();
+        for (ChatMessage message : messages) {
+            idsByRole.computeIfAbsent(message.getSenderRole(), ignored -> new HashSet<>())
+                    .add(message.getSenderId());
+        }
+        Map<String, String> names = new HashMap<>();
+        customerRepository.findAllById(idsByRole.getOrDefault("customer", Set.of()))
+                .forEach(entity -> names.put("customer:" + entity.getId(), entity.getName()));
+        workshopRepository.findAllById(idsByRole.getOrDefault("workshop", Set.of()))
+                .forEach(entity -> names.put("workshop:" + entity.getId(), entity.getName()));
+        driverRepository.findAllById(idsByRole.getOrDefault("driver", Set.of()))
+                .forEach(entity -> names.put("driver:" + entity.getId(), entity.getName()));
+        technicianRepository.findAllById(idsByRole.getOrDefault("technician", Set.of()))
+                .forEach(entity -> names.put("technician:" + entity.getId(), entity.getName()));
+        return names;
+    }
+
+    private String senderKey(ChatMessage message) {
+        return message.getSenderRole() + ":" + message.getSenderId();
     }
 }

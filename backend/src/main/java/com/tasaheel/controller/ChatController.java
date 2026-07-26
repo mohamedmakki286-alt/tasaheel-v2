@@ -57,8 +57,9 @@ public class ChatController {
     public ResponseEntity<ApiResponse<Page<ChatMessageDTO>>> getMessages(
             @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long roomId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        Page<ChatMessageDTO> messages = chatService.getMessages(roomId, user, page, size);
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "asc") String direction) {
+        Page<ChatMessageDTO> messages = chatService.getMessages(roomId, user, page, size, direction);
         return ResponseEntity.ok(ApiResponse.success(messages));
     }
 

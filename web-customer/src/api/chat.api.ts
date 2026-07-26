@@ -80,20 +80,13 @@ export async function getRoomByRequestId(requestId: number): Promise<ChatRoom | 
 }
 
 export async function getLatestMessages(roomId: string, size: number = 50): Promise<ChatPaginatedResult> {
-  const { data: meta } = await client.get(`/chat/room/${roomId}/messages`, { params: { page: 0, size: 1 } });
-  const totalPages = meta.totalPages || 1;
-  const totalElements = meta.totalElements || 0;
-
-  if (totalElements === 0) {
-    return { messages: [], totalPages: 0, currentPage: 0, totalElements: 0 };
-  }
-
-  const lastPage = totalPages - 1;
-  const { data } = await client.get(`/chat/room/${roomId}/messages`, { params: { page: lastPage, size } });
+  const { data } = await client.get(`/chat/room/${roomId}/messages`, {
+    params: { page: 0, size, direction: 'desc' },
+  });
   return {
-    messages: (data.content || []).map((m: any) => mapMessage(m, roomId)),
+    messages: (data.content || []).slice().reverse().map((m: any) => mapMessage(m, roomId)),
     totalPages: data.totalPages,
-    currentPage: lastPage,
+    currentPage: 0,
     totalElements: data.totalElements,
   };
 }

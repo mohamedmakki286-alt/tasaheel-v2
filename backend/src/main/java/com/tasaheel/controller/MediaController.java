@@ -69,6 +69,9 @@ public class MediaController {
                 .type(media.getType())
                 .url(media.getUrl())
                 .thumbnailUrl(media.getThumbnailUrl())
+                .originalFileName(media.getOriginalFileName())
+                .mimeType(media.getMimeType())
+                .fileSize(media.getFileSize())
                 .createdAt(media.getCreatedAt())
                 .build();
     }

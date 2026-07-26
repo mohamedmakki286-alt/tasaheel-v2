@@ -21,10 +21,10 @@ public class WorkshopGallery {
     @JoinColumn(name = "workshop_id", nullable = false)
     private Workshop workshop;
 
-    @Column(name = "media_url", nullable = false)
+    @Column(name = "media_url", nullable = false, columnDefinition = "TEXT")
     private String mediaUrl;
 
-    @Column(name = "media_type", nullable = false)
+    @Column(name = "media_type", nullable = false, columnDefinition = "TEXT")
     @Builder.Default
     private String mediaType = "image";
 

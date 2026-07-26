@@ -16,5 +16,8 @@ public class MediaDTO {
     private String type;
     private String url;
     private String thumbnailUrl;
+    private String originalFileName;
+    private String mimeType;
+    private Long fileSize;
     private LocalDateTime createdAt;
 }

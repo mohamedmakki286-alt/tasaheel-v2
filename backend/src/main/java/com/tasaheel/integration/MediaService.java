@@ -38,10 +38,15 @@ public class MediaService {
         "audio/aac", "audio/mpeg", "audio/wav"
     );
 
+    private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of(
+        "video/mp4", "video/webm", "video/quicktime", "video/x-matroska"
+    );
+
     private static final Set<String> ALLOWED_FILE_TYPES = new HashSet<>();
     static {
         ALLOWED_FILE_TYPES.addAll(ALLOWED_IMAGE_TYPES);
         ALLOWED_FILE_TYPES.addAll(ALLOWED_AUDIO_TYPES);
+        ALLOWED_FILE_TYPES.addAll(ALLOWED_VIDEO_TYPES);
         ALLOWED_FILE_TYPES.addAll(Set.of(
             "application/pdf",
             "application/msword",
@@ -49,7 +54,7 @@ public class MediaService {
         ));
     }
 
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+    private static final long MAX_FILE_SIZE = 30 * 1024 * 1024;
 
     public void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -156,7 +161,10 @@ public class MediaService {
                     .request(request)
                     .type(mediaType)
                     .url(getPublicBaseUrl() + "/uploads/" + fileName)
-                    .thumbnailUrl(getPublicBaseUrl() + "/uploads/thumb_" + fileName)
+                    .thumbnailUrl(null)
+                    .originalFileName(originalFileName != null ? originalFileName : fileName)
+                    .mimeType(contentType != null ? contentType.toLowerCase(Locale.ROOT) : "application/octet-stream")
+                    .fileSize(file.getSize())
                     .build();
 
             return mediaRepository.save(media);

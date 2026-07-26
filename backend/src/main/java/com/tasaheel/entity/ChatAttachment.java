@@ -21,16 +21,16 @@ public class ChatAttachment {
     @JoinColumn(name = "message_id", nullable = false)
     private ChatMessage message;
 
-    @Column(name = "storage_key", nullable = false)
+    @Column(name = "storage_key", nullable = false, columnDefinition = "TEXT")
     private String storageKey;
 
-    @Column(name = "file_url", nullable = false, length = 500)
+    @Column(name = "file_url", nullable = false, columnDefinition = "TEXT")
     private String fileUrl;
 
-    @Column(name = "original_file_name", nullable = false)
+    @Column(name = "original_file_name", nullable = false, columnDefinition = "TEXT")
     private String originalFileName;
 
-    @Column(name = "mime_type", nullable = false)
+    @Column(name = "mime_type", nullable = false, columnDefinition = "TEXT")
     private String mimeType;
 
     @Column(name = "file_size", nullable = false)

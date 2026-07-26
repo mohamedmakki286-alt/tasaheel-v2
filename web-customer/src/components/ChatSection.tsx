@@ -38,6 +38,7 @@ function MediaMessage({ msg, isCustomer }: { msg: { mediaUrl?: string; content?:
   const type = msg.type?.toLowerCase() || '';
   const isImage = type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
   const isAudio = type === 'audio' || /\.(mp3|wav|ogg|m4a|webm|aac)$/i.test(url);
+  const isVideo = type === 'video' || /\.(mp4|mov|mkv)$/i.test(url);
   const isPdf = type === 'file' && /\.pdf$/i.test(url);
 
   if (isAudio) {
@@ -53,6 +54,9 @@ function MediaMessage({ msg, isCustomer }: { msg: { mediaUrl?: string; content?:
         <img src={url} alt="صورة" className="max-w-[240px] max-h-[200px] rounded-xl object-cover" loading="lazy" />
       </a>
     );
+  }
+  if (isVideo) {
+    return <video src={url} controls preload="metadata" className="max-h-[240px] max-w-[260px] rounded-xl" />;
   }
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-3 py-2 rounded-xl ${isCustomer ? 'bg-white/20' : 'bg-surface-100 dark:bg-surface-600'}`}>
@@ -470,7 +474,7 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
         {showEmojiPicker && <div className="absolute bottom-[68px] left-0 right-0 z-20 rounded-2xl border border-surface-200 bg-white p-3 shadow-2xl dark:border-surface-700 dark:bg-surface-900" dir="rtl">
           {emojiGroups.map((group, groupIndex) => <div key={groupIndex} className="mb-2 grid grid-cols-10 gap-1 last:mb-0">{group.map((emoji) => <button key={emoji} type="button" onClick={() => { setContent((value) => `${value}${emoji}`); setShowEmojiPicker(false); }} className="rounded-lg p-1.5 text-xl transition hover:bg-surface-100 dark:hover:bg-surface-800">{emoji}</button>)}</div>)}
         </div>}
-        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,audio/webm,audio/ogg,audio/mp4,audio/m4a,audio/aac,audio/mpeg,audio/wav,.pdf,.doc,.docx" className="hidden" onChange={handleFileSelect} />
+        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,audio/webm,audio/ogg,audio/mp4,audio/m4a,audio/aac,audio/mpeg,audio/wav,video/mp4,video/webm,video/quicktime,.pdf,.doc,.docx" className="hidden" onChange={handleFileSelect} />
         <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="إضافة ملف"><Plus size={29} strokeWidth={2.2} /></button>
         <button type="button" onClick={() => setShowEmojiPicker((open) => !open)} className="flex h-12 w-10 shrink-0 items-center justify-center rounded-full text-surface-900 transition hover:bg-surface-100 dark:text-white dark:hover:bg-surface-700" aria-label="الإيموجي"><Smile size={28} strokeWidth={2.2} /></button>
         {isRecording ? (

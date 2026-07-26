@@ -60,10 +60,12 @@ export async function getRoom(requestId: string): Promise<ChatRoom> {
 }
 
 export async function getMessages(roomId: string): Promise<ChatMessage[]> {
-  const response = await apiClient.get(`/chat/room/${roomId}/messages`);
+  const response = await apiClient.get(`/chat/room/${roomId}/messages`, {
+    params: { page: 0, size: 50, direction: 'desc' },
+  });
   const list = Array.isArray(response.data) ? response.data :
     (response.data?.content ? response.data.content : []);
-  return list.map((m: any) => ({
+  return list.slice().reverse().map((m: any) => ({
     id: String(m.id),
     roomId: String(m.roomId || roomId),
     senderId: String(m.senderId || ''),

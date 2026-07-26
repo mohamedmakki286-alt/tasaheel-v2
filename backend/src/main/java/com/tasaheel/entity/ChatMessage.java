@@ -35,7 +35,7 @@ public class ChatMessage {
     @Builder.Default
     private MessageType type = MessageType.TEXT;
 
-    @Column(name = "media_url")
+    @Column(name = "media_url", columnDefinition = "TEXT")
     private String mediaUrl;
 
     @OneToOne(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

@@ -1,7 +1,7 @@
 package com.tasaheel.entity;
 
 public enum MessageType {
-    TEXT, IMAGE, AUDIO, FILE;
+    TEXT, IMAGE, AUDIO, VIDEO, FILE;
 
     public static MessageType fromString(String value) {
         if (value == null) return TEXT;

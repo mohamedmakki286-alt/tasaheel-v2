@@ -21,14 +21,23 @@ public class Media {
     @JoinColumn(name = "request_id", nullable = false)
     private MaintenanceRequest request;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String type;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String url;
 
-    @Column(name = "thumbnail_url")
+    @Column(name = "thumbnail_url", columnDefinition = "TEXT")
     private String thumbnailUrl;
+
+    @Column(name = "original_file_name", columnDefinition = "TEXT")
+    private String originalFileName;
+
+    @Column(name = "mime_type", columnDefinition = "TEXT")
+    private String mimeType;
+
+    @Column(name = "file_size")
+    private Long fileSize;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
