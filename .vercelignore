@@ -1,7 +1,5 @@
 backend
 backend.tar
-web-admin
-web-workshop
 web-workshop-android
 **/node_modules
 **/android
