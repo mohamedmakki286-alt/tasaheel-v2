@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     Optional<ChatRoom> findByRequestIdAndCustomerIdAndWorkshopId(Long requestId, Long customerId, Long workshopId);
     Optional<ChatRoom> findByRequestIdAndCustomerIdAndDriverId(Long requestId, Long customerId, Long driverId);
-    Optional<ChatRoom> findByRequestId(Long requestId);
+    Optional<ChatRoom> findFirstByRequestIdOrderByIdAsc(Long requestId);
     @EntityGraph(attributePaths = {"request", "customer", "workshop", "driver", "technician"})
     List<ChatRoom> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
     @EntityGraph(attributePaths = {"request", "customer", "workshop", "driver", "technician"})

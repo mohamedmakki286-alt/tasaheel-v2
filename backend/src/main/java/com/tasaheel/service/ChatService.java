@@ -196,7 +196,7 @@ public class ChatService {
 
     @Transactional
     public ChatRoomDTO getRoomByRequestId(Long requestId, UserDetailsImpl user) {
-        ChatRoom room = chatRoomRepository.findByRequestId(requestId).orElse(null);
+        ChatRoom room = chatRoomRepository.findFirstByRequestIdOrderByIdAsc(requestId).orElse(null);
         MaintenanceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
 

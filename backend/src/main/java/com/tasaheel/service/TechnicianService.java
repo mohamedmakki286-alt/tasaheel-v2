@@ -171,7 +171,7 @@ public class TechnicianService {
         assignment = assignmentRepository.save(assignment);
 
         // Add technician to chat room for this request
-        chatRoomRepository.findByRequestId(assignment.getRequest().getId()).ifPresent(room -> {
+        chatRoomRepository.findFirstByRequestIdOrderByIdAsc(assignment.getRequest().getId()).ifPresent(room -> {
             room.setTechnician(tech);
             chatRoomRepository.save(room);
         });
@@ -391,7 +391,7 @@ public class TechnicianService {
                 .build());
 
         // Add technician to chat room if exists
-        chatRoomRepository.findByRequestId(requestId).ifPresent(room -> {
+        chatRoomRepository.findFirstByRequestIdOrderByIdAsc(requestId).ifPresent(room -> {
             room.setTechnician(tech);
             chatRoomRepository.save(room);
         });
