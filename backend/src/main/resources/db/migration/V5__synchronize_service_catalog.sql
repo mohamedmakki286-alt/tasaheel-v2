@@ -33,7 +33,20 @@ ALTER TABLE workshop_service_listings ADD COLUMN IF NOT EXISTS is_available BOOL
 ALTER TABLE workshop_service_listings ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0;
 ALTER TABLE workshop_service_listings ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
 ALTER TABLE workshop_service_listings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
-ALTER TABLE workshop_service_listings ALTER COLUMN service_type_id DROP NOT NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'workshop_service_listings'
+          AND column_name = 'service_type_id'
+    ) THEN
+        ALTER TABLE workshop_service_listings
+            ALTER COLUMN service_type_id DROP NOT NULL;
+    END IF;
+END
+$$;
 
 INSERT INTO service_categories (name, name_en, icon, display_order, is_active)
 SELECT
