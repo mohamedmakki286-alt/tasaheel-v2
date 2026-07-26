@@ -1,4 +1,5 @@
 backend
+backend.tar
 web-admin
 web-workshop
 web-workshop-android
@@ -11,3 +12,8 @@ web-workshop-android
 *.log
 docs
 tmp-deploy
+tmp-workshop-deploy
+.agents
+.codex-video-frames
+.codex-video-frames-after
+.e2e-logs
