@@ -1,0 +1,2 @@
+ALTER TABLE workshops ALTER COLUMN address TYPE TEXT;
+ALTER TABLE workshops ALTER COLUMN whatsapp TYPE TEXT;

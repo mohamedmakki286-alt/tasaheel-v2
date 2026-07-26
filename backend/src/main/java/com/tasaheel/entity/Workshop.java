@@ -33,7 +33,7 @@ public class Workshop {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String address;
 
     @Column(nullable = false)
@@ -92,7 +92,7 @@ public class Workshop {
     @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
 
-    @Column(name = "whatsapp")
+    @Column(name = "whatsapp", columnDefinition = "TEXT")
     private String whatsapp;
 
     @Column(name = "website", columnDefinition = "TEXT")
