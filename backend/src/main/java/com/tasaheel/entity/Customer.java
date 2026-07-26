@@ -33,7 +33,7 @@ public class Customer {
     @Column
     private String city;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String avatar;
 
     @Column(name = "is_active", nullable = false)
@@ -43,7 +43,7 @@ public class Customer {
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 
-    @Column(name = "fcm_token")
+    @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
 
     @CreationTimestamp

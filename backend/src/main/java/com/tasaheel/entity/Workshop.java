@@ -51,16 +51,16 @@ public class Workshop {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "logo_url")
+    @Column(name = "logo_url", columnDefinition = "TEXT")
     private String logoUrl;
 
-    @Column(name = "cover_image_url")
+    @Column(name = "cover_image_url", columnDefinition = "TEXT")
     private String coverImageUrl;
 
-    @Column(name = "commercial_registration")
+    @Column(name = "commercial_registration", columnDefinition = "TEXT")
     private String commercialRegistration;
 
-    @Column(name = "municipality_license")
+    @Column(name = "municipality_license", columnDefinition = "TEXT")
     private String municipalityLicense;
 
     @Column(name = "rejection_reason")
@@ -89,31 +89,31 @@ public class Workshop {
     @Column(name = "working_hours", columnDefinition = "TEXT")
     private String workingHours;
 
-    @Column(name = "fcm_token")
+    @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
 
     @Column(name = "whatsapp")
     private String whatsapp;
 
-    @Column(name = "website")
+    @Column(name = "website", columnDefinition = "TEXT")
     private String website;
 
-    @Column(name = "tiktok_url")
+    @Column(name = "tiktok_url", columnDefinition = "TEXT")
     private String tiktokUrl;
 
-    @Column(name = "snapchat_url")
+    @Column(name = "snapchat_url", columnDefinition = "TEXT")
     private String snapchatUrl;
 
-    @Column(name = "facebook_url")
+    @Column(name = "facebook_url", columnDefinition = "TEXT")
     private String facebookUrl;
 
-    @Column(name = "instagram_url")
+    @Column(name = "instagram_url", columnDefinition = "TEXT")
     private String instagramUrl;
 
-    @Column(name = "x_url")
+    @Column(name = "x_url", columnDefinition = "TEXT")
     private String xUrl;
 
-    @Column(name = "youtube_url")
+    @Column(name = "youtube_url", columnDefinition = "TEXT")
     private String youtubeUrl;
 
     @Column(columnDefinition = "TEXT")
@@ -137,7 +137,7 @@ public class Workshop {
     @Column(name = "admin_notes", columnDefinition = "TEXT")
     private String adminNotes;
 
-    @Column(name = "contract_url")
+    @Column(name = "contract_url", columnDefinition = "TEXT")
     private String contractUrl;
 
     @Column(name = "contract_signed_at")
