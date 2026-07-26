@@ -18,25 +18,25 @@ public class Workshop {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String name;
 
-    @Column(name = "owner_name")
+    @Column(name = "owner_name", columnDefinition = "TEXT")
     private String ownerName;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, columnDefinition = "TEXT")
     private String phone;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String password;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String address;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String city;
 
     @Column
@@ -63,7 +63,7 @@ public class Workshop {
     @Column(name = "municipality_license", columnDefinition = "TEXT")
     private String municipalityLicense;
 
-    @Column(name = "rejection_reason")
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
     @Column(nullable = false)
@@ -78,7 +78,7 @@ public class Workshop {
     @Builder.Default
     private Boolean isApproved = false;
 
-    @Column(name = "workshop_type")
+    @Column(name = "workshop_type", columnDefinition = "TEXT")
     @Builder.Default
     private String workshopType = "stationary";
 
@@ -119,16 +119,16 @@ public class Workshop {
     @Column(columnDefinition = "TEXT")
     private String features;
 
-    @Column(name = "beneficiary_name")
+    @Column(name = "beneficiary_name", columnDefinition = "TEXT")
     private String beneficiaryName;
 
-    @Column(name = "bank_name")
+    @Column(name = "bank_name", columnDefinition = "TEXT")
     private String bankName;
 
-    @Column(name = "iban")
+    @Column(name = "iban", columnDefinition = "TEXT")
     private String iban;
 
-    @Column(name = "tax_number")
+    @Column(name = "tax_number", columnDefinition = "TEXT")
     private String taxNumber;
 
     @Column(name = "commission_percentage")
