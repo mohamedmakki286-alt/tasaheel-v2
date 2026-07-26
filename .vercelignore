@@ -15,3 +15,4 @@ tmp-workshop-deploy
 .codex-video-frames
 .codex-video-frames-after
 .e2e-logs
+.e2e-chrome-profile
