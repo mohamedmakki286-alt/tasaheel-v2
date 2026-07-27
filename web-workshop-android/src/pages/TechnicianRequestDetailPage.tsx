@@ -331,11 +331,19 @@ export default function TechnicianRequestDetailPage() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ requestId, status }: { requestId: number; status: string }) => {
       const response = await apiClient.put(`/technician/requests/${requestId}/status`, { status });
-      return response.data;
+      return { updatedRequest: response.data as TechRequest, requestedStatus: status };
     },
-    onSuccess: () => {
+    onSuccess: async ({ updatedRequest, requestedStatus }) => {
+      const effectiveStatus = requestedStatus === 'completed' ? 'awaiting_payment' : requestedStatus;
+      queryClient.setQueryData<TechRequest[]>(['technician-requests'], (current = []) =>
+        current.map((item) =>
+          String(item.id) === String(updatedRequest?.id || request?.id)
+            ? { ...item, ...updatedRequest, status: updatedRequest?.status || effectiveStatus }
+            : item
+        )
+      );
       toast.success('تم تحديث الحالة بنجاح');
-      queryClient.invalidateQueries({ queryKey: ['technician-requests'] });
+      await queryClient.refetchQueries({ queryKey: ['technician-requests'], type: 'active' });
     },
     onError: () => toast.error('فشل تحديث الحالة'),
   });
