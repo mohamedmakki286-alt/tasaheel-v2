@@ -18,7 +18,7 @@ export interface Customer {
   requestsCount: number;
   isActive: boolean;
   avatar?: string;
-  joinedAt: string;
+  joinedAt: string | null;
 }
 
 export type WorkshopType = 'stationary' | 'mobile' | 'both';

@@ -28,18 +28,11 @@ public class TestDataResetV2Controller {
 
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getUsers() {
-        if (!allowReset) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("ALLOW_TEST_DATA_RESET is not enabled on this environment"));
-        }
         return ResponseEntity.ok(ApiResponse.success(resetService.resolveUsers()));
     }
 
     @PostMapping("/preview")
     public ResponseEntity<ApiResponse<Map<String, Object>>> preview(@RequestBody Map<String, Object> body) {
-        if (!allowReset) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("ALLOW_TEST_DATA_RESET is not enabled on this environment"));
-        }
-
         @SuppressWarnings("unchecked")
         List<Long> customerIds = body.get("customerIds") != null
             ? ((List<Number>) body.get("customerIds")).stream().map(Number::longValue).toList()
@@ -101,9 +94,6 @@ public class TestDataResetV2Controller {
 
     @GetMapping("/audit-log")
     public ResponseEntity<ApiResponse<List<TestDataResetAuditLog>>> getAuditLog() {
-        if (!allowReset) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("ALLOW_TEST_DATA_RESET is not enabled on this environment"));
-        }
         return ResponseEntity.ok(ApiResponse.success(resetService.getAuditLogs()));
     }
 }
