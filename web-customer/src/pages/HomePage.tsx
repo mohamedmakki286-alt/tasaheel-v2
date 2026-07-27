@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/authStore';
 import { motion } from 'framer-motion';
@@ -24,12 +25,39 @@ const QUICK_SERVICES = [
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const } }) };
 
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const radius = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const customer = useAuthStore((s) => s.customer);
   const { showLoginSheet, closeSheet, requireAuth, pendingMessage } = useGuestGuard();
+  const [position, setPosition] = useState<[number, number] | null>(null);
   const { data: nearbyWorkshops = [] } = useQuery({ queryKey: ['home-workshops'], queryFn: () => workshopsApi.getAll(undefined, undefined, undefined) });
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      ({ coords }) => setPosition([coords.latitude, coords.longitude]),
+      () => setPosition(null),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+    );
+  }, []);
+  const orderedNearbyWorkshops = useMemo(() => nearbyWorkshops
+    .map((workshop) => ({
+      ...workshop,
+      distanceKm: position && workshop.latitude != null && workshop.longitude != null
+        && workshop.latitude !== 0 && workshop.longitude !== 0
+        ? distanceKm(position[0], position[1], workshop.latitude, workshop.longitude)
+        : null,
+    }))
+    .sort((a, b) => (a.distanceKm ?? Number.POSITIVE_INFINITY) - (b.distanceKm ?? Number.POSITIVE_INFINITY))
+    .slice(0, 8), [nearbyWorkshops, position]);
 
   const h = new Date().getHours();
   const greetingTime = h < 12 ? 'صباح الخير' : h < 18 ? 'مساء الخير' : 'مساء الخير';
@@ -125,10 +153,13 @@ export function HomePage() {
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-          {nearbyWorkshops.map((w, i) => (
+          {orderedNearbyWorkshops.map((w, i) => (
             <motion.button key={w.id} custom={i} initial="hidden" animate="visible" variants={fadeUp} onClick={() => navigate(`/workshops/${w.id}`)} className="min-w-[220px] bg-white dark:bg-surface-800/50 border border-surface-100 dark:border-surface-700/30 rounded-[16px] overflow-hidden text-right hover:shadow-card-hover transition-shadow active:scale-[0.98]">
-              <div className="h-28 bg-gradient-to-br from-surface-200 to-surface-300 dark:from-surface-700 dark:to-surface-800 flex items-center justify-center">
-                <Wrench size={32} className="text-surface-400 dark:text-surface-500" />
+              <div className="relative h-28 bg-gradient-to-br from-surface-200 to-surface-300 dark:from-surface-700 dark:to-surface-800 flex items-center justify-center">
+                {w.coverImageUrl || w.logoUrl ? (
+                  <img src={w.coverImageUrl || w.logoUrl} alt={w.name} className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+                ) : <span className="text-3xl font-black text-surface-400">{w.name?.trim()?.[0] || <Wrench size={32} />}</span>}
+                {w.logoUrl && w.coverImageUrl && <img src={w.logoUrl} alt="" className="absolute bottom-2 right-2 h-10 w-10 rounded-xl border-2 border-white bg-white object-cover shadow" />}
               </div>
               <div className="p-3">
                 <div className="flex items-center justify-between mb-1">
@@ -141,6 +172,7 @@ export function HomePage() {
                 <div className="flex items-center gap-1 text-xs text-surface-400 mb-2">
                   <MapPin size={11} />
                   <span>{w.city}</span>
+                  {w.distanceKm != null && <span>• {w.distanceKm < 1 ? `${Math.round(w.distanceKm * 1000)} م` : `${w.distanceKm.toFixed(1)} كم`}</span>}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${w.workshopType === 'mobile' ? 'bg-success-50 text-success-500' : 'bg-blue-50 text-blue-500'}`}>

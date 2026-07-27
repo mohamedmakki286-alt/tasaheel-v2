@@ -92,42 +92,42 @@ public class FcmEventHandler {
 
     private String getTitle(EventType type) {
         return switch (type) {
-            case REQUEST_CREATED, REQUEST_SUBMITTED -> "ط·ظ„ط¨ ط¬ط¯ظٹط¯";
-            case QUOTE_GENERATED -> "ط¹ط±ط¶ ط³ط¹ط± ط¬ط¯ظٹط¯";
-            case OFFER_ACCEPTED -> "طھظ… ظ‚ط¨ظˆظ„ ط§ظ„ط¹ط±ط¶";
+            case REQUEST_CREATED, REQUEST_SUBMITTED -> "طلب جديد";
+            case QUOTE_GENERATED -> "عرض سعر جديد";
+            case OFFER_ACCEPTED -> "تم قبول العرض";
             case QUOTE_REJECTED -> "تم رفض عرضك";
-            case STATUS_UPDATED -> "طھط­ط¯ظٹط« ط§ظ„ط­ط§ظ„ط©";
-            case SERVICE_STARTED -> "ط¨ط¯ط£طھ ط§ظ„ط®ط¯ظ…ط©";
-            case SERVICE_COMPLETED -> "ط§ظƒطھظ…ظ„طھ ط§ظ„ط®ط¯ظ…ط©";
-            case REPORT_SUBMITTED -> "طھظ‚ط±ظٹط± ط§ظ„ظپط­طµ";
-            case REPORT_APPROVED -> "طھظ… ط§ط¹طھظ…ط§ط¯ ط§ظ„طھظ‚ط±ظٹط±";
-            case INVOICE_CREATED -> "ظپط§طھظˆط±ط© ط¬ط¯ظٹط¯ط©";
-            case PAYMENT_HELD -> "طھظ… ط­ط¬ط² ط§ظ„ط¯ظپط¹";
-            case PAYMENT_RELEASED -> "طھظ… طµط±ظپ ط§ظ„ط¯ظپط¹";
-            case ADMIN_OVERRIDE -> "طھط¯ط®ظ„ ظ…ط¯ظٹط± ط§ظ„ظ†ط¸ط§ظ…";
-            default -> "ط¥ط´ط¹ط§ط±";
+            case STATUS_UPDATED -> "تحديث حالة الطلب";
+            case SERVICE_STARTED -> "بدأت الخدمة";
+            case SERVICE_COMPLETED -> "اكتملت الخدمة";
+            case REPORT_SUBMITTED -> "تقرير الفحص";
+            case REPORT_APPROVED -> "تم اعتماد التقرير";
+            case INVOICE_CREATED -> "فاتورة جديدة";
+            case PAYMENT_HELD -> "تم حجز الدفعة";
+            case PAYMENT_RELEASED -> "تم صرف الدفعة";
+            case ADMIN_OVERRIDE -> "تحديث من إدارة النظام";
+            default -> "إشعار من تساهيل";
         };
     }
 
     private String getBody(EventType type, MaintenanceRequest request, Map<String, Object> payload) {
         String serviceName = !request.getServiceTypes().isEmpty() ? request.getServiceTypes().get(0).getName() : "";
         return switch (type) {
-            case REQUEST_CREATED -> "طھظ… ط¥ظ†ط´ط§ط، ط·ظ„ط¨ ط®ط¯ظ…ط© " + serviceName;
-            case REQUEST_SUBMITTED -> "طھظ… طھظ‚ط¯ظٹظ… ط·ظ„ط¨ " + serviceName;
-            case QUOTE_GENERATED -> "طھظ… ط§ط³طھظ„ط§ظ… ط¹ط±ط¶ ط³ط¹ط± ظ„ط·ظ„ط¨ " + serviceName;
-            case OFFER_ACCEPTED -> "طھظ… ظ‚ط¨ظˆظ„ ط§ظ„ط¹ط±ط¶ ظ„ط·ظ„ط¨ " + serviceName;
+            case REQUEST_CREATED -> "تم إنشاء طلب خدمة " + serviceName;
+            case REQUEST_SUBMITTED -> "تم تقديم طلب " + serviceName;
+            case QUOTE_GENERATED -> "تم استلام عرض سعر لطلب " + serviceName;
+            case OFFER_ACCEPTED -> "تم قبول العرض لطلب " + serviceName;
             case QUOTE_REJECTED -> "تم رفض عرضك لطلب " + serviceName + " - تم اختيار عرض ورشة أخرى";
-            case STATUS_UPDATED -> "طھط؛ظٹط±طھ ط­ط§ظ„ط© ط§ظ„ط·ظ„ط¨: " + getStatusLabel(payload);
-            case SERVICE_STARTED -> "ط¨ط¯ط£ ط§ظ„ط¹ظ…ظ„ ط¹ظ„ظ‰ ط§ظ„ط®ط¯ظ…ط©: " + getServiceLabel(payload);
-            case SERVICE_COMPLETED -> "ط§ظƒطھظ…ظ„طھ ط§ظ„ط®ط¯ظ…ط©: " + getServiceLabel(payload);
-            case REPORT_SUBMITTED -> "طھظ… طھظ‚ط¯ظٹظ… طھظ‚ط±ظٹط± ط§ظ„ظپط­طµ ظ„ظ„ط·ظ„ط¨";
-            case REPORT_APPROVED -> "طھظ… ط§ط¹طھظ…ط§ط¯ طھظ‚ط±ظٹط± ط§ظ„ظپط­طµ";
-            case INVOICE_CREATED -> "طھظ… ط¥طµط¯ط§ط± ظپط§طھظˆط±ط© ظ„ظ„ط·ظ„ط¨";
-            case PAYMENT_HELD -> "طھظ… ط­ط¬ط² ط§ظ„ظ…ط¨ظ„ط؛ ظ„ط­ظٹظ† ط§ظƒطھظ…ط§ظ„ ط§ظ„ط®ط¯ظ…ط©";
-            case PAYMENT_RELEASED -> "طھظ… طµط±ظپ ط§ظ„ظ…ط¨ظ„ط؛ ظ„ظ„ظˆط±ط´ط©";
-            case ADMIN_OVERRIDE -> "ظ‚ط§ظ… ط§ظ„ظ…ط¯ظٹط± ط¨طھط­ط¯ظٹط« ط§ظ„ط·ظ„ط¨";
-            case REQUEST_CANCELLED -> "طھظ… ط¥ظ„ط؛ط§ط، ط§ظ„ط·ظ„ط¨";
-            default -> "ظ‡ظ†ط§ظƒ طھط­ط¯ظٹط« ط¹ظ„ظ‰ ط·ظ„ط¨ظƒ";
+            case STATUS_UPDATED -> "تغيرت حالة الطلب: " + getStatusLabel(payload);
+            case SERVICE_STARTED -> "بدأ العمل على الخدمة: " + getServiceLabel(payload);
+            case SERVICE_COMPLETED -> "اكتملت الخدمة: " + getServiceLabel(payload);
+            case REPORT_SUBMITTED -> "تم تقديم تقرير الفحص للطلب";
+            case REPORT_APPROVED -> "تم اعتماد تقرير الفحص";
+            case INVOICE_CREATED -> "تم إصدار فاتورة للطلب";
+            case PAYMENT_HELD -> "تم حجز المبلغ لحين اكتمال الخدمة";
+            case PAYMENT_RELEASED -> "تم صرف المبلغ للورشة";
+            case ADMIN_OVERRIDE -> "قامت الإدارة بتحديث الطلب";
+            case REQUEST_CANCELLED -> "تم إلغاء الطلب";
+            default -> "هناك تحديث جديد على طلبك";
         };
     }
 
@@ -140,7 +140,7 @@ public class FcmEventHandler {
 
     private String getServiceLabel(Map<String, Object> payload) {
         if (payload != null && payload.containsKey("serviceItemId")) {
-            return "ط±ظ‚ظ… " + payload.get("serviceItemId");
+            return "رقم " + payload.get("serviceItemId");
         }
         return "";
     }

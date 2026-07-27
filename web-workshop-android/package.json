@@ -15,6 +15,7 @@
     "cap:sync": "npx cap sync",
     "cap:open": "npx cap open android",
     "android:build": "npm run build && npx cap sync android",
+    "android:icons": "node gen-app-icon.cjs",
     "android:apk": "cd android && ./gradlew assembleDebug"
   },
   "dependencies": {

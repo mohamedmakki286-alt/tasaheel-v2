@@ -23,5 +23,8 @@ public class ChatRoomDTO {
     private String technicianName;
     private ChatMessageDTO lastMessage;
     private long unreadCount;
+    private String requestStatus;
+    private boolean writable;
+    private String closedReason;
     private LocalDateTime createdAt;
 }

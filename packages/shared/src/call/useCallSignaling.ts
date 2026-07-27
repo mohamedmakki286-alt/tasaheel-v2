@@ -35,7 +35,9 @@ export function useCallSignaling({ userId, userName, userRole, token }: UseCallS
     (destination: string, body: any) => {
       if (stompRef.current?.connected) {
         stompRef.current.publish({ destination, body: JSON.stringify(body) });
+        return true;
       }
+      return false;
     },
     [],
   );
@@ -115,12 +117,17 @@ export function useCallSignaling({ userId, userName, userRole, token }: UseCallS
         store.setStatus('ringing');
         store.setIsOutgoing(true);
 
-        publish('/app/call/offer', {
+        const published = publish('/app/call/offer', {
           calleeId: resolvedCalleeId,
           requestId,
           callerName: userName,
           sdp: JSON.stringify(offer),
         });
+        if (!published) {
+          rtc.cleanup();
+          store.reset();
+          throw new Error('Call signaling is not connected');
+        }
       } catch (err) {
         console.error('Failed to start call:', err);
         store.reset();
@@ -195,6 +202,9 @@ export function useCallSignaling({ userId, userName, userRole, token }: UseCallS
         client.subscribe('/user/queue/calls', (message) => {
           const data = JSON.parse(message.body);
           switch (data.type) {
+            case 'call_created':
+              store.setCallSessionId(data.callSessionId);
+              break;
             case 'call_offer':
               useCallStore.setState({
                 status: 'ringing',
@@ -210,6 +220,7 @@ export function useCallSignaling({ userId, userName, userRole, token }: UseCallS
               }
               break;
             case 'call_answer':
+              if (data.callSessionId) store.setCallSessionId(data.callSessionId);
               store.setStatus('connecting');
               if (data.sdp) {
                 rtc.setRemoteDescription(data.sdp);
@@ -223,6 +234,7 @@ export function useCallSignaling({ userId, userName, userRole, token }: UseCallS
             case 'call_rejected':
             case 'call_ended':
             case 'call_cancelled':
+            case 'call_timeout':
               rtc.cleanup();
               store.setStatus('ended');
               setTimeout(() => store.reset(), 2000);

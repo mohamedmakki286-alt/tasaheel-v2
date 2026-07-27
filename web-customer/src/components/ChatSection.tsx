@@ -77,6 +77,8 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
   const [uploadProgress, setUploadProgress] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const pendingAttachmentRef = useRef<File | null>(null);
+  const sendRecordingOnStopRef = useRef(false);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -205,12 +207,13 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
   const sendMutation = useMutation({
     mutationFn: async () => {
       if (!room?.id) throw new Error('No room');
-      if (previewFile) {
+      const attachment = pendingAttachmentRef.current || previewFile;
+      if (attachment) {
         setUploadState('uploading');
         setUploadProgress(0);
         const clientMsgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
         try {
-          const result = await sendAttachmentMessage(room.id, previewFile, content, clientMsgId, (p) => setUploadProgress(p));
+          const result = await sendAttachmentMessage(room.id, attachment, content, clientMsgId, (p) => setUploadProgress(p));
           setUploadState('sent');
           return result;
         } catch (e) {
@@ -223,6 +226,7 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
     onSuccess: () => {
       setContent('');
       setPreviewFile(null);
+      pendingAttachmentRef.current = null;
       setPreviewUrl(null);
       setUploadState('idle');
       setUploadProgress(0);
@@ -255,8 +259,13 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
         const extension = mimeType === 'audio/mp4' ? 'm4a' : mimeType.split('/')[1] || 'webm';
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
         const file = new File([blob], `voice-${Date.now()}.${extension}`, { type: mimeType });
+        pendingAttachmentRef.current = file;
         setPreviewFile(file);
         stream.getTracks().forEach(t => t.stop());
+        if (sendRecordingOnStopRef.current) {
+          sendRecordingOnStopRef.current = false;
+          setTimeout(() => sendMutation.mutate(), 0);
+        }
       };
 
       mediaRecorder.start();
@@ -268,8 +277,9 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
     }
   }, []);
 
-  const stopRecording = useCallback(() => {
+  const stopRecording = useCallback((sendImmediately = false) => {
     if (mediaRecorderRef.current && isRecording) {
+      sendRecordingOnStopRef.current = sendImmediately;
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (recordingIntervalRef.current) {
@@ -284,6 +294,8 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
       mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
       mediaRecorderRef.current = null;
       audioChunksRef.current = [];
+      pendingAttachmentRef.current = null;
+      sendRecordingOnStopRef.current = false;
       setIsRecording(false);
       setRecordingTime(0);
       if (recordingIntervalRef.current) {
@@ -470,7 +482,8 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
         </div>
       )}
 
-      <form onSubmit={handleSend} className="relative flex items-center gap-2 rounded-[28px] bg-white p-1.5 shadow-[0_5px_20px_rgba(15,23,42,0.10)] ring-1 ring-surface-100 dark:bg-surface-800 dark:ring-surface-700" dir="ltr">
+      {room?.writable === false && <div className="mb-2 rounded-2xl bg-surface-100 px-4 py-3 text-center text-sm text-surface-500 dark:bg-surface-800">{room.closedReason || 'تم إغلاق المحادثة لهذا الطلب'}</div>}
+      {room?.writable !== false && <form onSubmit={handleSend} className="relative flex items-center gap-2 rounded-[28px] bg-white p-1.5 shadow-[0_5px_20px_rgba(15,23,42,0.10)] ring-1 ring-surface-100 dark:bg-surface-800 dark:ring-surface-700" dir="ltr">
         {showEmojiPicker && <div className="absolute bottom-[68px] left-0 right-0 z-20 rounded-2xl border border-surface-200 bg-white p-3 shadow-2xl dark:border-surface-700 dark:bg-surface-900" dir="rtl">
           {emojiGroups.map((group, groupIndex) => <div key={groupIndex} className="mb-2 grid grid-cols-10 gap-1 last:mb-0">{group.map((emoji) => <button key={emoji} type="button" onClick={() => { setContent((value) => `${value}${emoji}`); setShowEmojiPicker(false); }} className="rounded-lg p-1.5 text-xl transition hover:bg-surface-100 dark:hover:bg-surface-800">{emoji}</button>)}</div>)}
         </div>}
@@ -486,8 +499,8 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
               <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
               <span className="text-sm text-red-400 font-mono">{String(Math.floor(recordingTime / 60)).padStart(2, '0')}:{String(recordingTime % 60).padStart(2, '0')}</span>
             </div>
-            <button type="button" onClick={stopRecording} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-500 text-white animate-pulse">
-              <MicOff size={22} />
+            <button type="button" onClick={() => stopRecording(true)} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-500 text-white shadow-lg shadow-accent-500/25" aria-label="إرسال التسجيل">
+              <Send size={20} />
             </button>
           </div>
         ) : (
@@ -511,7 +524,7 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
             )}
           </>
         )}
-      </form>
+      </form>}
     </div>
   );
 }

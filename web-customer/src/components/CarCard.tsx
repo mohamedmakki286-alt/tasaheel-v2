@@ -2,17 +2,20 @@ import { CalendarDays, Gauge, MoreHorizontal, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Car } from '../types';
 import { CarBrandLogo } from './CarBrandLogo';
+import { toArabicPlateDigits, toEnglishPlateLetters } from '../utils/saudiPlate';
 
 function MiniPlate({ value }: { value?: string | null }) {
   const tokens = (value ?? '').trim().split(/\s+/);
   const letters = tokens.filter((token) => /[A-Za-z\u0600-\u06ff]/.test(token)).join(' ');
   const numbers = tokens.filter((token) => /\d/.test(token)).join(' ');
+  const englishLetters = toEnglishPlateLetters(letters) || letters.toUpperCase();
+  const arabicNumbers = toArabicPlateDigits(numbers.replace(/\s/g, ''));
   return (
     <div className="grid h-[64px] w-[124px] shrink-0 grid-cols-2 grid-rows-2 overflow-hidden rounded-[12px] border border-surface-200 bg-white text-center text-[10px] font-black text-primary-500" dir="ltr">
-      <span className="flex items-center justify-center border-b border-r border-surface-200">{numbers || '١ ٢ ٣ ٤'}</span>
+      <span className="flex items-center justify-center border-b border-r border-surface-200">{arabicNumbers || '١ ٢ ٣ ٤'}</span>
       <span className="flex items-center justify-center border-b border-surface-200" dir="rtl">{letters || 'أ ب ج'}</span>
       <span className="flex items-center justify-center border-r border-surface-200">{numbers || '1 2 3 4'}</span>
-      <span className="flex items-center justify-center">{letters.toUpperCase() || 'A B J'}</span>
+      <span className="flex items-center justify-center">{englishLetters || 'A B J'}</span>
     </div>
   );
 }

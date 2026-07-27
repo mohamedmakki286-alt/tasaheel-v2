@@ -104,6 +104,12 @@ public class CallSignalingController {
             );
 
             sendToUser(calleeId, offer);
+            sendToUser(callerId, Map.of(
+                    "type", "call_created",
+                    "callSessionId", session.getId(),
+                    "calleeId", calleeId,
+                    "timestamp", System.currentTimeMillis()
+            ));
             log.info("Call offer: caller={} ({}) → callee={} ({}) session={}",
                     callerId, callerRole, calleeId, calleeRole, session.getId());
         } else {
@@ -375,7 +381,7 @@ public class CallSignalingController {
     }
 
     private void sendToUser(Long userId, Object payload) {
-        messagingTemplate.convertAndSend("/user/" + userId + "/queue/calls", payload);
+        messagingTemplate.convertAndSendToUser(String.valueOf(userId), "/queue/calls", payload);
     }
 
     private void sendError(Long userId, String errorCode) {

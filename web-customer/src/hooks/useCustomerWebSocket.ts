@@ -16,6 +16,7 @@ const WS_URL = getWsUrl();
 
 export function useCustomerWebSocket() {
   const { customer } = useAuthStore();
+  const token = useAuthStore((state) => state.token);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const syncFromServer = useNotificationStore((s) => s.syncFromServer);
   const clientRef = useRef<Client | null>(null);
@@ -28,6 +29,7 @@ export function useCustomerWebSocket() {
 
     const client = new Client({
       brokerURL: WS_URL,
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
@@ -63,7 +65,7 @@ export function useCustomerWebSocket() {
     return () => {
       client.deactivate();
     };
-  }, [customer?.id, customer?.city, addNotification, syncFromServer]);
+  }, [customer?.id, customer?.city, token, addNotification, syncFromServer]);
 
   return null;
 }

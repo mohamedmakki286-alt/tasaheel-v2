@@ -12,6 +12,7 @@ const WS_URL = getWsUrl();
 
 export function useWorkshopWebSocket() {
   const { workshop } = useAuthStore();
+  const token = useAuthStore((state) => state.token);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const syncFromServer = useNotificationStore((s) => s.syncFromServer);
   const clientRef = useRef<Client | null>(null);
@@ -26,6 +27,7 @@ export function useWorkshopWebSocket() {
 
     const client = new Client({
       brokerURL: WS_URL,
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
@@ -61,7 +63,7 @@ export function useWorkshopWebSocket() {
     return () => {
       client.deactivate();
     };
-  }, [workshop?.id, workshop?.city, addNotification, syncFromServer]);
+  }, [workshop?.id, workshop?.city, token, addNotification, syncFromServer]);
 
   return null;
 }

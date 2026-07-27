@@ -21,7 +21,7 @@ interface Props {
 }
 
 function extractCoords(input: string): { lat: number; lng: number } | null {
-  const trimmed = input.trim();
+  const trimmed = decodeURIComponent(input.trim().replace(/\+/g, ' '));
 
   // Pattern 1: @lat,lng or @lat,lng,zoom (Google Maps URL format)
   const atMatch = trimmed.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
@@ -32,7 +32,7 @@ function extractCoords(input: string): { lat: number; lng: number } | null {
   }
 
   // Pattern 2: q=lat,lng (Google Maps query param)
-  const qMatch = trimmed.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  const qMatch = trimmed.match(/[?&](?:q|query|destination)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
   if (qMatch) {
     const lat = parseFloat(qMatch[1]);
     const lng = parseFloat(qMatch[2]);
@@ -40,11 +40,18 @@ function extractCoords(input: string): { lat: number; lng: number } | null {
   }
 
   // Pattern 3: plain "(lat, lng)" or "lat, lng" with optional parentheses
-  const plainMatch = trimmed.match(/^\(?(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\)?$/);
+  const placeMatch = trimmed.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+  if (placeMatch) {
+    const lat = parseFloat(placeMatch[1]);
+    const lng = parseFloat(placeMatch[2]);
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
+  }
+
+  const plainMatch = trimmed.match(/^\(?(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)?$/);
   if (plainMatch) {
     const lat = parseFloat(plainMatch[1]);
     const lng = parseFloat(plainMatch[2]);
-    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
   }
 
   return null;

@@ -10,25 +10,16 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ArrowRight, CarFront, Check, ChevronDown, Plus, X } from 'lucide-react';
 import NumberInput from '../components/NumberInput';
 import BrandPicker from '../components/BrandPicker';
+import { SAUDI_PLATE_LETTERS } from '../utils/saudiPlate';
 
 const currentYear = new Date().getFullYear();
 const emptyForm = { make: '', model: '', year: currentYear, color: '', plateNumber: '', mileage: 0 };
-const safePlateLetters: Record<string, string> = {
-  '\u0627': 'A', '\u0623': 'A', '\u0628': 'B', '\u062D': 'J', '\u062F': 'D', '\u0631': 'R',
-  '\u0633': 'S', '\u0635': 'X', '\u0637': 'T', '\u0639': 'E', '\u0642': 'G', '\u0643': 'K',
-  '\u0644': 'L', '\u0645': 'Z', '\u0646': 'N', '\u0647': 'H', '\u0648': 'U', '\u0649': 'V', '\u064A': 'V',
-};
+const safePlateLetters = SAUDI_PLATE_LETTERS;
 const safeArabicDigits = '\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669';
 const normalizePlateDigit = (char: string) => {
   const arabic = safeArabicDigits.indexOf(char);
   const eastern = '\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9'.indexOf(char);
   return arabic >= 0 ? String(arabic) : eastern >= 0 ? String(eastern) : char;
-};
-
-const saudiPlateLetters: Record<string, string> = {
-  ا: 'A', أ: 'A', ب: 'B', ح: 'J', د: 'D', ر: 'R', س: 'S', ص: 'X',
-  ط: 'T', ع: 'E', ق: 'G', ك: 'K', ل: 'L', م: 'Z', ن: 'N', ه: 'H', هـ: 'H',
-  و: 'U', ى: 'V', ي: 'V',
 };
 
 function parsePlate(value: string) {

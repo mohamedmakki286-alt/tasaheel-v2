@@ -7,6 +7,7 @@ import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.repository.*;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.integration.MediaService;
+import com.tasaheel.integration.FirebaseService;
 import com.tasaheel.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +26,12 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class ChatService {
+    private static final Set<String> CHAT_ENABLED_STATUSES = Set.of(
+            "accepted", "inspection_report", "customer_approved", "in_progress",
+            "awaiting_payment", "completed", "paid");
+    private static final Set<String> CHAT_WRITABLE_STATUSES = Set.of(
+            "accepted", "inspection_report", "customer_approved", "in_progress",
+            "awaiting_payment");
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
@@ -37,6 +44,8 @@ public class ChatService {
     private final QuoteRepository quoteRepository;
     private final MediaService mediaService;
     private final SimpMessageSendingOperations messagingTemplate;
+    private final FirebaseService firebaseService;
+    private final NotificationService notificationService;
 
     @Transactional
     public ChatRoomDTO getOrCreateRoom(Long requestId, Long customerId, Long workshopId, Long driverId) {
@@ -53,6 +62,7 @@ public class ChatService {
         }
 
         if (existingRoom != null) {
+            requireAcceptedRequest(existingRoom.getRequest(), workshopId);
             if (existingRoom.getTechnician() == null && existingRoom.getRequest().getTechnician() != null) {
                 existingRoom.setTechnician(existingRoom.getRequest().getTechnician());
                 existingRoom = chatRoomRepository.save(existingRoom);
@@ -65,6 +75,7 @@ public class ChatService {
         if (!request.getCustomer().getId().equals(customerId)) {
             throw new BadRequestException("لست صاحب هذا الطلب");
         }
+        requireAcceptedRequest(request, workshopId);
         if (workshopId != null && !quoteRepository.findByRequestIdAndStatus(requestId, "accepted")
                 .map(quote -> quote.getWorkshop().getId().equals(workshopId)).orElse(false)) {
             throw new BadRequestException("المحادثة متاحة فقط مع الورشة المختارة");
@@ -92,6 +103,7 @@ public class ChatService {
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("ChatRoom", roomId));
         requireRoomParticipant(room, user);
+        requireWritableRoom(room);
         String senderRole = user.getRole().toLowerCase();
 
         MessageType messageType = MessageType.fromString(type);
@@ -112,6 +124,7 @@ public class ChatService {
 
         String destination = "/topic/room/" + roomId;
         messagingTemplate.convertAndSend(destination, dto);
+        notifyRecipients(room, user, dto);
 
         return dto;
     }
@@ -123,6 +136,7 @@ public class ChatService {
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("ChatRoom", roomId));
         requireRoomParticipant(room, user);
+        requireWritableRoom(room);
 
         if (clientMessageId != null && !clientMessageId.isBlank()) {
             boolean exists = chatMessageRepository.existsByClientMessageId(clientMessageId);
@@ -174,6 +188,7 @@ public class ChatService {
 
         String destination = "/topic/room/" + roomId;
         messagingTemplate.convertAndSend(destination, dto);
+        notifyRecipients(room, user, dto);
 
         return dto;
     }
@@ -202,7 +217,8 @@ public class ChatService {
 
         if (room == null && "technician".equalsIgnoreCase(user.getRole())
                 && request.getTechnician() != null
-                && request.getTechnician().getId().equals(user.getUserId())) {
+                && request.getTechnician().getId().equals(user.getUserId())
+                && isChatEnabled(request)) {
             room = chatRoomRepository.save(ChatRoom.builder()
                     .request(request)
                     .customer(request.getCustomer())
@@ -215,6 +231,7 @@ public class ChatService {
             throw new ResourceNotFoundException("ChatRoom for request", requestId);
         }
 
+        requireChatEnabled(request);
         if (room.getTechnician() == null && request.getTechnician() != null) {
             room.setTechnician(request.getTechnician());
             room = chatRoomRepository.save(room);
@@ -248,7 +265,8 @@ public class ChatService {
         ChatRoom room = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("ChatRoom", roomId));
         requireRoomParticipant(room, user);
-        chatMessageRepository.markAsReadByRoomIdAndSenderIdNot(roomId, user.getUserId());
+        chatMessageRepository.markAsReadForViewer(
+                roomId, user.getUserId(), user.getRole().toLowerCase());
     }
 
     private void requireRoomParticipant(ChatRoom room, UserDetailsImpl user) {
@@ -260,6 +278,33 @@ public class ChatService {
         if (!permitted) throw new BadRequestException("لست مشاركاً في هذه المحادثة");
     }
 
+    private void requireAcceptedRequest(MaintenanceRequest request, Long workshopId) {
+        requireChatEnabled(request);
+        if (workshopId != null && !quoteRepository.findByRequestIdAndStatus(request.getId(), "accepted")
+                .map(quote -> quote.getWorkshop().getId().equals(workshopId)).orElse(false)) {
+            throw new BadRequestException("المحادثة متاحة فقط مع الورشة التي قبل العميل عرضها");
+        }
+    }
+
+    private void requireChatEnabled(MaintenanceRequest request) {
+        if (!isChatEnabled(request)) {
+            throw new BadRequestException("المحادثة غير متاحة قبل قبول العرض أو بعد إلغاء الطلب");
+        }
+    }
+
+    private boolean isChatEnabled(MaintenanceRequest request) {
+        return request != null && request.getId() != null
+                && CHAT_ENABLED_STATUSES.contains(request.getStatus())
+                && quoteRepository.findByRequestIdAndStatus(request.getId(), "accepted").isPresent();
+    }
+
+    private void requireWritableRoom(ChatRoom room) {
+        requireChatEnabled(room.getRequest());
+        if (!CHAT_WRITABLE_STATUSES.contains(room.getRequest().getStatus())) {
+            throw new BadRequestException("تم إغلاق المحادثة لهذا الطلب");
+        }
+    }
+
     private ChatRoomDTO toChatRoomDTO(ChatRoom room, String viewerRole, Long viewerId) {
         Page<ChatMessage> lastPage = chatMessageRepository
                 .findByRoomId(room.getId(), PageRequest.of(0, 1,
@@ -267,8 +312,11 @@ public class ChatService {
 
         ChatMessage lastMsg = lastPage.isEmpty() ? null : lastPage.getContent().get(0);
 
+        String normalizedViewerRole = viewerRole == null ? "" : viewerRole.toLowerCase();
         long unreadCount = chatMessageRepository
-                .countByRoomIdAndIsReadFalseAndSenderIdNot(room.getId(), viewerId);
+                .countUnreadForViewer(room.getId(), viewerId, normalizedViewerRole);
+        boolean writable = CHAT_WRITABLE_STATUSES.contains(room.getRequest().getStatus())
+                && quoteRepository.findByRequestIdAndStatus(room.getRequest().getId(), "accepted").isPresent();
 
         ChatMessageDTO lastMessageDTO = lastMsg != null ? toChatMessageDTO(lastMsg) : null;
 
@@ -285,6 +333,9 @@ public class ChatService {
                 .technicianName(room.getTechnician() != null ? room.getTechnician().getName() : null)
                 .lastMessage(lastMessageDTO)
                 .unreadCount(unreadCount)
+                .requestStatus(room.getRequest().getStatus())
+                .writable(writable)
+                .closedReason(writable ? null : "تم إغلاق المحادثة لانتهاء أو إلغاء الطلب")
                 .createdAt(room.getCreatedAt())
                 .build();
     }
@@ -385,5 +436,53 @@ public class ChatService {
 
     private String senderKey(ChatMessage message) {
         return message.getSenderRole() + ":" + message.getSenderId();
+    }
+
+    private void notifyRecipients(ChatRoom room, UserDetailsImpl sender, ChatMessageDTO message) {
+        String senderRole = sender.getRole().toLowerCase();
+        String senderName = message.getSenderName() == null || message.getSenderName().isBlank()
+                ? "مستخدم" : message.getSenderName();
+        String body = message.getType() != null && !"TEXT".equalsIgnoreCase(message.getType())
+                ? "أرسل " + senderName + " مرفقاً جديداً"
+                : message.getContent();
+        Map<String, String> data = Map.of(
+                "type", "CHAT_MESSAGE",
+                "requestId", String.valueOf(room.getRequest().getId()),
+                "roomId", String.valueOf(room.getId()),
+                "url", "/orders/" + room.getRequest().getId() + "/chat"
+        );
+
+        if (room.getCustomer() != null && !("customer".equals(senderRole)
+                && room.getCustomer().getId().equals(sender.getUserId()))) {
+            saveAndPush(room.getCustomer().getId(), "customer", room.getCustomer().getFcmToken(),
+                    "رسالة جديدة", body, room.getRequest().getId(), data);
+            messagingTemplate.convertAndSend("/topic/customer/" + room.getCustomer().getId(),
+                    Map.of("type", "CHAT_MESSAGE", "requestId", room.getRequest().getId(),
+                            "payload", Map.of("body", body, "roomId", room.getId())));
+        }
+        if (room.getWorkshop() != null && !("workshop".equals(senderRole)
+                && room.getWorkshop().getId().equals(sender.getUserId()))) {
+            saveAndPush(room.getWorkshop().getId(), "workshop", room.getWorkshop().getFcmToken(),
+                    "رسالة جديدة", body, room.getRequest().getId(), data);
+            messagingTemplate.convertAndSend("/topic/workshop/" + room.getWorkshop().getId(),
+                    Map.of("type", "CHAT_MESSAGE", "requestId", room.getRequest().getId(),
+                            "payload", Map.of("body", body, "roomId", room.getId())));
+        }
+        if (room.getTechnician() != null && !("technician".equals(senderRole)
+                && room.getTechnician().getId().equals(sender.getUserId()))) {
+            saveAndPush(room.getTechnician().getId(), "technician", room.getTechnician().getFcmToken(),
+                    "رسالة جديدة", body, room.getRequest().getId(), data);
+            messagingTemplate.convertAndSend("/topic/technician/" + room.getTechnician().getId(),
+                    Map.of("type", "CHAT_MESSAGE", "requestId", room.getRequest().getId(),
+                            "payload", Map.of("body", body, "roomId", room.getId())));
+        }
+    }
+
+    private void saveAndPush(Long userId, String role, String token, String title, String body,
+                             Long requestId, Map<String, String> data) {
+        notificationService.save(userId, role, "message", title, body, requestId, "CHAT_MESSAGE");
+        if (token != null && !token.isBlank()) {
+            firebaseService.sendNotification(token, title, body, data);
+        }
     }
 }

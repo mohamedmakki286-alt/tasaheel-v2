@@ -37,6 +37,9 @@ export async function getRooms(): Promise<ChatRoom[]> {
     workshopName: r.workshopName || undefined,
     lastMessage: r.lastMessage ? mapMessage(r.lastMessage, String(r.id)) : undefined,
     unreadCount: Number(r.unreadCount || 0),
+    requestStatus: r.requestStatus,
+    writable: r.writable,
+    closedReason: r.closedReason,
     createdAt: r.createdAt || '',
   }));
 }
@@ -55,6 +58,9 @@ export async function getOrCreateRoom(requestId: number, customerId: number, wor
     workshopName: r.workshopName || undefined,
     lastMessage: r.lastMessage,
     unreadCount: r.unreadCount || 0,
+    requestStatus: r.requestStatus,
+    writable: r.writable,
+    closedReason: r.closedReason,
     createdAt: r.createdAt || '',
   };
 }
@@ -72,6 +78,9 @@ export async function getRoomByRequestId(requestId: number): Promise<ChatRoom | 
       workshopName: r.workshopName || undefined,
       lastMessage: r.lastMessage,
       unreadCount: r.unreadCount || 0,
+      requestStatus: r.requestStatus,
+      writable: r.writable,
+      closedReason: r.closedReason,
       createdAt: r.createdAt || '',
     };
   } catch {

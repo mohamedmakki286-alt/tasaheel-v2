@@ -75,6 +75,7 @@ function notificationType(eventType: string): 'request' | 'quote' | 'review' {
 
 export function useTechnicianWebSocket() {
   const technician = useAuthStore((s) => s.technician);
+  const token = useAuthStore((s) => s.token);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const syncFromServer = useNotificationStore((s) => s.syncFromServer);
   const clientRef = useRef<Client | null>(null);
@@ -86,6 +87,7 @@ export function useTechnicianWebSocket() {
 
     const client = new Client({
       brokerURL: WS_URL,
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
@@ -113,7 +115,7 @@ export function useTechnicianWebSocket() {
     return () => {
       client.deactivate();
     };
-  }, [technician?.id, technician?.workshopId, addNotification, syncFromServer, queryClient]);
+  }, [technician?.id, technician?.workshopId, token, addNotification, syncFromServer, queryClient]);
 
   return null;
 }

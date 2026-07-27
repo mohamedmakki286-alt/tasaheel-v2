@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight, MapPin, Phone, Car, Wrench, MessageCircle, Send, Clock, User,
-  FileText, CheckCheck, Plus, Smile, Image, X, Play, CheckCircle2, FileSearch,
+  FileText, CheckCheck, Plus, Smile, Image, X, Play, CheckCircle2, FileSearch, Mic, MicOff,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '../api/client';
@@ -87,7 +87,11 @@ function DateSeparator({ date }: { date: string }) {
 
 function MediaMessage({ url, isMine }: { url: string; isMine: boolean }) {
   const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url);
+  const isAudio = /\.(mp3|wav|ogg|m4a|webm|aac)$/i.test(url);
   const isPdf = /\.pdf$/i.test(url);
+  if (isAudio) {
+    return <audio src={url} controls preload="metadata" className="h-10 max-w-[240px]" />;
+  }
   if (isImage) {
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className="block">
@@ -109,6 +113,13 @@ function TechnicianChatSection({ requestId, customerName }: { requestId: number;
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const pendingAttachmentRef = useRef<File | null>(null);
+  const sendRecordingOnStopRef = useRef(false);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -130,9 +141,10 @@ function TechnicianChatSection({ requestId, customerName }: { requestId: number;
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      if (previewFile && room?.id) {
-        const url = await uploadChatMedia(previewFile);
-        const type = previewFile.type.startsWith('image/') ? 'image' : 'file';
+      const attachment = pendingAttachmentRef.current || previewFile;
+      if (attachment && room?.id) {
+        const url = await uploadChatMedia(attachment);
+        const type = attachment.type.startsWith('image/') ? 'image' : attachment.type.startsWith('audio/') ? 'audio' : 'file';
         return sendMessage(room.id, content || '', type, url);
       }
       return sendMessage(room!.id, content);
@@ -140,6 +152,7 @@ function TechnicianChatSection({ requestId, customerName }: { requestId: number;
     onSuccess: () => {
       setContent('');
       setPreviewFile(null);
+      pendingAttachmentRef.current = null;
       setPreviewUrl(null);
       queryClient.invalidateQueries({ queryKey: ['chat-messages', room?.id] });
     },
@@ -183,6 +196,74 @@ function TechnicianChatSection({ requestId, customerName }: { requestId: number;
     setPreviewFile(file);
     e.target.value = '';
   };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const supportedType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+        .find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = supportedType ? new MediaRecorder(stream, { mimeType: supportedType }) : new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) audioChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        const mimeType = recorder.mimeType.split(';')[0] || 'audio/webm';
+        const extension = mimeType === 'audio/mp4' ? 'm4a' : (mimeType.split('/')[1] || 'webm');
+        const file = new File([new Blob(audioChunksRef.current, { type: mimeType })], `voice-${Date.now()}.${extension}`, { type: mimeType });
+        pendingAttachmentRef.current = file;
+        setPreviewFile(file);
+        stream.getTracks().forEach((track) => track.stop());
+        if (sendRecordingOnStopRef.current) {
+          sendRecordingOnStopRef.current = false;
+          setTimeout(() => sendMutation.mutate(), 0);
+        }
+      };
+      recorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingIntervalRef.current = setInterval(() => setRecordingTime((value) => value + 1), 1000);
+    } catch {
+      toast.error('تعذر الوصول إلى الميكروفون');
+    }
+  };
+
+  const stopRecording = (sendImmediately: boolean) => {
+    if (!mediaRecorderRef.current || !isRecording) return;
+    sendRecordingOnStopRef.current = sendImmediately;
+    mediaRecorderRef.current.stop();
+    setIsRecording(false);
+    if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    recordingIntervalRef.current = null;
+  };
+
+  const cancelRecording = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.onstop = null;
+      recorder.stop();
+      recorder.stream.getTracks().forEach((track) => track.stop());
+    }
+    mediaRecorderRef.current = null;
+    audioChunksRef.current = [];
+    pendingAttachmentRef.current = null;
+    sendRecordingOnStopRef.current = false;
+    setIsRecording(false);
+    setRecordingTime(0);
+    if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    recordingIntervalRef.current = null;
+  };
+
+  useEffect(() => () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.onstop = null;
+      recorder.stop();
+      recorder.stream.getTracks().forEach((track) => track.stop());
+    }
+    if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+  }, []);
 
   if (isRoomError) {
     return (
@@ -233,7 +314,7 @@ function TechnicianChatSection({ requestId, customerName }: { requestId: number;
                     : 'bg-white text-[#111827] border border-gray-100 shadow-sm rounded-br-md'
                 }`}>
                   {!isMine && <p className="text-[10px] font-bold text-gray-400 mb-0.5">{msg.senderName}</p>}
-                  {msg.type === 'image' || msg.type === 'file' ? (
+                  {['image', 'audio', 'video', 'file'].includes(String(msg.type).toLowerCase()) ? (
                     <MediaMessage url={msg.mediaUrl || msg.content} isMine={isMine} />
                   ) : (
                     <p className="text-sm leading-relaxed">{msg.content}</p>
@@ -285,21 +366,35 @@ function TechnicianChatSection({ requestId, customerName }: { requestId: number;
         <input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={handleFileSelect} />
         <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition" aria-label="إضافة ملف"><Plus size={22} /></button>
         <button type="button" onClick={() => setShowEmojiPicker(v => !v)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition" aria-label="الإيموجي"><Smile size={22} /></button>
-        <input
+        {isRecording ? (
+          <div className="flex flex-1 items-center gap-3 rounded-full bg-red-50 px-4 py-2" dir="rtl">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+            <span className="flex-1 text-sm font-medium text-red-700">
+              {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}
+            </span>
+            <button type="button" onClick={cancelRecording} className="text-red-500" aria-label="إلغاء التسجيل">
+              <MicOff size={19} />
+            </button>
+          </div>
+        ) : <input
           type="text"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           className="flex-1 px-4 py-2.5 rounded-full bg-gray-100 text-sm outline-none focus:ring-2 focus:ring-[#E31B23]/30 transition-all"
           placeholder="اكتب رسالة..."
           dir="rtl"
-        />
-        {content.trim() || previewFile ? (
+        />}
+        {isRecording ? (
+          <button type="button" onClick={() => stopRecording(true)} disabled={sendMutation.isPending} className="w-10 h-10 rounded-full bg-[#E31B23] text-white flex items-center justify-center disabled:opacity-50 shrink-0">
+            <Send size={18} />
+          </button>
+        ) : content.trim() || previewFile ? (
           <button type="submit" disabled={sendMutation.isPending} className="w-10 h-10 rounded-full bg-[#E31B23] text-white flex items-center justify-center disabled:opacity-50 shrink-0 transition hover:bg-[#c9161e]">
             <Send size={18} />
           </button>
         ) : (
-          <button type="button" className="w-10 h-10 rounded-full text-gray-400 flex items-center justify-center shrink-0" aria-label="رسالة صوتية">
-            <span className="text-lg">🎤</span>
+          <button type="button" onClick={startRecording} className="w-10 h-10 rounded-full text-gray-500 flex items-center justify-center shrink-0 hover:bg-gray-100" aria-label="رسالة صوتية">
+            <Mic size={20} />
           </button>
         )}
       </form>

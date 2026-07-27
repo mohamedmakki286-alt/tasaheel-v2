@@ -365,5 +365,8 @@ export interface ChatRoom {
   driverName?: string;
   lastMessage?: ChatMessage;
   unreadCount?: number;
+  requestStatus?: string;
+  writable?: boolean;
+  closedReason?: string;
   createdAt: string;
 }

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { workshopsApi } from '../api/workshops.api';
 import { useState } from 'react';
+import { getWorkshopOpenStatus } from '../utils/workingHours';
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const } }) };
 
@@ -24,28 +25,6 @@ const FEATURE_MAP: Record<string, { label: string; icon: any }> = {
   parking: { label: 'موقف سيارات', icon: ParkingCircle },
   car_wash: { label: 'غسيل سيارات', icon: Droplets },
 };
-
-function getOpenStatus(workingHours?: string): { text: string; isOpen: boolean } | null {
-  if (!workingHours) return null;
-  try {
-    const hours = JSON.parse(workingHours);
-    if (!Array.isArray(hours)) return null;
-    const now = new Date();
-    const dayIndex = now.getDay() === 6 ? 0 : now.getDay() + 1;
-    const today = hours[dayIndex];
-    if (!today) return null;
-    if (today.closed) return { text: 'مغلق', isOpen: false };
-    const [oh, om] = today.open.split(':').map(Number);
-    const [ch, cm] = today.close.split(':').map(Number);
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const openMinutes = oh * 60 + om;
-    const closeMinutes = ch * 60 + cm;
-    if (closeMinutes === 0 && openMinutes > 0) {
-      return currentMinutes >= openMinutes ? { text: 'مفتوح', isOpen: true } : { text: 'مغلق', isOpen: false };
-    }
-    return currentMinutes >= openMinutes && currentMinutes < closeMinutes ? { text: 'مفتوح', isOpen: true } : { text: 'مغلق', isOpen: false };
-  } catch { return null; }
-}
 
 export function WorkshopDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -77,7 +56,7 @@ export function WorkshopDetailPage() {
   const serviceList = workshop?.services ? workshop.services.split(',').map((s) => s.trim()) : [];
   const features = workshop?.features ? workshop.features.split(',').filter(Boolean) : [];
   const gallery = workshop?.gallery || [];
-  const openStatus = getOpenStatus(workshop?.workingHours);
+  const openStatus = getWorkshopOpenStatus(workshop?.workingHours);
 
   const handleRequestService = () => {
     if (workshop) {

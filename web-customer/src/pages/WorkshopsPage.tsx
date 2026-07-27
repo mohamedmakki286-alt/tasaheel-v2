@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Search, MapPin, Star, Wrench, Building2, ChevronLeft, Truck, Shield, Clock, Phone, MessageCircle } from 'lucide-react';
 import { workshopsApi } from '../api/workshops.api';
 import type { Workshop } from '../types';
+import { getWorkshopOpenStatus } from '../utils/workingHours';
 
 const CITIES = [
   { value: 'الرياض', key: 'riyadh' },
@@ -17,24 +18,7 @@ const CITIES = [
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const } }) };
 
-function isOpenNow(workingHours?: string): boolean | null {
-  if (!workingHours) return null;
-  try {
-    const hours = JSON.parse(workingHours);
-    if (!Array.isArray(hours)) return null;
-    const now = new Date();
-    const dayIndex = now.getDay() === 6 ? 0 : now.getDay() + 1;
-    const today = hours[dayIndex];
-    if (!today || today.closed) return false;
-    const [oh, om] = today.open.split(':').map(Number);
-    const [ch, cm] = today.close.split(':').map(Number);
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const openMinutes = oh * 60 + om;
-    const closeMinutes = ch * 60 + cm;
-    if (closeMinutes === 0 && openMinutes > 0) return currentMinutes >= openMinutes;
-    return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
-  } catch { return null; }
-}
+const isOpenNow = (workingHours?: string) => getWorkshopOpenStatus(workingHours)?.isOpen ?? null;
 
 export function WorkshopsPage() {
   const navigate = useNavigate();

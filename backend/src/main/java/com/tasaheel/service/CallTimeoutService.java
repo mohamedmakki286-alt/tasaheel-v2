@@ -82,6 +82,6 @@ public class CallTimeoutService {
     }
 
     private void sendToUser(Long userId, Object payload) {
-        messagingTemplate.convertAndSend("/user/" + userId + "/queue/calls", payload);
+        messagingTemplate.convertAndSendToUser(String.valueOf(userId), "/queue/calls", payload);
     }
 }
