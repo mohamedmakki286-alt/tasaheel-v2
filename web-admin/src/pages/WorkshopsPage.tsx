@@ -163,7 +163,7 @@ export default function WorkshopsPage() {
       key: 'rating', label: t('pages.workshops.table.rating'), sortable: true,
       render: (w) => (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-          {w.rating.toFixed(1)} ★
+          {Number(w.rating ?? 0).toFixed(1)} ★
         </span>
       ),
     },
@@ -203,7 +203,7 @@ export default function WorkshopsPage() {
           <Button variant="secondary" size="sm" icon={<Download className="w-4 h-4" />} onClick={() => {
             const items = data?.data || [];
             if (!items.length) { toast.error(t('toast.error.noExportData')); return; }
-            exportDataToPDF(items.map((w: Workshop) => ({ '#': w.id, [t('pages.workshops.table.name')]: w.name, [t('pages.workshops.detail.owner')]: w.ownerName, [t('pages.workshops.table.phone')]: w.phone, [t('pages.workshops.table.city')]: w.city, [t('pages.workshops.table.rating')]: w.rating.toFixed(1) })), t('pages.workshops.title'), t('pages.workshops.subtitle'));
+            exportDataToPDF(items.map((w: Workshop) => ({ '#': w.id, [t('pages.workshops.table.name')]: w.name, [t('pages.workshops.detail.owner')]: w.ownerName, [t('pages.workshops.table.phone')]: w.phone, [t('pages.workshops.table.city')]: w.city, [t('pages.workshops.table.rating')]: Number(w.rating ?? 0).toFixed(1) })), t('pages.workshops.title'), t('pages.workshops.subtitle'));
             toast.success(t('toast.success.exportSuccess'));
           }}>{t('common.export')}</Button>
           <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreateModal(true)}>{t('pages.workshops.addWorkshop')}</Button>

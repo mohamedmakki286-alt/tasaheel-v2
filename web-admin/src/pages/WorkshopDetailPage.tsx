@@ -201,7 +201,7 @@ export default function WorkshopDetailPage() {
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-3 shadow-lg">
                   <Star className="w-6 h-6 text-white" />
                 </div>
-                <p className="text-3xl font-bold text-amber-700">{workshop.rating.toFixed(1)}</p>
+                <p className="text-3xl font-bold text-amber-700">{Number(workshop.rating ?? 0).toFixed(1)}</p>
                 <p className="text-sm text-amber-600 font-medium">{t('pages.workshops.detail.rating')}</p>
               </div>
               <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-5 text-center">

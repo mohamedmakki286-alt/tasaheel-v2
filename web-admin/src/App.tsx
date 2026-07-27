@@ -1,15 +1,14 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
 import LoginPage from './pages/LoginPage';
 import AdminLayout from './layouts/AdminLayout';
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
+import AppErrorBoundary from './components/AppErrorBoundary';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const testDataResetEnabled =
-  import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_DATA_RESET === 'true';
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CustomersPage = lazy(() => import('./pages/CustomersPage'));
 const CustomerDetailPage = lazy(() => import('./pages/CustomerDetailPage'));
@@ -49,6 +48,7 @@ function AuthInit({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
+  const location = useLocation();
   if (window.location.hash.includes('access_token') && window.location.pathname !== '/login') {
     window.location.replace('/login' + window.location.hash);
     return null;
@@ -56,6 +56,7 @@ function AppRoutes() {
   return (
     <GoogleOAuthProvider clientId={googleClientId || ''}>
     <AuthInit>
+    <AppErrorBoundary resetKey={location.pathname}>
     <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
@@ -78,15 +79,14 @@ function AppRoutes() {
         <Route path="services" element={<ServicesPage />} />
         <Route path="workshop-services" element={<WorkshopServiceListingsPage />} />
         <Route path="offers" element={<OffersPage />} />
-        {testDataResetEnabled && (
-          <Route path="test-data-reset" element={<TestDataResetPage />} />
-        )}
+        <Route path="test-data-reset" element={<TestDataResetPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </Suspense>
+    </AppErrorBoundary>
     </AuthInit>
     </GoogleOAuthProvider>
   );

@@ -35,9 +35,6 @@ import AIAssistant from '../components/AIAssistant';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
-const testDataResetEnabled =
-  import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_DATA_RESET === 'true';
-
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -66,9 +63,7 @@ export default function AdminLayout() {
     { path: '/offers', label: 'الباقات والعروض', icon: Gift },
     { path: '/reports', label: t('layout.sidebar.reports'), icon: BarChart3 },
     { path: '/settings', label: t('layout.sidebar.settings'), icon: Cog },
-    ...(testDataResetEnabled
-      ? [{ path: '/test-data-reset', label: 'إعادة تعيين البيانات', icon: ShieldAlert }]
-      : []),
+    { path: '/test-data-reset', label: 'حذف البيانات التجريبية', icon: ShieldAlert },
   ];
   const accountingItems = [
     { path: '/payments', label: 'سجل التحصيلات', icon: DollarSign },
@@ -93,7 +88,7 @@ export default function AdminLayout() {
     '/offers': 'الباقات والعروض',
     '/reports': t('layout.sidebar.reports'),
     '/settings': t('layout.sidebar.settings'),
-    '/test-data-reset': 'إعادة تعيين البيانات',
+    '/test-data-reset': 'حذف البيانات التجريبية',
   };
 
   const toggleLang = () => {

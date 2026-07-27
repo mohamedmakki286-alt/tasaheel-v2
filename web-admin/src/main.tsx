@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import toast, { Toaster } from 'react-hot-toast';
 import * as Sentry from '@sentry/react';
 import App from './App';
 import './index.css';
@@ -16,11 +16,27 @@ Sentry.init({
   tracesSampleRate: 0.2,
 });
 
+function getErrorMessage(error: unknown) {
+  const apiError = error as {
+    response?: { data?: { message?: string }; status?: number };
+    message?: string;
+  };
+  return apiError.response?.data?.message || apiError.message || 'تعذر الاتصال بالخادم';
+}
+
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => toast.error(getErrorMessage(error)),
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => toast.error(getErrorMessage(error)),
+  }),
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      throwOnError: (error: any) =>
+        !error?.response || Number(error.response.status) >= 500,
     },
   },
 });
