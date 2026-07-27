@@ -80,7 +80,12 @@ export default function InvoiceForm({
       queryClient.invalidateQueries({ queryKey: ['requests'] });
       onClose();
     },
-    onError: () => toast.error(t('toast.error.invoiceCreateFailed')),
+    onError: (error: any) => toast.error(
+      error?.friendlyMessage
+        || error?.response?.data?.message
+        || error?.message
+        || t('toast.error.invoiceCreateFailed')
+    ),
   });
 
   const handleSubmit = (e: React.FormEvent) => {

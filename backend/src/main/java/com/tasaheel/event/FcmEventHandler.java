@@ -62,9 +62,12 @@ public class FcmEventHandler {
         }
 
         Object technicianValue = event.getPayload() == null ? null : event.getPayload().get("technicianId");
-        Long technicianId = technicianValue instanceof Number
-                ? ((Number) technicianValue).longValue()
-                : request.getTechnician() == null ? null : request.getTechnician().getId();
+        Long technicianId = null;
+        if (technicianValue instanceof Number) {
+            technicianId = ((Number) technicianValue).longValue();
+        } else if (request.getTechnician() != null) {
+            technicianId = request.getTechnician().getId();
+        }
         if (technicianId != null && !"technician".equals(actorRole)) {
             Technician technician = technicianRepository.findById(technicianId).orElse(null);
             if (technician != null && technician.getFcmToken() != null && !technician.getFcmToken().isBlank()) {

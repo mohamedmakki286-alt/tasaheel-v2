@@ -51,8 +51,8 @@ public class InvoiceService {
         if (!List.of("awaiting_payment", "completed").contains(request.getStatus())) {
             throw new BadRequestException("Work must be completed before creating an invoice");
         }
-        InspectionReport approvedReport = inspectionReportRepository.findTopByRequestIdOrderByCreatedAtDesc(requestId)
-                .filter(report -> "approved".equals(report.getStatus()))
+        InspectionReport approvedReport = inspectionReportRepository
+                .findTopByRequestIdAndStatusOrderByCreatedAtDesc(requestId, "approved")
                 .orElseThrow(() -> new BadRequestException("The inspection report must be approved before creating an invoice"));
 
         double safeParts = partsTotal != null ? partsTotal : 0.0;

@@ -266,6 +266,10 @@ public class TechnicianService {
         }
 
         String effectiveStatus = "completed".equals(status) ? "awaiting_payment" : status;
+        // PUT updates may be retried when a mobile connection is slow.
+        if (effectiveStatus.equals(request.getStatus())) {
+            return toRequestDTO(request);
+        }
         boolean allowed = ("customer_approved".equals(request.getStatus()) && "in_progress".equals(effectiveStatus))
                 || ("in_progress".equals(request.getStatus()) && "awaiting_payment".equals(effectiveStatus));
         if (!allowed) {

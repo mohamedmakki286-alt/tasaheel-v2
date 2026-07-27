@@ -308,7 +308,7 @@ export default function RequestDetailPage() {
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setShowInvoiceForm(true)} disabled={!report && request.status !== 'awaiting_payment'} className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"><Receipt size={16} /> إنشاء الفاتورة</button>
+                <button onClick={() => setShowInvoiceForm(true)} disabled={!['awaiting_payment', 'completed'].includes(request.status)} title={!['awaiting_payment', 'completed'].includes(request.status) ? 'يجب إكمال العمل واعتماد تقرير الفحص أولاً' : undefined} className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"><Receipt size={16} /> إنشاء الفاتورة</button>
               )}
             </DocumentRow>
           </section>

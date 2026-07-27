@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface InspectionReportRepository extends JpaRepository<InspectionReport, Long> {
     Optional<InspectionReport> findByRequestId(Long requestId);
     Optional<InspectionReport> findTopByRequestIdOrderByCreatedAtDesc(Long requestId);
+    Optional<InspectionReport> findTopByRequestIdAndStatusOrderByCreatedAtDesc(Long requestId, String status);
 }

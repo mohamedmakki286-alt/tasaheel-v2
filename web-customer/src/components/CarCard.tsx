@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import type { Car } from '../types';
 import { CarBrandLogo } from './CarBrandLogo';
 
-function MiniPlate({ value = '' }: { value?: string }) {
-  const tokens = value.trim().split(/\s+/);
+function MiniPlate({ value }: { value?: string | null }) {
+  const tokens = (value ?? '').trim().split(/\s+/);
   const letters = tokens.filter((token) => /[A-Za-z\u0600-\u06ff]/.test(token)).join(' ');
   const numbers = tokens.filter((token) => /\d/.test(token)).join(' ');
   return (

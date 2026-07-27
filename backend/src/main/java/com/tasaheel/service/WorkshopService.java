@@ -276,6 +276,10 @@ public class WorkshopService {
         requireSelectedWorkshop(requestId, workshopId);
 
         String effectiveStatus = "completed".equals(status) ? "awaiting_payment" : status;
+        // PUT updates may be retried when a mobile connection is slow.
+        if (effectiveStatus.equals(request.getStatus())) {
+            return;
+        }
 
         java.util.Set<String> allowed = WORKSHOP_ALLOWED_TRANSITIONS.getOrDefault(request.getStatus(), java.util.Set.of());
         if (!allowed.contains(effectiveStatus)) {

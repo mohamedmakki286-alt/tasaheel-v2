@@ -1,0 +1,5 @@
+ALTER TABLE workshops ALTER COLUMN services TYPE TEXT;
+ALTER TABLE workshops ALTER COLUMN description TYPE TEXT;
+ALTER TABLE workshops ALTER COLUMN working_hours TYPE TEXT;
+ALTER TABLE workshops ALTER COLUMN features TYPE TEXT;
+ALTER TABLE workshops ALTER COLUMN admin_notes TYPE TEXT;
