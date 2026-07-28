@@ -11,6 +11,9 @@ function mapRoom(r: any): ChatRoom {
     workshopName: r.workshopName || '',
     participants: [],
     unreadCount: Number(r.unreadCount || 0),
+    requestStatus: r.requestStatus,
+    writable: r.writable,
+    closedReason: r.closedReason,
     lastMessage: r.lastMessage ? {
       id: String(r.lastMessage.id || ''),
       roomId: String(r.lastMessage.roomId || r.id || ''),
@@ -44,6 +47,9 @@ export async function getRoom(requestId: string): Promise<ChatRoom> {
     workshopName: r.workshopName || '',
     participants: [],
     unreadCount: r.unreadCount || 0,
+    requestStatus: r.requestStatus,
+    writable: r.writable,
+    closedReason: r.closedReason,
     lastMessage: r.lastMessage ? {
       id: String(r.lastMessage.id || ''),
       roomId: String(r.lastMessage.roomId || ''),
@@ -101,6 +107,10 @@ export async function sendMessage(roomId: string, content: string, type: string 
 
 export async function markAsRead(roomId: string): Promise<void> {
   await apiClient.put(`/chat/room/${roomId}/read`);
+}
+
+export async function deleteRoom(roomId: string): Promise<void> {
+  await apiClient.delete(`/chat/room/${roomId}`);
 }
 
 export async function sendAttachmentMessage(

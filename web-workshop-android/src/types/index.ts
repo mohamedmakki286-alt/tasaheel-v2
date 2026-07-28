@@ -238,6 +238,9 @@ export interface ChatRoom {
   participants: string[];
   unreadCount?: number;
   lastMessage?: ChatMessage;
+  requestStatus?: string;
+  writable?: boolean;
+  closedReason?: string;
   createdAt: string;
 }
 
