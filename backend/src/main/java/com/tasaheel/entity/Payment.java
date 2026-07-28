@@ -50,6 +50,15 @@ public class Payment {
     @Column(name = "moyasar_invoice_id")
     private String moyasarInvoiceId;
 
+    @Column(name = "provider_invoice_id", length = 120)
+    private String providerInvoiceId;
+
+    @Column(name = "idempotency_key", unique = true, length = 100)
+    private String idempotencyKey;
+
+    @Column(name = "provider_event_id", length = 120)
+    private String providerEventId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

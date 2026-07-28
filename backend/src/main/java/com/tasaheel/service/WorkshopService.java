@@ -184,6 +184,15 @@ public class WorkshopService {
         if (!List.of("pending", "quoted").contains(request.getStatus())) {
             throw new BadRequestException("Request is not open for quotes");
         }
+        if (price == null || !Double.isFinite(price) || price <= 0) {
+            throw new BadRequestException("Quote price must be greater than zero");
+        }
+        if (estimatedDays != null && estimatedDays <= 0) {
+            throw new BadRequestException("Estimated days must be greater than zero");
+        }
+        if (warrantyMonths != null && warrantyMonths < 0) {
+            throw new BadRequestException("Warranty months cannot be negative");
+        }
         requestDispatchService.markQuoted(requestId, workshopId);
 
         if (!quoteRepository.findByRequestIdAndWorkshopId(requestId, workshopId).isEmpty()) {

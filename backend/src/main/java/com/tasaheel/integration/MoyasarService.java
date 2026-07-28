@@ -28,6 +28,38 @@ public class MoyasarService {
         return initiatePayment(amount, currency, description, callbackUrl, null);
     }
 
+    public Map<String, Object> createHostedInvoice(double amount, String currency, String description,
+                                                    String callbackUrl, String successUrl, String backUrl,
+                                                    String reference) {
+        try {
+            HttpHeaders headers = createHeaders();
+            Map<String, Object> body = new HashMap<>();
+            body.put("amount", Math.round(amount * 100));
+            body.put("currency", currency);
+            body.put("description", description);
+            body.put("callback_url", callbackUrl);
+            body.put("success_url", successUrl);
+            body.put("back_url", backUrl);
+            body.put("metadata", Map.of("reference", reference));
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            return restTemplate.exchange(baseUrl + "/invoices", HttpMethod.POST, entity, Map.class).getBody();
+        } catch (Exception e) {
+            log.error("Failed to create hosted invoice: {}", e.getMessage());
+            throw new BadRequestException("Failed to create payment checkout");
+        }
+    }
+
+    public Map<String, Object> getInvoice(String invoiceId) {
+        try {
+            HttpEntity<Void> entity = new HttpEntity<>(createHeaders());
+            return restTemplate.exchange(
+                    baseUrl + "/invoices/" + invoiceId, HttpMethod.GET, entity, Map.class).getBody();
+        } catch (Exception e) {
+            log.error("Failed to fetch hosted invoice: {}", e.getMessage());
+            throw new BadRequestException("Payment invoice not found");
+        }
+    }
+
     public Map<String, Object> initiatePayment(double amount, String currency, String description, String callbackUrl, String sourceType) {
         try {
             HttpHeaders headers = createHeaders();

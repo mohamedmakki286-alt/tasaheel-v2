@@ -17,6 +17,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,6 +36,7 @@ public class InvoiceService {
     private final RequestCompletionService requestCompletionService;
     private final QuoteRepository quoteRepository;
     private final EventPublisher eventPublisher;
+    private final AccountingService accountingService;
 
     @Transactional
     public InvoiceDTO createOrUpdateInvoice(Long requestId, Long workshopId, Double partsTotal, Double laborTotal, Double totalAmount, Double tax, Double taxPercent, Double grandTotal, List<InvoiceItemDTO> items) {
@@ -55,38 +58,58 @@ public class InvoiceService {
                 .findTopByRequestIdAndStatusOrderByCreatedAtDesc(requestId, "approved")
                 .orElseThrow(() -> new BadRequestException("The inspection report must be approved before creating an invoice"));
 
-        double safeParts = partsTotal != null ? partsTotal : 0.0;
-        double safeLabor = laborTotal != null ? laborTotal : 0.0;
-        double safeTotalAmount = totalAmount != null ? totalAmount : 0.0;
-        double safeGrandTotal = grandTotal != null ? grandTotal : 0.0;
-        double safeTax = tax != null ? tax : 0.0;
+        double finalTaxPercent = taxPercent != null ? taxPercent : 15.0;
+        if (finalTaxPercent < 0 || finalTaxPercent > 100) {
+            throw new BadRequestException("Tax percentage must be between 0 and 100");
+        }
 
-        double taxRate = taxPercent != null ? taxPercent / 100.0 : 0.15;
+        double safeParts = money(partsTotal);
+        double safeLabor = money(laborTotal);
+        double safeTotalAmount;
+        double safeTax;
+        double safeGrandTotal;
 
         if (items != null && !items.isEmpty()) {
-            double itemsTotal = items.stream().mapToDouble(InvoiceItemDTO::getTotal).sum();
-            safeTotalAmount = itemsTotal;
+            BigDecimal itemsTotal = BigDecimal.ZERO;
+            for (InvoiceItemDTO item : items) {
+                if (item.getName() == null || item.getName().isBlank()) {
+                    throw new BadRequestException("Invoice item name is required");
+                }
+                if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                    throw new BadRequestException("Invoice item quantity must be greater than zero");
+                }
+                if (item.getUnitPrice() == null || item.getUnitPrice() < 0) {
+                    throw new BadRequestException("Invoice item unit price cannot be negative");
+                }
+                BigDecimal calculated = BigDecimal.valueOf(item.getUnitPrice())
+                        .multiply(BigDecimal.valueOf(item.getQuantity()))
+                        .setScale(2, RoundingMode.HALF_UP);
+                item.setTotal(calculated.doubleValue());
+                itemsTotal = itemsTotal.add(calculated);
+            }
+            safeTotalAmount = itemsTotal.setScale(2, RoundingMode.HALF_UP).doubleValue();
             if (partsTotal == null && laborTotal == null) {
-                safeParts = itemsTotal;
+                safeParts = safeTotalAmount;
                 safeLabor = 0.0;
-            } else if (Math.abs((safeParts + safeLabor) - itemsTotal) > 0.01) {
+            } else if (Math.abs((safeParts + safeLabor) - safeTotalAmount) > 0.01) {
                 throw new BadRequestException("Parts and labor totals must match invoice items total");
             }
-            if (grandTotal == null || grandTotal == 0) {
-                safeTax = itemsTotal * taxRate;
-                safeGrandTotal = itemsTotal + safeTax;
-            } else {
-                safeTax = safeGrandTotal - safeTotalAmount;
-            }
-        } else if (safeGrandTotal == 0) {
-            safeGrandTotal = approvedReport.getGrandTotal() != null ? approvedReport.getGrandTotal() : 0.0;
-            safeTax = approvedReport.getTax() != null ? approvedReport.getTax() : safeGrandTotal * taxRate;
-            safeTotalAmount = safeGrandTotal - safeTax;
+            safeTax = calculateTax(safeTotalAmount, finalTaxPercent);
+            safeGrandTotal = money(safeTotalAmount + safeTax);
+        } else {
+            safeGrandTotal = money(approvedReport.getGrandTotal());
+            safeTax = money(approvedReport.getTax());
+            safeTotalAmount = money(safeGrandTotal - safeTax);
             safeParts = safeTotalAmount;
             safeLabor = 0.0;
         }
 
-        double finalTaxPercent = taxPercent != null ? taxPercent : 15.0;
+        if (safeTotalAmount < 0 || safeTax < 0 || safeGrandTotal <= 0) {
+            throw new BadRequestException("Invoice amounts must be valid positive values");
+        }
+        if (Math.abs(safeGrandTotal - money(safeTotalAmount + safeTax)) > 0.01) {
+            throw new BadRequestException("Invoice total does not match subtotal and tax");
+        }
 
         // Check if invoice exists and can be modified
         var existingOpt = invoiceRepository.findByRequestId(requestId);
@@ -224,6 +247,7 @@ public class InvoiceService {
 
         invoice.setStatus("approved");
         invoice = invoiceRepository.save(invoice);
+        accountingService.postInvoiceApproval(invoice);
         return toInvoiceDTO(invoice);
     }
 
@@ -244,6 +268,19 @@ public class InvoiceService {
         invoice.setStatus("rejected");
         invoice = invoiceRepository.save(invoice);
         return toInvoiceDTO(invoice);
+    }
+
+    private double money(Double value) {
+        if (value == null) return 0.0;
+        if (!Double.isFinite(value)) throw new BadRequestException("Invalid monetary amount");
+        return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private double calculateTax(double subtotal, double percentage) {
+        return BigDecimal.valueOf(subtotal)
+                .multiply(BigDecimal.valueOf(percentage))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP)
+                .doubleValue();
     }
 
     public InvoiceDTO toInvoiceDTO(Invoice invoice) {
@@ -291,12 +328,9 @@ public class InvoiceService {
     }
 
     private String generateInvoiceNumber() {
-        LocalDate today = LocalDate.now();
-        String datePart = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        LocalDateTime dayStart = today.atStartOfDay();
-        LocalDateTime dayEnd = today.plusDays(1).atStartOfDay();
-        long count = invoiceRepository.countByCreatedAtBetween(dayStart, dayEnd);
-        return "INV-" + datePart + "-" + String.format("%04d", count + 1);
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        String suffix = UUID.randomUUID().toString().substring(0, 6).toUpperCase(Locale.ROOT);
+        return "INV-" + timestamp + "-" + suffix;
     }
 
     public Page<InvoiceDTO> getWorkshopInvoices(Long workshopId, int page, int size) {

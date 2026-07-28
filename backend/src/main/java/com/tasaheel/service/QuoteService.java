@@ -41,6 +41,9 @@ public class QuoteService {
         if (!List.of("pending", "quoted").contains(request.getStatus())) {
             throw new BadRequestException("Request is not open for quotes");
         }
+        if (dto.getPrice() == null || !Double.isFinite(dto.getPrice()) || dto.getPrice() <= 0) {
+            throw new BadRequestException("Quote price must be greater than zero");
+        }
 
         if (!quoteRepository.findByRequestIdAndWorkshopId(requestId, workshopId).isEmpty()) {
             throw new BadRequestException("Workshop has already submitted a quote for this request");

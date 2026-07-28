@@ -109,7 +109,6 @@ public class SettlementService {
             totalGross += grandTotal;
             totalCommission += commissionAmount;
 
-            accountingService.postCommission(inv, percentage);
         }
 
         String settlementNumber = generateSettlementNumber();
@@ -144,6 +143,13 @@ public class SettlementService {
             throw new BadRequestException(msg.getMessage("settlement.not.pending", null, LocaleContextHolder.getLocale()));
         }
 
+        List<Invoice> invoices = invoiceRepository.findBySettlementId(settlementId);
+        for (Invoice invoice : invoices) {
+            accountingService.postCommission(invoice,
+                    invoice.getCommissionPercentage() != null
+                            ? invoice.getCommissionPercentage()
+                            : getDefaultCommissionPercentage());
+        }
         JournalEntryDTO entry = accountingService.postSettlement(settlement);
         settlement.setStatus("SETTLED");
         settlement.setSettledAt(LocalDateTime.now());
@@ -151,7 +157,6 @@ public class SettlementService {
                 .orElseThrow(() -> new ResourceNotFoundException("JournalEntry", entry.getId())));
         settlement = settlementRepository.save(settlement);
 
-        List<Invoice> invoices = invoiceRepository.findBySettlementId(settlementId);
         LocalDateTime now = LocalDateTime.now();
         for (Invoice inv : invoices) {
             inv.setSettledAt(now);
@@ -412,8 +417,8 @@ public class SettlementService {
     private String generateSettlementNumber() {
         LocalDate today = LocalDate.now();
         String datePart = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long count = settlementRepository.count();
-        return "STL-" + datePart + "-" + String.format("%05d", count + 1);
+        String suffix = UUID.randomUUID().toString().substring(0, 6).toUpperCase(Locale.ROOT);
+        return "STL-" + datePart + "-" + suffix;
     }
 
     private WorkshopSettlementDTO toDTO(WorkshopSettlement settlement) {

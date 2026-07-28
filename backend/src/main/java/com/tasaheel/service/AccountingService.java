@@ -76,6 +76,8 @@ public class AccountingService {
 
     @Transactional
     public JournalEntryDTO postInvoiceApproval(Invoice invoice) {
+        JournalEntryDTO existing = existingPostedEntry("INVOICE_APPROVAL", invoice.getId());
+        if (existing != null) return existing;
         Account receivables = accountRepository.findByCode("1.3.1")
                 .orElseThrow(() -> new ResourceNotFoundException("Account", "code", "1.3.1"));
         Account payables = accountRepository.findByCode("2.1.1")
@@ -103,17 +105,12 @@ public class AccountingService {
 
     @Transactional
     public JournalEntryDTO postInvoiceReversal(Invoice invoice) {
+        JournalEntryDTO existingReversal = existingPostedEntry("INVOICE_REVERSAL", invoice.getId());
+        if (existingReversal != null) return existingReversal;
         List<JournalEntry> entries = journalEntryRepository.findByReference("INVOICE_APPROVAL", invoice.getId());
         for (JournalEntry entry : entries) {
             entry.setStatus("REVERSED");
             journalEntryRepository.save(entry);
-
-            List<JournalEntryLine> lines = journalEntryLineRepository.findByEntryId(entry.getId());
-            for (JournalEntryLine line : lines) {
-                Account account = line.getAccount();
-                account.setBalance(account.getBalance() - line.getDebit() + line.getCredit());
-                accountRepository.save(account);
-            }
         }
 
         Account receivables = accountRepository.findByCode("1.3.1")
@@ -143,6 +140,8 @@ public class AccountingService {
 
     @Transactional
     public JournalEntryDTO postPayment(Invoice invoice) {
+        JournalEntryDTO existing = existingPostedEntry("PAYMENT", invoice.getId());
+        if (existing != null) return existing;
         Account holdingWallet = accountRepository.findByCode("1.2.1")
                 .orElseThrow(() -> new ResourceNotFoundException("Account", "code", "1.2.1"));
         Account receivables = accountRepository.findByCode("1.3.1")
@@ -170,6 +169,8 @@ public class AccountingService {
 
     @Transactional
     public JournalEntryDTO postCommission(Invoice invoice, Double commissionPercentage) {
+        JournalEntryDTO existing = existingPostedEntry("COMMISSION", invoice.getId());
+        if (existing != null) return existing;
         Account workshopPayables = accountRepository.findByCode("2.1.1")
                 .orElseThrow(() -> new ResourceNotFoundException("Account", "code", "2.1.1"));
         Account commissionRevenue = accountRepository.findByCode("3.1.1")
@@ -199,10 +200,12 @@ public class AccountingService {
 
     @Transactional
     public JournalEntryDTO postSettlement(WorkshopSettlement settlement) {
+        JournalEntryDTO existing = existingPostedEntry("SETTLEMENT", settlement.getId());
+        if (existing != null) return existing;
         Account workshopPayables = accountRepository.findByCode("2.1.1")
                 .orElseThrow(() -> new ResourceNotFoundException("Account", "code", "2.1.1"));
-        Account bankAccount = accountRepository.findByCode("1.1.2")
-                .orElseThrow(() -> new ResourceNotFoundException("Account", "code", "1.1.2"));
+        Account holdingWallet = accountRepository.findByCode("1.2.1")
+                .orElseThrow(() -> new ResourceNotFoundException("Account", "code", "1.2.1"));
 
         var locale = LocaleContextHolder.getLocale();
         return createJournalEntry(
@@ -216,12 +219,49 @@ public class AccountingService {
                                 .description(msg.getMessage("accounting.journal.line.settleWorkshop", new Object[]{settlement.getSettlementNumber()}, locale))
                                 .build(),
                         JournalEntryLineDTO.builder()
-                                .accountId(bankAccount.getId())
+                                .accountId(holdingWallet.getId())
                                 .credit(settlement.getTotalNetAmount())
                                 .description(msg.getMessage("accounting.journal.line.payWorkshop", new Object[]{settlement.getSettlementNumber()}, locale))
                                 .build()
                 )
         );
+    }
+
+    @Transactional
+    public JournalEntryDTO postPaymentRefund(Invoice invoice) {
+        JournalEntryDTO existing = existingPostedEntry("PAYMENT_REFUND", invoice.getId());
+        if (existing != null) return existing;
+
+        Account holdingWallet = accountRepository.findByCode("1.2.1")
+                .orElseThrow(() -> new ResourceNotFoundException("Account", "code", "1.2.1"));
+        Account receivables = accountRepository.findByCode("1.3.1")
+                .orElseThrow(() -> new ResourceNotFoundException("Account", "code", "1.3.1"));
+        var locale = LocaleContextHolder.getLocale();
+        return createJournalEntry(
+                LocalDate.now(),
+                "Refund payment for invoice " + invoice.getInvoiceNumber(),
+                "PAYMENT_REFUND", invoice.getId(),
+                List.of(
+                        JournalEntryLineDTO.builder()
+                                .accountId(receivables.getId())
+                                .debit(invoice.getGrandTotal())
+                                .description("Restore customer receivable")
+                                .build(),
+                        JournalEntryLineDTO.builder()
+                                .accountId(holdingWallet.getId())
+                                .credit(invoice.getGrandTotal())
+                                .description("Refund from payment wallet")
+                                .build()
+                )
+        );
+    }
+
+    private JournalEntryDTO existingPostedEntry(String referenceType, Long referenceId) {
+        return journalEntryRepository.findByReference(referenceType, referenceId).stream()
+                .filter(entry -> "POSTED".equals(entry.getStatus()))
+                .findFirst()
+                .map(this::toJournalEntryDTO)
+                .orElse(null);
     }
 
     public List<AccountDTO> getAllAccounts() {
@@ -418,8 +458,8 @@ public class AccountingService {
 
     private String generateEntryNumber(LocalDate date) {
         String datePart = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long count = journalEntryRepository.countByEntryDate(date);
-        return "JE-" + datePart + "-" + String.format("%05d", count + 1);
+        String suffix = UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
+        return "JE-" + datePart + "-" + suffix;
     }
 
     private JournalEntryDTO toJournalEntryDTO(JournalEntry entry) {

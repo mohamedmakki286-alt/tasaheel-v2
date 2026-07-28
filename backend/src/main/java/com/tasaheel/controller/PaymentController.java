@@ -33,9 +33,12 @@ public class PaymentController {
         Long requestId = Long.valueOf(body.get("requestId").toString());
         Double amount = Double.valueOf(body.get("amount").toString());
         String method = (String) body.getOrDefault("method", "moyasar");
+        String idempotencyKey = body.get("idempotencyKey") != null
+                ? body.get("idempotencyKey").toString() : null;
 
         Locale locale = LocaleContextHolder.getLocale();
-        PaymentDTO payment = paymentService.initiatePayment(requestId, user.getUserId(), amount, method);
+        PaymentDTO payment = paymentService.initiatePayment(
+                requestId, user.getUserId(), amount, method, idempotencyKey);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(msg.getMessage("payment.initiated", null, locale), payment));
     }
 
@@ -71,6 +74,15 @@ public class PaymentController {
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long id) {
         PaymentDTO payment = paymentService.getPayment(id, user.getUserId(), user.getRole());
+        return ResponseEntity.ok(ApiResponse.success(payment));
+    }
+
+    @PostMapping("/{id}/verify")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponse<PaymentDTO>> verifyPayment(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id) {
+        PaymentDTO payment = paymentService.verifyPayment(id, user.getUserId());
         return ResponseEntity.ok(ApiResponse.success(payment));
     }
 

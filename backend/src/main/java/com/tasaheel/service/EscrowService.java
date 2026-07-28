@@ -27,6 +27,7 @@ public class EscrowService {
     private final WorkshopRepository workshopRepository;
     private final ServiceItemRepository serviceItemRepository;
     private final QuoteRepository quoteRepository;
+    private final PaymentRepository paymentRepository;
     private final EventPublisher eventPublisher;
     private final MessageSource msg;
 
@@ -45,16 +46,18 @@ public class EscrowService {
             throw new BadRequestException(msg.getMessage("escrow.already.held", null, LocaleContextHolder.getLocale()));
         }
 
-        double amount = quoteRepository.findByRequestIdOrderByCreatedAtAsc(requestId).stream()
-                .filter(q -> "accepted".equals(q.getStatus()))
-                .mapToDouble(q -> q.getPrice() != null ? q.getPrice() : 0.0)
-                .sum();
-        if (amount <= 0) amount = 500.0;
+        Payment completedPayment = paymentRepository
+                .findFirstByRequestIdAndStatusOrderByCreatedAtDesc(requestId, "completed")
+                .orElseThrow(() -> new BadRequestException(
+                        "A verified completed payment is required before creating a hold"));
+        Quote acceptedQuote = quoteRepository.findByRequestIdAndStatus(requestId, "accepted")
+                .orElseThrow(() -> new BadRequestException("No accepted workshop quote found"));
 
         PaymentHold hold = PaymentHold.builder()
                 .request(request)
                 .customer(customer)
-                .amount(amount)
+                .workshop(acceptedQuote.getWorkshop())
+                .amount(completedPayment.getAmount())
                 .status("HELD")
                 .build();
         hold = paymentHoldRepository.save(hold);
@@ -75,6 +78,9 @@ public class EscrowService {
 
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", workshopId));
+        if (hold.getWorkshop() == null || !hold.getWorkshop().getId().equals(workshopId)) {
+            throw new BadRequestException("Payment hold does not belong to this workshop");
+        }
 
         hold.setStatus("RELEASED");
         hold.setReleasedAt(LocalDateTime.now());

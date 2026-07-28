@@ -19,6 +19,7 @@ const ChatsPage = lazy(() => import('./pages/ChatsPage'));
 const NewRequestPage = lazy(() => import('./pages/NewRequestPage').then(m => ({ default: m.NewRequestPage })));
 const InspectionReportPage = lazy(() => import('./pages/InspectionReportPage').then(m => ({ default: m.InspectionReportPage })));
 const PaymentPage = lazy(() => import('./pages/PaymentPage').then(m => ({ default: m.PaymentPage })));
+const PaymentCallbackPage = lazy(() => import('./pages/PaymentCallbackPage').then(m => ({ default: m.PaymentCallbackPage })));
 const RatingPage = lazy(() => import('./pages/RatingPage').then(m => ({ default: m.RatingPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ReportsPage = lazy(() => import('./pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
@@ -116,6 +117,9 @@ export default function App() {
             </Route>
             <Route path="/payment/:requestId" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
               <Route index element={<PaymentPage />} />
+            </Route>
+            <Route path="/payment/callback" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
+              <Route index element={<PaymentCallbackPage />} />
             </Route>
             <Route path="/rating/:requestId/:workshopId" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
               <Route index element={<RatingPage />} />

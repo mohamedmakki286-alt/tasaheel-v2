@@ -17,18 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import java.util.Map;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PaymentService {
 
-    @Value("${application.moyasar.base-url}")
-    private String baseMoyasarUrl;
-
     @Value("${application.payment.callback-base-url:http://localhost:5175}")
     private String callbackBaseUrl;
+
+    @Value("${application.public-url:http://localhost:8080}")
+    private String publicApiUrl;
 
     private final PaymentRepository paymentRepository;
     private final MaintenanceRequestRepository requestRepository;
@@ -37,10 +36,14 @@ public class PaymentService {
     private final MoyasarService moyasarService;
     private final TamaraService tamaraService;
     private final RequestCompletionService requestCompletionService;
-    private final PlatformSettingService platformSettingService;
+    private final AccountingService accountingService;
+
+    public PaymentDTO initiatePayment(Long requestId, Long customerId, Double amount, String method) {
+        return initiatePayment(requestId, customerId, amount, method, null);
+    }
 
     @Transactional
-    public PaymentDTO initiatePayment(Long requestId, Long customerId, Double amount, String method) {
+    public PaymentDTO initiatePayment(Long requestId, Long customerId, Double amount, String method, String idempotencyKey) {
         MaintenanceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
         Customer customer = customerRepository.findById(customerId)
@@ -60,45 +63,59 @@ public class PaymentService {
         if (amount == null || Math.abs(amount - invoiceAmount) > 0.001) {
             throw new BadRequestException("Payment amount must match the approved invoice");
         }
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            var existingByKey = paymentRepository.findByIdempotencyKey(idempotencyKey);
+            if (existingByKey.isPresent()) {
+                Payment existing = existingByKey.get();
+                if (!existing.getCustomer().getId().equals(customerId)
+                        || !existing.getRequest().getId().equals(requestId)) {
+                    throw new BadRequestException("Invalid idempotency key");
+                }
+                return toPaymentDTO(existing);
+            }
+        }
+        var activePayment = paymentRepository.findFirstByRequestIdAndStatusInOrderByCreatedAtDesc(
+                requestId, java.util.List.of("initiated", "completed"));
+        if (activePayment.isPresent()) {
+            return toPaymentDTO(activePayment.get());
+        }
 
         Payment payment = Payment.builder()
                 .request(request)
                 .customer(customer)
                 .amount(amount)
-                .fee(amount * 0.028)
-                .total(amount + (amount * 0.028))
+                .fee(0.0)
+                .total(amount)
                 .currency("SAR")
                 .method(method)
                 .status("initiated")
+                .idempotencyKey(idempotencyKey)
                 .build();
 
         payment = paymentRepository.save(payment);
 
         try {
-            String sourceType = mapSourceType(method);
-            String callbackUrl = callbackBaseUrl + "/payment/callback";
-
-            Map<String, Object> moyasarResponse = moyasarService.initiatePayment(
+            String customerReturnUrl = callbackBaseUrl + "/payment/callback?requestId=" + requestId;
+            Map<String, Object> moyasarResponse = moyasarService.createHostedInvoice(
                     amount, "SAR", "Payment for request #" + requestId,
-                    callbackUrl, sourceType
+                    publicApiUrl + "/api/payments/webhook",
+                    customerReturnUrl,
+                    callbackBaseUrl + "/orders/" + requestId,
+                    "request-" + requestId + "-payment-" + payment.getId()
             );
 
             if (moyasarResponse != null) {
-                String moyasarId = (String) moyasarResponse.get("id");
-                payment.setMoyasarPaymentId(moyasarId);
-                String transactionUrl = (String) moyasarResponse.get("transaction_url");
-                if (transactionUrl == null) {
-                    Map<String, Object> source = (Map<String, Object>) moyasarResponse.get("source");
-                    if (source != null) {
-                        transactionUrl = (String) source.get("transaction_url");
-                    }
+                Object rawProviderInvoiceId = moyasarResponse.get("id");
+                if (rawProviderInvoiceId == null) {
+                    throw new BadRequestException("Payment provider did not return an invoice id");
                 }
-                if (transactionUrl == null && moyasarId != null) {
-                    transactionUrl = baseMoyasarUrl + "/payments/" + moyasarId;
+                String providerInvoiceId = rawProviderInvoiceId.toString();
+                String transactionUrl = (String) moyasarResponse.get("url");
+                if (transactionUrl == null || transactionUrl.isBlank()) {
+                    throw new BadRequestException("Payment provider did not return a checkout URL");
                 }
-                if (transactionUrl != null) {
-                    payment.setMoyasarInvoiceId(transactionUrl);
-                }
+                payment.setProviderInvoiceId(providerInvoiceId);
+                payment.setMoyasarInvoiceId(transactionUrl);
                 paymentRepository.save(payment);
             }
         } catch (Exception e) {
@@ -129,6 +146,11 @@ public class PaymentService {
         double invoiceAmount = invoice.getGrandTotal() != null ? invoice.getGrandTotal() : 0.0;
         if (amount == null || Math.abs(amount - invoiceAmount) > 0.001) {
             throw new BadRequestException("Payment amount must match the approved invoice");
+        }
+        var activePayment = paymentRepository.findFirstByRequestIdAndStatusInOrderByCreatedAtDesc(
+                requestId, java.util.List.of("initiated", "completed"));
+        if (activePayment.isPresent()) {
+            return toPaymentDTO(activePayment.get());
         }
 
         Payment payment = Payment.builder()
@@ -177,55 +199,95 @@ public class PaymentService {
         return toPaymentDTO(payment);
     }
 
-    private String mapSourceType(String method) {
-        return switch (method) {
-            case "applepay" -> "applepay";
-            case "tabby" -> "tabby";
-            case "creditcard", "mada" -> "creditcard";
-            default -> null;
-        };
-    }
-
     @Transactional
     public void handlePaymentWebhook(Map<String, Object> payload) {
-        String paymentId = payload.get("id") != null ? payload.get("id").toString() : null;
-        if (paymentId == null || paymentId.isBlank()) {
-            throw new BadRequestException("Missing payment id");
+        Map<String, Object> paymentPayload = payload;
+        if (payload.get("data") instanceof Map<?, ?> nested) {
+            Map<String, Object> nestedPayment = new java.util.HashMap<>();
+            nested.forEach((key, value) -> nestedPayment.put(String.valueOf(key), value));
+            paymentPayload = nestedPayment;
+        }
+        String providerInvoiceId = paymentPayload.get("id") != null ? paymentPayload.get("id").toString() : null;
+        if (providerInvoiceId == null || providerInvoiceId.isBlank()) {
+            throw new BadRequestException("Missing provider invoice id");
         }
 
-        Payment payment = paymentRepository.findByMoyasarPaymentId(paymentId)
+        Payment payment = paymentRepository.findByProviderInvoiceId(providerInvoiceId)
                 .orElseThrow(() -> new BadRequestException("Unknown payment"));
         if ("completed".equals(payment.getStatus())) {
             return;
         }
 
-        Map<String, Object> verifiedPayment = moyasarService.getPayment(paymentId);
-        String status = verifiedPayment.get("status") != null
-                ? verifiedPayment.get("status").toString() : null;
-        validateProviderAmount(verifiedPayment.get("amount"), payment.getAmount(), true);
+        verifyAndApplyHostedInvoiceStatus(payment);
+    }
+
+    @Transactional
+    public PaymentDTO verifyPayment(Long localPaymentId, Long customerId) {
+        Payment payment = paymentRepository.findById(localPaymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", localPaymentId));
+        if (!payment.getCustomer().getId().equals(customerId)) {
+            throw new BadRequestException("You are not allowed to verify this payment");
+        }
+        if (payment.getProviderInvoiceId() == null || payment.getProviderInvoiceId().isBlank()) {
+            throw new BadRequestException("Provider invoice is not initialized");
+        }
+        verifyAndApplyHostedInvoiceStatus(payment);
+        return toPaymentDTO(payment);
+    }
+
+    private void verifyAndApplyHostedInvoiceStatus(Payment payment) {
+        Map<String, Object> verifiedInvoice = moyasarService.getInvoice(payment.getProviderInvoiceId());
+        String status = verifiedInvoice.get("status") != null
+                ? verifiedInvoice.get("status").toString() : null;
+        validateProviderAmount(verifiedInvoice.get("amount"), payment.getAmount(), true);
 
         switch (status) {
-            case "paid" -> payment.setStatus("completed");
-            case "failed" -> payment.setStatus("failed");
-            case "refunded" -> payment.setStatus("refunded");
+            case "paid" -> {
+                String providerPaymentId = extractProviderPaymentId(verifiedInvoice);
+                payment.setMoyasarPaymentId(providerPaymentId);
+                completePayment(payment, providerPaymentId);
+            }
+            case "failed", "canceled", "expired" -> {
+                payment.setStatus("failed");
+                paymentRepository.save(payment);
+            }
+            case "refunded" -> {
+                payment.setStatus("refunded");
+                paymentRepository.save(payment);
+            }
+            case "initiated", "authorized" -> {
+                // Still pending at the provider; keep the local status unchanged.
+            }
             default -> throw new BadRequestException("Unsupported payment status");
         }
+    }
 
-        paymentRepository.save(payment);
-
-        if ("paid".equals(status)) {
-            Invoice invoice = invoiceRepository.findByRequestId(payment.getRequest().getId())
-                    .orElseThrow(() -> new BadRequestException("Invoice not found"));
-            if (!"approved".equals(invoice.getStatus())) {
-                throw new BadRequestException("Invoice is not approved");
-            }
-            invoice.setStatus("paid");
-            invoice.setPaymentMethod(payment.getMethod());
-            invoice.setPaymentId(paymentId);
-            invoice.setPaidAt(java.time.LocalDateTime.now());
-            invoiceRepository.save(invoice);
-            requestCompletionService.completeAfterPayment(payment.getRequest(), paymentId);
+    private String extractProviderPaymentId(Map<String, Object> invoice) {
+        Object payments = invoice.get("payments");
+        if (payments instanceof java.util.List<?> list && !list.isEmpty()
+                && list.get(0) instanceof Map<?, ?> providerPayment) {
+            Object id = providerPayment.get("id");
+            if (id != null) return id.toString();
         }
+        throw new BadRequestException("Paid provider invoice has no payment reference");
+    }
+
+    private void completePayment(Payment payment, String providerReference) {
+        if ("completed".equals(payment.getStatus())) return;
+        Invoice invoice = invoiceRepository.findByRequestId(payment.getRequest().getId())
+                .orElseThrow(() -> new BadRequestException("Invoice not found"));
+        if (!"approved".equals(invoice.getStatus())) {
+            throw new BadRequestException("Invoice is not approved");
+        }
+        payment.setStatus("completed");
+        paymentRepository.save(payment);
+        invoice.setStatus("paid");
+        invoice.setPaymentMethod(payment.getMethod());
+        invoice.setPaymentId(providerReference);
+        invoice.setPaidAt(LocalDateTime.now());
+        invoiceRepository.save(invoice);
+        accountingService.postPayment(invoice);
+        requestCompletionService.completeAfterPayment(payment.getRequest(), providerReference);
     }
 
     @Transactional
@@ -260,14 +322,7 @@ public class PaymentService {
             if (!"approved".equals(invoice.getStatus())) {
                 throw new BadRequestException("Invoice is not approved");
             }
-            payment.setStatus("completed");
-            paymentRepository.save(payment);
-            invoice.setStatus("paid");
-            invoice.setPaymentMethod("tamara");
-            invoice.setPaymentId(orderId);
-            invoice.setPaidAt(java.time.LocalDateTime.now());
-            invoiceRepository.save(invoice);
-            requestCompletionService.completeAfterPayment(payment.getRequest(), orderId);
+            completePayment(payment, orderId);
         } else if ("cancelled".equalsIgnoreCase(status) || "declined".equalsIgnoreCase(status)) {
             payment.setStatus("failed");
             paymentRepository.save(payment);
@@ -284,11 +339,20 @@ public class PaymentService {
         if (!"completed".equals(payment.getStatus())) {
             throw new BadRequestException("Payment must be completed to refund");
         }
+        if ("tamara".equalsIgnoreCase(payment.getMethod())) {
+            throw new BadRequestException("Tamara refunds must be initiated from the Tamara settlement workflow");
+        }
 
         try {
             moyasarService.refundPayment(payment.getMoyasarPaymentId(), payment.getAmount());
             payment.setStatus("refunded");
             payment = paymentRepository.save(payment);
+            Invoice invoice = invoiceRepository.findByRequestId(payment.getRequest().getId())
+                    .orElseThrow(() -> new BadRequestException("Invoice not found"));
+            invoice.setStatus("refunded");
+            invoiceRepository.save(invoice);
+            accountingService.postPaymentRefund(invoice);
+            accountingService.postInvoiceReversal(invoice);
         } catch (Exception e) {
             log.error("Refund failed: {}", e.getMessage());
             throw new BadRequestException("Refund failed: " + e.getMessage());
@@ -367,6 +431,7 @@ public class PaymentService {
                 .moyasarPaymentId(payment.getMoyasarPaymentId())
                 .moyasarInvoiceId(payment.getMoyasarInvoiceId())
                 .paymentUrl(payment.getMoyasarInvoiceId())
+                .idempotencyKey(payment.getIdempotencyKey())
                 .createdAt(payment.getCreatedAt())
                 .updatedAt(payment.getUpdatedAt())
                 .build();

@@ -14,6 +14,9 @@ import java.util.Optional;
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Page<Payment> findByCustomerIdOrderByCreatedAtDesc(Long customerId, Pageable pageable);
     Optional<Payment> findByMoyasarPaymentId(String moyasarPaymentId);
+    Optional<Payment> findByProviderInvoiceId(String providerInvoiceId);
+    Optional<Payment> findByIdempotencyKey(String idempotencyKey);
+    Optional<Payment> findFirstByRequestIdAndStatusInOrderByCreatedAtDesc(Long requestId, java.util.Collection<String> statuses);
     Optional<Payment> findFirstByRequestIdAndStatusOrderByCreatedAtDesc(Long requestId, String status);
     Page<Payment> findByStatus(String status, Pageable pageable);
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.status = ?1 AND p.createdAt >= ?2")

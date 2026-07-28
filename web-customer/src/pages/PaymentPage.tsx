@@ -26,15 +26,24 @@ export function PaymentPage() {
     if (!invoice || !requestId) return;
     setPaying(true);
     try {
-      await paymentsApi.initiate({
+      const idempotencyKey = crypto.randomUUID();
+      const response: any = await paymentsApi.initiate({
         requestId,
         amount: invoice.grandTotal,
         method: 'moyasar',
+        idempotencyKey,
       });
-      toast.success('تم تأكيد الدفع بنجاح');
-      navigate(`/orders/${requestId}`);
+      const payment = response.data || response;
+      if (!payment?.id || !payment?.paymentUrl) {
+        throw new Error('لم تُرجع بوابة الدفع رابطاً صالحاً');
+      }
+      sessionStorage.setItem('tasaheel_pending_payment', JSON.stringify({
+        localPaymentId: payment.id,
+        requestId,
+      }));
+      window.location.assign(payment.paymentUrl);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'تعذر إكمال الدفع');
+      toast.error(err.response?.data?.message || err.message || 'تعذر بدء عملية الدفع');
     } finally { setPaying(false); }
   };
 
@@ -52,7 +61,7 @@ export function PaymentPage() {
         <div className="flex justify-between font-bold text-lg"><span>الإجمالي</span><span className="text-accent-400">{invoice.grandTotal.toLocaleString()} {t('constants.currency')}</span></div>
       </div>
     </div>
-    <div className="card border-emerald-400/30 bg-emerald-400/10 flex items-start gap-3"><ShieldCheck className="h-6 w-6 text-emerald-500 shrink-0"/><div><h3 className="font-bold">الدفع الآمن</h3><p className="text-sm text-surface-500 mt-1">يتم الدفع عبر بوابة الدفع الآمنة. جميع المعاملات مشفرة ومؤمنة.</p></div></div>
+    <div className="card border-emerald-400/30 bg-emerald-400/10 flex items-start gap-3"><ShieldCheck className="h-6 w-6 text-emerald-500 shrink-0"/><div><h3 className="font-bold">الدفع الآمن</h3><p className="text-sm text-surface-500 mt-1">سيتم تحويلك إلى بوابة Moyasar. لا تُعد العملية ناجحة إلا بعد تأكيد مزود الدفع.</p></div></div>
     <button onClick={handlePay} disabled={paying || invoice.status !== 'approved'} className="btn-primary w-full py-4 flex items-center justify-center gap-2 text-lg disabled:opacity-50">
       {paying ? <div className="h-5 w-5 border-2 border-black border-t-transparent rounded-full animate-spin"/> : <><Wallet className="h-5 w-5"/> تأكيد الدفع — {invoice.grandTotal.toLocaleString()} {t('constants.currency')}</>}
     </button>

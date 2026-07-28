@@ -24,6 +24,7 @@ public class PaymentDTO {
     private String moyasarPaymentId;
     private String moyasarInvoiceId;
     private String paymentUrl;
+    private String idempotencyKey;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
