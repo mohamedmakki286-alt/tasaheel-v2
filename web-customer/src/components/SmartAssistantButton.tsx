@@ -57,14 +57,15 @@ export default function SmartAssistantButton() {
 
   const mutation = useMutation({
     mutationFn: (msg: string) => {
-      const history = messages.slice(1).map((m) => ({ role: m.role, content: m.content }));
+      const history = messages.slice(-12).map((m) => ({ role: m.role, content: m.content }));
       return sendChatMessage(msg, history);
     },
     onSuccess: (reply) => {
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
     },
-    onError: () => {
-      setMessages((prev) => [...prev, { role: 'assistant', content: t('components.aiAssistant.error') }]);
+    onError: (error: any) => {
+      const message = error?.friendlyMessage || error?.response?.data?.message || t('components.aiAssistant.error');
+      setMessages((prev) => [...prev, { role: 'assistant', content: message }]);
     },
   });
 
