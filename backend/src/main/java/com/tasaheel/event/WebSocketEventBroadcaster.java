@@ -141,6 +141,21 @@ public class WebSocketEventBroadcaster {
                 log.warn("Failed to save notification for workshop {}: {}", workshopId, e.getMessage());
             }
         }
+        if (event.getEventType() == EventType.REQUEST_SUBMITTED
+                && request.getCity() != null && !request.getCity().isBlank()) {
+            for (Workshop workshop : workshopRepository.findByCityAndIsApprovedAndIsActive(
+                    request.getCity(), true, true)) {
+                if (workshopId != null && workshopId.equals(workshop.getId())) continue;
+                try {
+                    notificationService.save(workshop.getId(), "workshop", eventType,
+                            "طلب جديد", "يوجد طلب خدمة جديد في مدينتك",
+                            event.getRequestId(), eventType);
+                } catch (Exception e) {
+                    log.warn("Failed to save city notification for workshop {}: {}",
+                            workshop.getId(), e.getMessage());
+                }
+            }
+        }
 
         // Notify admin
         try {

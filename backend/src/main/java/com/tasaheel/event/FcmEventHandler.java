@@ -2,20 +2,22 @@ package com.tasaheel.event;
 
 import com.tasaheel.entity.Customer;
 import com.tasaheel.entity.MaintenanceRequest;
-import com.tasaheel.entity.Workshop;
 import com.tasaheel.entity.Technician;
+import com.tasaheel.entity.Workshop;
 import com.tasaheel.integration.FirebaseService;
-import com.tasaheel.repository.CustomerRepository;
 import com.tasaheel.repository.MaintenanceRequestRepository;
-import com.tasaheel.repository.WorkshopRepository;
 import com.tasaheel.repository.TechnicianRepository;
+import com.tasaheel.repository.WorkshopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -24,7 +26,6 @@ public class FcmEventHandler {
 
     private final FirebaseService firebaseService;
     private final MaintenanceRequestRepository requestRepository;
-    private final CustomerRepository customerRepository;
     private final WorkshopRepository workshopRepository;
     private final TechnicianRepository technicianRepository;
 
@@ -35,113 +36,128 @@ public class FcmEventHandler {
         MaintenanceRequest request = requestRepository.findById(event.getRequestId()).orElse(null);
         if (request == null) return;
 
-        String title = getTitle(event.getEventType());
-        String body = getBody(event.getEventType(), request, event.getPayload());
-
+        String title = titleFor(event.getEventType());
+        String body = bodyFor(event.getEventType(), request, event.getPayload());
         Map<String, String> data = new HashMap<>();
         data.put("type", event.getEventType().name());
+        data.put("eventType", event.getEventType().name());
         data.put("requestId", String.valueOf(event.getRequestId()));
         data.put("timestamp", event.getEventTimestamp().toString());
 
-        String actorRole = event.getActorRole() == null ? "" : event.getActorRole().trim().toLowerCase();
+        String actorRole = normalizeRole(event.getActorRole());
         Customer customer = request.getCustomer();
-        if (!"customer".equals(actorRole)
-                && customer != null
-                && customer.getFcmToken() != null
-                && !customer.getFcmToken().isBlank()) {
-            firebaseService.sendNotification(customer.getFcmToken(), title, body, data);
+        if (!"customer".equals(actorRole) && customer != null) {
+            send(customer.getFcmToken(), title, body, data);
         }
 
         if (!"workshop".equals(actorRole)) {
-            for (Long workshopId : extractWorkshopIds(request, event)) {
-                Workshop workshop = workshopRepository.findById(workshopId).orElse(null);
-                if (workshop != null && workshop.getFcmToken() != null && !workshop.getFcmToken().isBlank()) {
-                    firebaseService.sendNotification(workshop.getFcmToken(), title, body, data);
-                }
+            for (Long workshopId : targetWorkshopIds(request, event)) {
+                workshopRepository.findById(workshopId)
+                        .ifPresent(workshop -> send(workshop.getFcmToken(), title, body, data));
             }
         }
 
-        Object technicianValue = event.getPayload() == null ? null : event.getPayload().get("technicianId");
-        Long technicianId = null;
-        if (technicianValue instanceof Number) {
-            technicianId = ((Number) technicianValue).longValue();
-        } else if (request.getTechnician() != null) {
+        Long technicianId = extractLong(event.getPayload(), "technicianId");
+        if (technicianId == null && request.getTechnician() != null) {
             technicianId = request.getTechnician().getId();
         }
         if (technicianId != null && !"technician".equals(actorRole)) {
             Technician technician = technicianRepository.findById(technicianId).orElse(null);
-            if (technician != null && technician.getFcmToken() != null && !technician.getFcmToken().isBlank()) {
-                firebaseService.sendNotification(technician.getFcmToken(), "تم إسناد مهمة جديدة",
-                        "تم إسناد طلب جديد إليك", data);
+            if (technician != null) {
+                String technicianTitle = event.getEventType() == EventType.WORKSHOP_ASSIGNED
+                        ? "تم إسناد مهمة جديدة" : title;
+                String technicianBody = event.getEventType() == EventType.WORKSHOP_ASSIGNED
+                        ? "تم إسناد طلب جديد إليك" : body;
+                send(technician.getFcmToken(), technicianTitle, technicianBody, data);
             }
         }
     }
 
-    private java.util.List<Long> extractWorkshopIds(MaintenanceRequest request, DomainEvent event) {
-        if (event.getPayload() != null && event.getPayload().containsKey("workshopId")) {
-            Object val = event.getPayload().get("workshopId");
-            if (val instanceof Number) {
-                return java.util.List.of(((Number) val).longValue());
-            }
+    private List<Long> targetWorkshopIds(MaintenanceRequest request, DomainEvent event) {
+        Set<Long> ids = new LinkedHashSet<>();
+        Long payloadWorkshopId = extractLong(event.getPayload(), "workshopId");
+        if (payloadWorkshopId != null) ids.add(payloadWorkshopId);
+
+        if (event.getEventType() == EventType.REQUEST_SUBMITTED
+                && request.getCity() != null && !request.getCity().isBlank()) {
+            workshopRepository.findByCityAndIsApprovedAndIsActive(request.getCity(), true, true)
+                    .stream().map(Workshop::getId).forEach(ids::add);
         }
-        if ("workshop".equals(event.getActorRole()) && event.getActorId() != null) {
-            return java.util.List.of(event.getActorId());
-        }
-        return java.util.Collections.emptyList();
+        return List.copyOf(ids);
     }
 
-    private String getTitle(EventType type) {
+    private void send(String token, String title, String body, Map<String, String> data) {
+        if (token != null && !token.isBlank()) {
+            firebaseService.sendNotification(token, title, body, data);
+        }
+    }
+
+    private Long extractLong(Map<String, Object> payload, String key) {
+        if (payload == null) return null;
+        Object value = payload.get(key);
+        if (value instanceof Number number) return number.longValue();
+        if (value instanceof String text) {
+            try {
+                return Long.parseLong(text);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private String normalizeRole(String role) {
+        return role == null ? "" : role.trim().toLowerCase();
+    }
+
+    private String titleFor(EventType type) {
         return switch (type) {
             case REQUEST_CREATED, REQUEST_SUBMITTED -> "طلب جديد";
             case QUOTE_GENERATED -> "عرض سعر جديد";
-            case OFFER_ACCEPTED -> "تم قبول العرض";
-            case QUOTE_REJECTED -> "تم رفض عرضك";
+            case QUOTE_ACCEPTED, OFFER_ACCEPTED, OFFER_SELECTED -> "تم قبول العرض";
+            case QUOTE_REJECTED -> "تم رفض العرض";
+            case WORKSHOP_ASSIGNED, WORKSHOP_REASSIGNED -> "تم إسناد الطلب";
             case STATUS_UPDATED -> "تحديث حالة الطلب";
             case SERVICE_STARTED -> "بدأت الخدمة";
-            case SERVICE_COMPLETED -> "اكتملت الخدمة";
+            case SERVICE_COMPLETED, SERVICE_VERIFIED -> "اكتملت الخدمة";
             case REPORT_SUBMITTED -> "تقرير الفحص";
             case REPORT_APPROVED -> "تم اعتماد التقرير";
-            case INVOICE_CREATED -> "فاتورة جديدة";
-            case PAYMENT_HELD -> "تم حجز الدفعة";
+            case REPORT_REJECTED -> "تم رفض التقرير";
+            case INVOICE_CREATED, INVOICE_APPROVED -> "تحديث الفاتورة";
+            case PAYMENT_INITIATED -> "بدأت عملية الدفع";
+            case PAYMENT_HELD -> "تم تأكيد الدفع";
             case PAYMENT_RELEASED -> "تم صرف الدفعة";
-            case ADMIN_OVERRIDE -> "تحديث من إدارة النظام";
+            case PAYMENT_REFUNDED -> "تم استرداد الدفعة";
+            case REQUEST_CANCELLED -> "تم إلغاء الطلب";
+            case ADMIN_OVERRIDE -> "تحديث من إدارة تساهيل";
             default -> "إشعار من تساهيل";
         };
     }
 
-    private String getBody(EventType type, MaintenanceRequest request, Map<String, Object> payload) {
-        String serviceName = !request.getServiceTypes().isEmpty() ? request.getServiceTypes().get(0).getName() : "";
+    private String bodyFor(EventType type, MaintenanceRequest request, Map<String, Object> payload) {
+        String serviceName = request.getServiceTypes() == null || request.getServiceTypes().isEmpty()
+                ? "" : request.getServiceTypes().get(0).getName();
         return switch (type) {
             case REQUEST_CREATED -> "تم إنشاء طلب خدمة " + serviceName;
-            case REQUEST_SUBMITTED -> "تم تقديم طلب " + serviceName;
-            case QUOTE_GENERATED -> "تم استلام عرض سعر لطلب " + serviceName;
-            case OFFER_ACCEPTED -> "تم قبول العرض لطلب " + serviceName;
-            case QUOTE_REJECTED -> "تم رفض عرضك لطلب " + serviceName + " - تم اختيار عرض ورشة أخرى";
-            case STATUS_UPDATED -> "تغيرت حالة الطلب: " + getStatusLabel(payload);
-            case SERVICE_STARTED -> "بدأ العمل على الخدمة: " + getServiceLabel(payload);
-            case SERVICE_COMPLETED -> "اكتملت الخدمة: " + getServiceLabel(payload);
-            case REPORT_SUBMITTED -> "تم تقديم تقرير الفحص للطلب";
+            case REQUEST_SUBMITTED -> "طلب خدمة جديد في مدينتك: " + serviceName;
+            case QUOTE_GENERATED -> "وصل عرض سعر جديد لطلب " + serviceName;
+            case QUOTE_ACCEPTED, OFFER_ACCEPTED, OFFER_SELECTED -> "تم قبول العرض لطلب " + serviceName;
+            case QUOTE_REJECTED -> "تم رفض العرض لطلب " + serviceName;
+            case WORKSHOP_ASSIGNED, WORKSHOP_REASSIGNED -> "تم إسناد طلب " + serviceName;
+            case STATUS_UPDATED -> "تغيرت حالة الطلب إلى: " + String.valueOf(payload == null ? "" : payload.getOrDefault("status", ""));
+            case SERVICE_STARTED -> "بدأ العمل على الخدمة " + serviceName;
+            case SERVICE_COMPLETED, SERVICE_VERIFIED -> "اكتملت الخدمة " + serviceName;
+            case REPORT_SUBMITTED -> "تم إرسال تقرير الفحص";
             case REPORT_APPROVED -> "تم اعتماد تقرير الفحص";
-            case INVOICE_CREATED -> "تم إصدار فاتورة للطلب";
-            case PAYMENT_HELD -> "تم حجز المبلغ لحين اكتمال الخدمة";
-            case PAYMENT_RELEASED -> "تم صرف المبلغ للورشة";
+            case REPORT_REJECTED -> "تم رفض تقرير الفحص";
+            case INVOICE_CREATED, INVOICE_APPROVED -> "يوجد تحديث جديد على فاتورة الطلب";
+            case PAYMENT_INITIATED -> "بدأت عملية الدفع للطلب";
+            case PAYMENT_HELD -> "تم تأكيد دفع قيمة الطلب";
+            case PAYMENT_RELEASED -> "تم صرف مستحقات الطلب";
+            case PAYMENT_REFUNDED -> "تم استرداد قيمة الطلب";
             case ADMIN_OVERRIDE -> "قامت الإدارة بتحديث الطلب";
             case REQUEST_CANCELLED -> "تم إلغاء الطلب";
-            default -> "هناك تحديث جديد على طلبك";
+            default -> "يوجد تحديث جديد على الطلب";
         };
-    }
-
-    private String getStatusLabel(Map<String, Object> payload) {
-        if (payload != null && payload.containsKey("status")) {
-            return payload.get("status").toString();
-        }
-        return "";
-    }
-
-    private String getServiceLabel(Map<String, Object> payload) {
-        if (payload != null && payload.containsKey("serviceItemId")) {
-            return "رقم " + payload.get("serviceItemId");
-        }
-        return "";
     }
 }

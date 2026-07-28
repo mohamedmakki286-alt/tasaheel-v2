@@ -19,7 +19,7 @@ function handleEvent(data: any, add: (n: any) => void) {
   const body = buildBody(eventType, payload);
 
   add({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type: notificationType(eventType),
     title,
     body,

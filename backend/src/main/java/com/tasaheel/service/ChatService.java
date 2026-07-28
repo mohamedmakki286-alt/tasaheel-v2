@@ -257,6 +257,7 @@ public class ChatService {
         };
         return rooms.stream()
                 .filter(room -> isVisibleForRole(room, role))
+                .filter(room -> isChatEnabled(room.getRequest()))
                 .map(room -> toChatRoomDTO(room, role, user.getUserId()))
                 .sorted((a, b) -> {
                     java.time.LocalDateTime at = a.getLastMessage() != null ? a.getLastMessage().getCreatedAt() : a.getCreatedAt();

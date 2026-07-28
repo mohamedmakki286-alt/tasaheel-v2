@@ -52,7 +52,10 @@ export const useNotificationStore = create<NotificationState>()(
       markAsRead: (id) =>
         set((s) => {
           const updated = s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
-          notificationsApi.markAsRead(Number(id)).catch(() => {});
+          const serverId = Number(id);
+          if (Number.isInteger(serverId) && serverId > 0) {
+            notificationsApi.markAsRead(serverId).catch(() => {});
+          }
           return { notifications: updated, unreadCount: updated.filter((x) => !x.read).length };
         }),
       markAllAsRead: () =>
