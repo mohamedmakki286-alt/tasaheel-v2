@@ -146,7 +146,7 @@ public class ChatService {
             }
         }
 
-        Map<String, Object> fileData = mediaService.storeFileWithMetadata(file, "chat");
+        Map<String, Object> fileData = mediaService.storeFileWithMetadata(file, "chat/" + roomId);
 
         String contentType = file.getContentType();
         MessageType messageType = MessageType.TEXT;

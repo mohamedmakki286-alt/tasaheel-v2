@@ -4,18 +4,14 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.tasaheel.entity.TestDataResetAuditLog;
+import com.tasaheel.integration.MediaStorageService;
 import com.tasaheel.repository.TestDataResetAuditLogRepository;
 import com.tasaheel.security.UserDetailsImpl;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -27,9 +23,7 @@ public class TestDataResetService {
     @PersistenceContext
     private final EntityManager em;
     private final TestDataResetAuditLogRepository auditLogRepository;
-
-    @Value("${application.upload.dir}")
-    private String uploadDir;
+    private final MediaStorageService storageService;
 
     public static final String CONFIRM_TEXT = "RESET_TASAHEEL_TEST_DATA";
 
@@ -285,18 +279,14 @@ public class TestDataResetService {
 
     private List<String> deleteFilesFromDisk(List<String> urls) {
         List<String> deleted = new ArrayList<>();
-        Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
         for (String url : urls) {
             if (url == null || url.isBlank()) continue;
             try {
-                String fileName = url.replaceAll(".*/uploads/", "");
-                if (fileName.isBlank()) continue;
-                Path filePath = uploadPath.resolve(fileName).normalize();
-                if (filePath.startsWith(uploadPath) && Files.exists(filePath)) {
-                    Files.delete(filePath);
-                    deleted.add(fileName);
-                }
-            } catch (IOException e) {
+                String storageKey = storageService.keyFromUrl(url);
+                if (storageKey.isBlank()) continue;
+                storageService.delete(storageKey);
+                deleted.add(storageKey);
+            } catch (RuntimeException e) {
                 log.warn("Failed to delete file: {}", url);
             }
         }

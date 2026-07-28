@@ -1,20 +1,20 @@
 package com.tasaheel.integration;
 
 import com.tasaheel.entity.Media;
+import com.tasaheel.entity.MaintenanceRequest;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.repository.MediaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -22,156 +22,78 @@ import java.util.*;
 public class MediaService {
 
     private final MediaRepository mediaRepository;
-
-    @Value("${application.upload.dir}")
-    private String uploadDir;
-
-    @Value("${application.public-url:}")
-    private String publicUrl;
+    private final MediaStorageService storageService;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
-        "image/jpeg", "image/png", "image/webp", "image/gif"
+            "image/jpeg", "image/png", "image/webp", "image/gif"
     );
-
     private static final Set<String> ALLOWED_AUDIO_TYPES = Set.of(
-        "audio/webm", "audio/ogg", "audio/mp4", "audio/m4a",
-        "audio/aac", "audio/mpeg", "audio/wav"
+            "audio/webm", "audio/ogg", "audio/mp4", "audio/m4a",
+            "audio/aac", "audio/mpeg", "audio/wav"
     );
-
     private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of(
-        "video/mp4", "video/webm", "video/quicktime", "video/x-matroska"
+            "video/mp4", "video/webm", "video/quicktime", "video/x-matroska"
     );
-
     private static final Set<String> ALLOWED_FILE_TYPES = new HashSet<>();
+    private static final long MAX_FILE_SIZE = 30L * 1024 * 1024;
+
     static {
         ALLOWED_FILE_TYPES.addAll(ALLOWED_IMAGE_TYPES);
         ALLOWED_FILE_TYPES.addAll(ALLOWED_AUDIO_TYPES);
         ALLOWED_FILE_TYPES.addAll(ALLOWED_VIDEO_TYPES);
         ALLOWED_FILE_TYPES.addAll(Set.of(
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         ));
     }
-
-    private static final long MAX_FILE_SIZE = 30 * 1024 * 1024;
 
     public void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("الملف مطلوب");
         }
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new BadRequestException("حجم الملف يتجاوز الحد الأقصى (10 ميجا)");
+            throw new BadRequestException("حجم الملف يتجاوز الحد الأقصى (30 ميجابايت)");
         }
-        String contentType = file.getContentType();
-        String normalizedContentType = contentType == null
-                ? null
-                : contentType.toLowerCase(Locale.ROOT).split(";", 2)[0].trim();
-        if (normalizedContentType == null || !ALLOWED_FILE_TYPES.contains(normalizedContentType)) {
-            throw new BadRequestException("نوع الملف غير مدعوم: " + contentType);
+        String contentType = normalizeContentType(file.getContentType());
+        if (!ALLOWED_FILE_TYPES.contains(contentType)) {
+            throw new BadRequestException("نوع الملف غير مدعوم: " + file.getContentType());
         }
-    }
-
-    public String getPublicBaseUrl() {
-        if (publicUrl != null && !publicUrl.isBlank()) {
-            return publicUrl.replaceAll("/$", "");
-        }
-        return "https://api.salabaa.com";
     }
 
     public String storeFile(MultipartFile file, String prefix) {
         validateFile(file);
-        try {
-            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-            Files.createDirectories(uploadPath);
-
-            String originalFileName = file.getOriginalFilename();
-            String fileExtension = "";
-            if (originalFileName != null && originalFileName.contains(".")) {
-                fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
-            }
-            String fileName = prefix + "_" + UUID.randomUUID() + fileExtension;
-
-            Path targetLocation = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-            return getPublicBaseUrl() + "/uploads/" + fileName;
-        } catch (IOException e) {
-            log.error("Failed to store file: {}", e.getMessage());
-            throw new BadRequestException("فشل حفظ الملف");
-        }
+        return storageService.store(file, prefix).fileUrl();
     }
 
     public Map<String, Object> storeFileWithMetadata(MultipartFile file, String prefix) {
         validateFile(file);
-        try {
-            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-            Files.createDirectories(uploadPath);
-
-            String originalFileName = file.getOriginalFilename();
-            String fileExtension = "";
-            if (originalFileName != null && originalFileName.contains(".")) {
-                fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
-            }
-            String fileName = prefix + "_" + UUID.randomUUID() + fileExtension;
-            String storageKey = prefix + "/" + fileName;
-
-            Path targetLocation = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-            String fileUrl = getPublicBaseUrl() + "/uploads/" + fileName;
-            String mimeType = file.getContentType() != null ? file.getContentType().toLowerCase() : "application/octet-stream";
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("storageKey", storageKey);
-            result.put("fileUrl", fileUrl);
-            result.put("mimeType", mimeType);
-            result.put("fileSize", file.getSize());
-            result.put("originalFileName", originalFileName != null ? originalFileName : fileName);
-            return result;
-        } catch (IOException e) {
-            log.error("Failed to store file: {}", e.getMessage());
-            throw new BadRequestException("فشل حفظ الملف");
-        }
+        MediaStorageService.StoredFile stored = storageService.store(file, prefix);
+        Map<String, Object> result = new HashMap<>();
+        result.put("storageKey", stored.storageKey());
+        result.put("fileUrl", stored.fileUrl());
+        result.put("mimeType", stored.mimeType());
+        result.put("fileSize", stored.fileSize());
+        result.put("originalFileName", stored.originalFileName());
+        return result;
     }
 
-    public Media uploadFile(MultipartFile file, Long requestId, com.tasaheel.entity.MaintenanceRequest request) {
+    public Media uploadFile(MultipartFile file, Long requestId, MaintenanceRequest request) {
         validateFile(file);
-        try {
-            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-            Files.createDirectories(uploadPath);
+        MediaStorageService.StoredFile stored = storageService.store(file, "requests/" + requestId);
+        String mediaType = stored.mimeType().startsWith("video/") ? "video"
+                : stored.mimeType().startsWith("audio/") ? "audio" : "image";
 
-            String originalFileName = file.getOriginalFilename();
-            String fileExtension = "";
-            if (originalFileName != null && originalFileName.contains(".")) {
-                fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
-            }
-            String fileName = UUID.randomUUID() + fileExtension;
-
-            Path targetLocation = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-            String contentType = file.getContentType();
-            String mediaType = "image";
-            if (contentType != null && contentType.startsWith("video")) {
-                mediaType = "video";
-            }
-
-            Media media = Media.builder()
-                    .request(request)
-                    .type(mediaType)
-                    .url(getPublicBaseUrl() + "/uploads/" + fileName)
-                    .thumbnailUrl(null)
-                    .originalFileName(originalFileName != null ? originalFileName : fileName)
-                    .mimeType(contentType != null ? contentType.toLowerCase(Locale.ROOT) : "application/octet-stream")
-                    .fileSize(file.getSize())
-                    .build();
-
-            return mediaRepository.save(media);
-        } catch (IOException e) {
-            log.error("Failed to upload file: {}", e.getMessage());
-            throw new BadRequestException("فشل رفع الملف");
-        }
+        Media media = Media.builder()
+                .request(request)
+                .type(mediaType)
+                .url(stored.fileUrl())
+                .thumbnailUrl(null)
+                .originalFileName(stored.originalFileName())
+                .mimeType(stored.mimeType())
+                .fileSize(stored.fileSize())
+                .build();
+        return mediaRepository.save(media);
     }
 
     public List<Media> getFilesByRequest(Long requestId) {
@@ -181,18 +103,13 @@ public class MediaService {
     public void deleteFile(Long mediaId) {
         Media media = mediaRepository.findById(mediaId)
                 .orElseThrow(() -> new BadRequestException("الملف غير موجود"));
-
-        try {
-            Path filePath = Paths.get(uploadDir).resolve(media.getUrl().replace("/uploads/", "")).normalize();
-            Files.deleteIfExists(filePath);
-            if (media.getThumbnailUrl() != null) {
-                Path thumbPath = Paths.get(uploadDir).resolve(media.getThumbnailUrl().replace("/uploads/", "")).normalize();
-                Files.deleteIfExists(thumbPath);
-            }
-        } catch (IOException e) {
-            log.warn("Failed to delete file: {}", e.getMessage());
-        }
-
+        storageService.deleteByUrl(media.getUrl());
+        storageService.deleteByUrl(media.getThumbnailUrl());
         mediaRepository.delete(media);
+    }
+
+    private String normalizeContentType(String contentType) {
+        if (contentType == null || contentType.isBlank()) return "";
+        return contentType.toLowerCase(Locale.ROOT).split(";", 2)[0].trim();
     }
 }

@@ -55,6 +55,8 @@ application:
     expiration: 604800000
   upload:
     dir: ${user.home}/tasaheel/uploads
+  storage:
+    provider: ${MEDIA_STORAGE_PROVIDER:local}
   moyasar:
     secret-key: moyasar_dev_key
     base-url: https://api.moyasar.com/v1

@@ -67,6 +67,12 @@ application:
     expiration: 604800000
   upload:
     dir: ${user.home}/tasaheel/uploads
+  storage:
+    provider: ${MEDIA_STORAGE_PROVIDER:local}
+    oci:
+      region: ${OCI_OBJECT_STORAGE_REGION:me-riyadh-1}
+      namespace: ${OCI_OBJECT_STORAGE_NAMESPACE:axwurkwwudzgw}
+      bucket: ${OCI_OBJECT_STORAGE_BUCKET:tasaheel-media}
   moyasar:
     secret-key: moyasar_secret_key_placeholder
     base-url: https://api.moyasar.com/v1

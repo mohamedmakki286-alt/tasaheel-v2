@@ -113,6 +113,18 @@
             <version>9.2.0</version>
         </dependency>
 
+        <!-- Oracle Cloud Object Storage -->
+        <dependency>
+            <groupId>com.oracle.oci.sdk</groupId>
+            <artifactId>oci-java-sdk-objectstorage</artifactId>
+            <version>3.89.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.oci.sdk</groupId>
+            <artifactId>oci-java-sdk-common-httpclient-jersey3</artifactId>
+            <version>3.89.1</version>
+        </dependency>
+
         <!-- HTTP Client -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>

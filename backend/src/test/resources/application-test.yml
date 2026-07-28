@@ -21,6 +21,8 @@ spring:
 application:
   upload:
     dir: /tmp/tasaheel-test-uploads
+  storage:
+    provider: local
   public-url: http://localhost:8080
   jwt:
     secret: test-secret-key-for-jwt-token-generation-and-validation
