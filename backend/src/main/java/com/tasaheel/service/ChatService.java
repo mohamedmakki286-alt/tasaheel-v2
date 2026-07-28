@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -63,10 +64,11 @@ public class ChatService {
 
         if (existingRoom != null) {
             requireAcceptedRequest(existingRoom.getRequest(), workshopId);
+            existingRoom.setCustomerDeletedAt(null);
             if (existingRoom.getTechnician() == null && existingRoom.getRequest().getTechnician() != null) {
                 existingRoom.setTechnician(existingRoom.getRequest().getTechnician());
-                existingRoom = chatRoomRepository.save(existingRoom);
             }
+            existingRoom = chatRoomRepository.save(existingRoom);
             return toChatRoomDTO(existingRoom, "customer", customerId);
         }
 
@@ -119,6 +121,7 @@ public class ChatService {
                 .build();
 
         message = chatMessageRepository.save(message);
+        restoreRoomVisibility(room);
 
         ChatMessageDTO dto = toChatMessageDTO(message);
 
@@ -172,6 +175,7 @@ public class ChatService {
                 .build();
 
         message = chatMessageRepository.save(message);
+        restoreRoomVisibility(room);
 
         ChatAttachment attachment = ChatAttachment.builder()
                 .message(message)
@@ -237,6 +241,7 @@ public class ChatService {
             room = chatRoomRepository.save(room);
         }
         requireRoomParticipant(room, user);
+        restoreRoomVisibilityForViewer(room, user.getRole());
         return toChatRoomDTO(room, user.getRole(), user.getUserId());
     }
 
@@ -251,6 +256,7 @@ public class ChatService {
             default -> List.of();
         };
         return rooms.stream()
+                .filter(room -> isVisibleForRole(room, role))
                 .map(room -> toChatRoomDTO(room, role, user.getUserId()))
                 .sorted((a, b) -> {
                     java.time.LocalDateTime at = a.getLastMessage() != null ? a.getLastMessage().getCreatedAt() : a.getCreatedAt();
@@ -258,6 +264,22 @@ public class ChatService {
                     return bt.compareTo(at);
                 })
                 .toList();
+    }
+
+    @Transactional
+    public void deleteRoomForParticipant(Long roomId, UserDetailsImpl user) {
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new ResourceNotFoundException("ChatRoom", roomId));
+        requireRoomParticipant(room, user);
+        String role = user.getRole().toLowerCase();
+        if ("customer".equals(role)) {
+            room.setCustomerDeletedAt(LocalDateTime.now());
+        } else if ("workshop".equals(role)) {
+            room.setWorkshopDeletedAt(LocalDateTime.now());
+        } else {
+            throw new BadRequestException("حذف المحادثة متاح للعميل والورشة فقط");
+        }
+        chatRoomRepository.save(room);
     }
 
     @Transactional
@@ -276,6 +298,33 @@ public class ChatService {
                 || ("driver".equals(role) && room.getDriver() != null && room.getDriver().getId().equals(user.getUserId()))
                 || ("technician".equals(role) && room.getTechnician() != null && room.getTechnician().getId().equals(user.getUserId()));
         if (!permitted) throw new BadRequestException("لست مشاركاً في هذه المحادثة");
+    }
+
+    private boolean isVisibleForRole(ChatRoom room, String role) {
+        if ("customer".equals(role)) return room.getCustomerDeletedAt() == null;
+        if ("workshop".equals(role)) return room.getWorkshopDeletedAt() == null;
+        return true;
+    }
+
+    private void restoreRoomVisibility(ChatRoom room) {
+        if (room.getCustomerDeletedAt() != null || room.getWorkshopDeletedAt() != null) {
+            room.setCustomerDeletedAt(null);
+            room.setWorkshopDeletedAt(null);
+            chatRoomRepository.save(room);
+        }
+    }
+
+    private void restoreRoomVisibilityForViewer(ChatRoom room, String viewerRole) {
+        String role = viewerRole == null ? "" : viewerRole.toLowerCase();
+        boolean changed = false;
+        if ("customer".equals(role) && room.getCustomerDeletedAt() != null) {
+            room.setCustomerDeletedAt(null);
+            changed = true;
+        } else if ("workshop".equals(role) && room.getWorkshopDeletedAt() != null) {
+            room.setWorkshopDeletedAt(null);
+            changed = true;
+        }
+        if (changed) chatRoomRepository.save(room);
     }
 
     private void requireAcceptedRequest(MaintenanceRequest request, Long workshopId) {

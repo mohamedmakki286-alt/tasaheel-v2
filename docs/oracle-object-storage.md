@@ -9,7 +9,7 @@ service-account private key is required.
 ```env
 MEDIA_STORAGE_PROVIDER=oci
 OCI_OBJECT_STORAGE_REGION=me-riyadh-1
-OCI_OBJECT_STORAGE_NAMESPACE=axwurkwwudzgw
+OCI_OBJECT_STORAGE_NAMESPACE=axwurkwudzgw
 OCI_OBJECT_STORAGE_BUCKET=tasaheel-media
 MEDIA_STORAGE_MIGRATE_LOCAL=false
 ```

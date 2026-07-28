@@ -6,21 +6,21 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { Search, MapPin, Star, ChevronLeft, Wrench, Gift } from 'lucide-react';
 import { useGuestGuard } from '../hooks/useGuestGuard';
-import { workshopsApi } from '../api/workshops.api';
+import { workshopsApi, type ServiceCatalogCategory } from '../api/workshops.api';
 import {
   OilChangeIcon, BatteryIcon, TireIcon, InspectionIcon,
   ACIcon, ElectricIcon, WashIcon, TowIcon
 } from '../components/ServiceIcons';
 
 const QUICK_SERVICES = [
-  { icon: OilChangeIcon, label: 'تغيير زيت', category: 'periodic' },
-  { icon: BatteryIcon, label: 'بطارية', category: 'electrical' },
-  { icon: TireIcon, label: 'إطارات', category: 'emergency' },
-  { icon: InspectionIcon, label: 'فحص شامل', category: 'periodic' },
+  { icon: OilChangeIcon, label: 'تغيير زيت', category: 'periodic', templateNameEn: 'Oil Change' },
+  { icon: BatteryIcon, label: 'تغيير بطارية', category: 'electrical', templateNameEn: 'Battery Replacement' },
+  { icon: TireIcon, label: 'تغيير إطار', category: 'emergency', templateNameEn: 'Tire Change' },
+  { icon: InspectionIcon, label: 'فحص شامل', category: 'periodic', templateNameEn: 'Periodic Inspection' },
   { icon: ElectricIcon, label: 'كهرباء', category: 'electrical' },
   { icon: ACIcon, label: 'مكيف', category: 'ac' },
-  { icon: WashIcon, label: 'غسيل', category: 'bodywork' },
-  { icon: TowIcon, label: 'سطحة', category: 'emergency' },
+  { icon: WashIcon, label: 'تلميع', category: 'bodywork', templateNameEn: 'Car Polishing' },
+  { icon: TowIcon, label: 'سطحة', category: 'emergency', templateNameEn: 'Tow Truck' },
 ];
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const } }) };
@@ -41,6 +41,10 @@ export function HomePage() {
   const { showLoginSheet, closeSheet, requireAuth, pendingMessage } = useGuestGuard();
   const [position, setPosition] = useState<[number, number] | null>(null);
   const { data: nearbyWorkshops = [] } = useQuery({ queryKey: ['home-workshops'], queryFn: () => workshopsApi.getAll(undefined, undefined, undefined) });
+  const { data: serviceCatalog = [] } = useQuery<ServiceCatalogCategory[]>({
+    queryKey: ['serviceCatalog'],
+    queryFn: () => workshopsApi.getCatalog(),
+  });
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       ({ coords }) => setPosition([coords.latitude, coords.longitude]),
@@ -63,6 +67,19 @@ export function HomePage() {
   const greetingTime = h < 12 ? 'صباح الخير' : h < 18 ? 'مساء الخير' : 'مساء الخير';
   const customerName = customer?.name?.split(' ')[0] || '';
   const greeting = customerName ? `${greetingTime} يا ${customerName}` : greetingTime;
+
+  const openQuickService = (service: typeof QUICK_SERVICES[number]) => {
+    if (service.templateNameEn) {
+      const template = serviceCatalog
+        .flatMap(category => category.templates)
+        .find(item => item.nameEn?.trim().toLowerCase() === service.templateNameEn?.toLowerCase());
+      if (template) {
+        navigate(`/services/${template.id}`);
+        return;
+      }
+    }
+    navigate('/services', { state: { category: service.category } });
+  };
 
   return (
     <div className="space-y-5">
@@ -116,7 +133,7 @@ export function HomePage() {
         </div>
         <div className="grid grid-cols-4 gap-2.5">
           {QUICK_SERVICES.map((s, i) => (
-            <motion.button key={s.label} custom={i} initial="hidden" animate="visible" variants={fadeUp} onClick={() => navigate('/services', { state: { category: s.category } })} className="flex flex-col items-center gap-2 p-3 rounded-[14px] bg-white dark:bg-surface-800/50 border border-surface-100 dark:border-surface-700/30 hover:shadow-card-hover transition-all active:scale-95">
+            <motion.button key={s.label} custom={i} initial="hidden" animate="visible" variants={fadeUp} onClick={() => openQuickService(s)} className="flex flex-col items-center gap-2 p-3 rounded-[14px] bg-white dark:bg-surface-800/50 border border-surface-100 dark:border-surface-700/30 hover:shadow-card-hover transition-all active:scale-95">
               <div className="w-12 h-12 rounded-[12px] bg-surface-50 dark:bg-surface-700/50 flex items-center justify-center text-surface-600 dark:text-surface-300">
                 <s.icon size={26} />
               </div>

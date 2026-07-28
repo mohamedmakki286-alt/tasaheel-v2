@@ -65,6 +65,14 @@ public class MaintenanceRequestController {
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("request.draft.submitted", null, locale), request));
     }
 
+    @DeleteMapping("/{id}/draft")
+    public ResponseEntity<ApiResponse<Void>> deleteDraft(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long id) {
+        requestService.deleteDraft(id, user.getUserId());
+        return ResponseEntity.ok(ApiResponse.success("تم حذف المسودة", null));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<MaintenanceRequestDTO>> getRequest(
             @AuthenticationPrincipal UserDetailsImpl user, @PathVariable Long id) {

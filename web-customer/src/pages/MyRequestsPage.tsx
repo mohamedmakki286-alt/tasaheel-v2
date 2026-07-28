@@ -6,7 +6,7 @@ import type { Request } from '../types';
 import { RequestCard } from '../components/RequestCard';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { RefreshCw, Save, Send, FileText, Clock, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Save, Send, Clock, CheckCircle2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type Tab = 'active' | 'completed' | 'drafts';
@@ -40,6 +40,17 @@ export function MyRequestsPage() {
       load();
     } catch {
       toast.error(t('toast.error.draftSubmitFailed'));
+    }
+  };
+
+  const handleDeleteDraft = async (id: string) => {
+    if (!window.confirm('حذف هذه المسودة نهائياً؟')) return;
+    try {
+      await requestsApi.deleteDraft(id);
+      setDrafts(current => current.filter(draft => draft.id !== id));
+      toast.success('تم حذف المسودة');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'تعذر حذف المسودة');
     }
   };
 
@@ -137,6 +148,13 @@ export function MyRequestsPage() {
                   >
                     <Send className="h-3.5 w-3.5" />
                     {t('pages.requests.submitDraft')}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDraft(draft.id)}
+                    aria-label="حذف المسودة"
+                    className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-red-200 text-red-600 transition hover:bg-red-50 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>

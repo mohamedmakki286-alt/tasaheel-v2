@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { authApi } from '../api/auth.api';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
-import { Camera, CheckCircle2, ChevronLeft, KeyRound, LogOut, Mail, MapPin, Moon, Save, ShieldCheck, Sun, UserRound, X, MessageCircle, Fingerprint } from 'lucide-react';
+import { Camera, CheckCircle2, ChevronLeft, KeyRound, LogOut, Mail, MapPin, Moon, Save, ShieldCheck, Sun, UserRound, X, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -20,11 +20,14 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [panel, setPanel] = useState<'email' | 'password' | null>(null);
   const [newEmail, setNewEmail] = useState(customer?.email || '');
-  const [biometricEnabled, setBiometricEnabled] = useState(() => localStorage.getItem('tasaheel-biometric-enabled') === 'true');
   const fileInput = useRef<HTMLInputElement>(null);
   const isDark = theme === 'dark';
   const { data: chatRooms = [] } = useQuery({ queryKey: ['chat-rooms'], queryFn: getRooms, refetchInterval: 15_000 });
   const unreadMessages = chatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
+
+  useEffect(() => {
+    localStorage.removeItem('tasaheel-biometric-enabled');
+  }, []);
 
   const handleAvatar = async (file?: File) => {
     if (!file) return;
@@ -60,14 +63,6 @@ export function SettingsPage() {
     catch { toast.error('تعذر إرسال رابط تغيير كلمة المرور حاليًا'); }
   };
 
-  const toggleBiometric = () => {
-    const next = !biometricEnabled;
-    setBiometricEnabled(next);
-    localStorage.setItem('tasaheel-biometric-enabled', String(next));
-    if (next) toast.success('تم تفعيل الدخول السريع على هذا الجهاز');
-    else toast.success('تم إيقاف الدخول بالبصمة أو الوجه');
-  };
-
   return <div className="mx-auto max-w-2xl space-y-5 pb-24" dir="rtl">
     <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-surface-950 to-surface-800 p-6 text-white shadow-xl">
       <div className="absolute -left-10 -top-12 h-40 w-40 rounded-full bg-accent-500/20 blur-2xl" />
@@ -83,8 +78,6 @@ export function SettingsPage() {
       <button onClick={() => setPanel('email')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10"><Mail size={20}/></span><span className="min-w-0 flex-1"><span className="block font-black text-surface-900 dark:text-white">البريد الإلكتروني</span><span className="block truncate text-xs text-surface-500">{customer?.email || 'غير مضاف'}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
       <button onClick={() => setPanel('password')} className="flex w-full items-center gap-3 p-4 text-right transition hover:bg-surface-50 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><KeyRound size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">كلمة المرور</span><span className="block text-xs text-surface-500">تغيير آمن عبر رابط التحقق</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
     </section>
-
-    <section className="rounded-3xl border border-surface-200 bg-white p-4 dark:border-surface-700 dark:bg-surface-900"><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-500/10"><Fingerprint size={21}/></span><span><span className="block font-black text-surface-900 dark:text-white">الدخول بالبصمة أو الوجه</span><span className="block text-xs text-surface-500">تفعيل الدخول السريع على هذا الجهاز</span></span></div><button onClick={toggleBiometric} className={`relative h-7 w-12 shrink-0 rounded-full transition ${biometricEnabled ? 'bg-accent-500' : 'bg-surface-300 dark:bg-surface-700'}`} aria-label="تفعيل الدخول بالبصمة"><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${biometricEnabled ? 'right-1' : 'right-6'}`}/></button></div>{biometricEnabled && <p className="mr-[52px] mt-3 text-xs text-emerald-600">مفعّل لهذا الجهاز</p>}</section>
 
     <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-surface-200 bg-white p-5 dark:border-surface-700 dark:bg-surface-900">
       <div className="flex items-center gap-2"><UserRound size={19} className="text-accent-500"/><h2 className="font-black text-surface-900 dark:text-white">المعلومات الشخصية</h2></div>

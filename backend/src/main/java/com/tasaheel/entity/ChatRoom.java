@@ -37,6 +37,12 @@ public class ChatRoom {
     @JoinColumn(name = "technician_id")
     private Technician technician;
 
+    @Column(name = "customer_deleted_at")
+    private LocalDateTime customerDeletedAt;
+
+    @Column(name = "workshop_deleted_at")
+    private LocalDateTime workshopDeletedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

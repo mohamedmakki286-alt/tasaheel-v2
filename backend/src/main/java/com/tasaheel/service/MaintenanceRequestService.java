@@ -6,6 +6,7 @@ import com.tasaheel.event.EventPublisher;
 import com.tasaheel.event.EventType;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.exception.ResourceNotFoundException;
+import com.tasaheel.integration.MediaService;
 import com.tasaheel.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,6 +39,8 @@ public class MaintenanceRequestService {
     private final SplitRequestService splitRequestService;
     private final InvoiceRepository invoiceRepository;
     private final RequestDispatchService requestDispatchService;
+    private final ServiceItemRepository serviceItemRepository;
+    private final MediaService mediaService;
 
     @Transactional
     public MaintenanceRequestDTO createRequest(Long customerId, MaintenanceRequestDTO dto, boolean isDraft) {
@@ -98,7 +101,7 @@ public class MaintenanceRequestService {
                 dto.getDescription(),
                 primaryServiceName
         );
-        if ("mobile_mechanic".equals(category)) {
+        if (!isDraft && "mobile_mechanic".equals(category)) {
             List<Workshop> mobileWorkshops = workshopRepository.findByCityAndWorkshopTypeIn(
                     dto.getCity(),
                     List.of("mobile", "both")
@@ -139,6 +142,24 @@ public class MaintenanceRequestService {
     public List<MaintenanceRequestDTO> getCustomerDrafts(Long customerId) {
         return requestRepository.findByCustomerIdAndStatusOrderByCreatedAtDesc(customerId, "draft")
                 .stream().map(this::toRequestDTO).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void deleteDraft(Long requestId, Long customerId) {
+        MaintenanceRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request", requestId));
+        if (!request.getCustomer().getId().equals(customerId)) {
+            throw new BadRequestException("You are not the owner of this request");
+        }
+        if (!"draft".equals(request.getStatus())) {
+            throw new BadRequestException("Only draft requests can be deleted");
+        }
+
+        mediaRepository.findByRequestIdOrderByCreatedAtAsc(requestId)
+                .forEach(media -> mediaService.deleteFile(media.getId()));
+        homeServiceAssignmentRepository.deleteByRequestId(requestId);
+        serviceItemRepository.deleteByRequestId(requestId);
+        requestRepository.delete(request);
     }
 
     public MaintenanceRequestDTO getRequest(Long id) {

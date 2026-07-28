@@ -96,6 +96,14 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("chat.read", null, locale), null));
     }
 
+    @DeleteMapping("/room/{roomId}")
+    public ResponseEntity<ApiResponse<Void>> deleteRoomForParticipant(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @PathVariable Long roomId) {
+        chatService.deleteRoomForParticipant(roomId, user);
+        return ResponseEntity.ok(ApiResponse.success("تم حذف المحادثة من قائمتك", null));
+    }
+
     @PostMapping("/upload")
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadChatMedia(
             @RequestParam("file") MultipartFile file,

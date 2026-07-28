@@ -109,6 +109,10 @@ export async function markAsRead(roomId: string): Promise<void> {
   await apiClient.put(`/chat/room/${roomId}/read`);
 }
 
+export async function deleteRoom(roomId: string): Promise<void> {
+  await apiClient.delete(`/chat/room/${roomId}`);
+}
+
 export async function sendAttachmentMessage(
   roomId: string,
   file: File,

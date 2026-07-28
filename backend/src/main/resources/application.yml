@@ -71,7 +71,7 @@ application:
     provider: ${MEDIA_STORAGE_PROVIDER:local}
     oci:
       region: ${OCI_OBJECT_STORAGE_REGION:me-riyadh-1}
-      namespace: ${OCI_OBJECT_STORAGE_NAMESPACE:axwurkwwudzgw}
+      namespace: ${OCI_OBJECT_STORAGE_NAMESPACE:axwurkwudzgw}
       bucket: ${OCI_OBJECT_STORAGE_BUCKET:tasaheel-media}
   moyasar:
     secret-key: moyasar_secret_key_placeholder

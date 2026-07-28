@@ -77,7 +77,7 @@ application:
     migrate-local-on-startup: ${MEDIA_STORAGE_MIGRATE_LOCAL:false}
     oci:
       region: ${OCI_OBJECT_STORAGE_REGION:me-riyadh-1}
-      namespace: ${OCI_OBJECT_STORAGE_NAMESPACE:axwurkwwudzgw}
+      namespace: ${OCI_OBJECT_STORAGE_NAMESPACE:axwurkwudzgw}
       bucket: ${OCI_OBJECT_STORAGE_BUCKET:tasaheel-media}
   moyasar:
     secret-key: ${MOYASAR_SECRET_KEY:}

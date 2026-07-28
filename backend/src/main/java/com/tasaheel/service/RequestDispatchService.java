@@ -14,9 +14,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -41,11 +44,19 @@ public class RequestDispatchService {
 
         if (request.getPreferredWorkshopId() != null) {
             workshopRepository.findById(request.getPreferredWorkshopId())
-                    .filter(this::isEligible)
+                    .filter(workshop -> isEligibleForRequest(workshop, request))
                     .ifPresent(workshop -> candidates.put(workshop.getId(), workshop));
         }
 
-        workshopRepository.findByCityAndIsApprovedAndIsActive(request.getCity(), true, true)
+        workshopRepository.findByCityAndIsApprovedAndIsActive(request.getCity(), true, true).stream()
+                .filter(workshop -> isEligibleForRequest(workshop, request))
+                .sorted(Comparator.comparingDouble(workshop -> distanceKm(workshop, request)))
+                .forEach(workshop -> candidates.putIfAbsent(workshop.getId(), workshop));
+
+        workshopRepository.findByIsApprovedAndIsActive(true, true).stream()
+                .filter(workshop -> isEligibleForRequest(workshop, request))
+                .filter(workshop -> isSameCityOrNearby(workshop, request))
+                .sorted(Comparator.comparingDouble(workshop -> distanceKm(workshop, request)))
                 .forEach(workshop -> candidates.putIfAbsent(workshop.getId(), workshop));
 
         LocalDateTime now = LocalDateTime.now();
@@ -144,6 +155,73 @@ public class RequestDispatchService {
 
     private boolean isEligible(Workshop workshop) {
         return Boolean.TRUE.equals(workshop.getIsApproved()) && Boolean.TRUE.equals(workshop.getIsActive());
+    }
+
+    private boolean isEligibleForRequest(Workshop workshop, MaintenanceRequest request) {
+        if (!isEligible(workshop)) return false;
+
+        String method = request.getExecutionMethod();
+        String type = workshop.getWorkshopType() == null
+                ? "stationary"
+                : workshop.getWorkshopType().trim().toLowerCase(Locale.ROOT);
+
+        if ("mobile".equals(method)) {
+            return "mobile".equals(type) || "both".equals(type);
+        }
+        if ("workshop".equals(method)) {
+            return "stationary".equals(type) || "both".equals(type);
+        }
+        if ("pickup_delivery".equals(method)) {
+            return Boolean.TRUE.equals(workshop.getProvidesPickupDelivery());
+        }
+        return true;
+    }
+
+    private boolean isSameCityOrNearby(Workshop workshop, MaintenanceRequest request) {
+        if (normalizeCity(workshop.getCity()).equals(normalizeCity(request.getCity()))) {
+            return true;
+        }
+        return distanceKm(workshop, request) <= 80.0;
+    }
+
+    private double distanceKm(Workshop workshop, MaintenanceRequest request) {
+        if (workshop.getLatitude() == null || workshop.getLongitude() == null
+                || request.getLocationLat() == null || request.getLocationLng() == null) {
+            return Double.MAX_VALUE;
+        }
+        double earthRadiusKm = 6371.0;
+        double latDistance = Math.toRadians(workshop.getLatitude() - request.getLocationLat());
+        double lngDistance = Math.toRadians(workshop.getLongitude() - request.getLocationLng());
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(request.getLocationLat()))
+                * Math.cos(Math.toRadians(workshop.getLatitude()))
+                * Math.sin(lngDistance / 2) * Math.sin(lngDistance / 2);
+        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    private String normalizeCity(String city) {
+        if (city == null) return "";
+        String value = Normalizer.normalize(city.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('أ', 'ا')
+                .replace('إ', 'ا')
+                .replace('آ', 'ا')
+                .replace('ة', 'ه')
+                .replace('ى', 'ي')
+                .replaceAll("[^\\p{L}\\p{N}]+", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        return switch (value) {
+            case "riyadh", "ar riyad" -> "الرياض";
+            case "jeddah", "jiddah" -> "جده";
+            case "makkah", "mecca" -> "مكه";
+            case "madinah", "medina" -> "المدينه المنوره";
+            case "dammam" -> "الدمام";
+            case "khobar", "al khobar" -> "الخبر";
+            case "khamis mushait", "khamis musheit" -> "خميس مشيط";
+            default -> value;
+        };
     }
 
     private void notifyWorkshop(RequestWorkshopDispatch dispatch) {

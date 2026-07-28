@@ -5,6 +5,8 @@ import com.tasaheel.dto.ServiceCatalogDTO;
 import com.tasaheel.dto.ServiceTemplateDTO;
 import com.tasaheel.entity.ServiceCategory;
 import com.tasaheel.entity.ServiceTemplate;
+import com.tasaheel.entity.Workshop;
+import com.tasaheel.entity.WorkshopServiceListing;
 import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.repository.ServiceCategoryRepository;
 import com.tasaheel.repository.ServiceTemplateRepository;
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 
 @RestController
@@ -73,7 +75,18 @@ public class ServiceCatalogController {
         templateRepository.findById(templateId)
                 .filter(ServiceTemplate::getIsActive)
                 .orElseThrow(() -> new ResourceNotFoundException("ServiceTemplate", templateId));
-        return ResponseEntity.ok(ApiResponse.success(new ArrayList<>()));
+        List<Map<String, Object>> workshops = listingRepository
+                .findByServiceTemplateIdAndVisibleAndAvailable(templateId).stream()
+                .filter(listing -> Boolean.TRUE.equals(listing.getWorkshop().getIsApproved())
+                        && Boolean.TRUE.equals(listing.getWorkshop().getIsActive()))
+                .map(listing -> toTemplateWorkshop(listing, lat, lng))
+                .sorted((first, second) -> {
+                    double firstDistance = ((Number) first.getOrDefault("distanceKm", Double.MAX_VALUE)).doubleValue();
+                    double secondDistance = ((Number) second.getOrDefault("distanceKm", Double.MAX_VALUE)).doubleValue();
+                    return Double.compare(firstDistance, secondDistance);
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(workshops));
     }
 
     private ServiceCatalogDTO toCatalogDTO(ServiceCategory category, String search) {
@@ -110,5 +123,38 @@ public class ServiceCatalogController {
                 .icon(template.getIcon())
                 .isActive(template.getIsActive())
                 .build();
+    }
+
+    private Map<String, Object> toTemplateWorkshop(
+            WorkshopServiceListing listing,
+            Double customerLat,
+            Double customerLng) {
+        Workshop workshop = listing.getWorkshop();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("workshopId", workshop.getId());
+        result.put("workshopName", workshop.getName());
+        result.put("listingId", listing.getId());
+        result.put("price", listing.getPrice());
+        result.put("priceType", listing.getPriceType());
+        result.put("estimatedDuration", listing.getEstimatedDuration() == null ? "" : listing.getEstimatedDuration());
+        result.put("workshopRating", workshop.getRating() == null ? 0.0 : workshop.getRating());
+        result.put("workshopCity", workshop.getCity() == null ? "" : workshop.getCity());
+        if (customerLat != null && customerLng != null
+                && workshop.getLatitude() != null && workshop.getLongitude() != null) {
+            result.put("distanceKm", Math.round(
+                    distanceKm(customerLat, customerLng, workshop.getLatitude(), workshop.getLongitude()) * 10.0
+            ) / 10.0);
+        }
+        return result;
+    }
+
+    private double distanceKm(double lat1, double lng1, double lat2, double lng2) {
+        double earthRadiusKm = 6371.0;
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lngDistance = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lngDistance / 2) * Math.sin(lngDistance / 2);
+        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }

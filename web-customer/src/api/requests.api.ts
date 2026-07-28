@@ -18,6 +18,7 @@ export const requestsApi = {
   getDrafts: () => client.get('/requests/drafts'),
 
   submitDraft: (id: string) => client.put(`/requests/${id}/submit`),
+  deleteDraft: (id: string) => client.delete(`/requests/${id}/draft`),
   cancel: (id: string) => client.post(`/requests/${id}/cancel`),
   getQuotes: (id: string) => client.get(`/requests/${id}/quotes`),
   acceptQuote: (requestId: string, quoteId: string) =>

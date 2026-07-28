@@ -9,4 +9,5 @@ public interface ServiceItemRepository extends JpaRepository<ServiceItem, Long> 
     List<ServiceItem> findByRequestIdAndWorkshopId(Long requestId, Long workshopId);
     List<ServiceItem> findByWorkshopId(Long workshopId);
     long countByRequestIdAndStatus(Long requestId, String status);
+    void deleteByRequestId(Long requestId);
 }

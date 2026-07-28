@@ -45,6 +45,43 @@ function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const CITY_ALIASES: Record<string, string> = {
+  riyadh: 'الرياض',
+  'ar riyad': 'الرياض',
+  jeddah: 'جدة',
+  jiddah: 'جدة',
+  makkah: 'مكة',
+  mecca: 'مكة',
+  madinah: 'المدينة المنورة',
+  medina: 'المدينة المنورة',
+  dammam: 'الدمام',
+  khobar: 'الخبر',
+  'al khobar': 'الخبر',
+  'khamis mushait': 'خميس مشيط',
+  'khamis musheit': 'خميس مشيط',
+  أبها: 'ابها',
+};
+
+function normalizeCity(value?: string | null): string {
+  const normalized = (value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const aliased = CITY_ALIASES[normalized] || normalized;
+  return aliased
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function NewRequestPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -284,14 +321,19 @@ export function NewRequestPage() {
 
   const filteredByMethod = allWorkshops.filter(w => {
     if (!executionMethod) return true;
-    if (executionMethod === 'mobile') return w.workshopType === 'mobile';
-    if (executionMethod === 'workshop') return w.workshopType === 'stationary';
+    const workshopType = (w.workshopType || '').toLowerCase();
+    if (executionMethod === 'mobile') return workshopType === 'mobile' || workshopType === 'both';
+    if (executionMethod === 'workshop') return workshopType === 'stationary' || workshopType === 'both';
     if (executionMethod === 'pickup_delivery') return w.providesPickupDelivery === true;
     return true;
   });
 
   const filteredWorkshops = city
-    ? filteredByMethod.filter(w => w.city === city)
+    ? filteredByMethod.filter(w => {
+        if (normalizeCity(w.city) === normalizeCity(city)) return true;
+        if (w.latitude == null || w.longitude == null) return false;
+        return getDistance(position[0], position[1], w.latitude, w.longitude) <= 80;
+      })
     : filteredByMethod;
 
   const candidateWorkshops = presetWorkshopId

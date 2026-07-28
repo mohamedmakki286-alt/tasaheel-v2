@@ -13,4 +13,5 @@ public interface HomeServiceAssignmentRepository extends JpaRepository<HomeServi
     List<HomeServiceAssignment> findByWorkshopIdAndStatusOrderByCreatedAtDesc(Long workshopId, String status);
     List<HomeServiceAssignment> findByTechnicianId(Long technicianId);
     long countByWorkshopIdAndStatus(Long workshopId, String status);
+    void deleteByRequestId(Long requestId);
 }
