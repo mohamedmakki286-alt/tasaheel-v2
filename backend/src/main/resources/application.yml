@@ -2,6 +2,21 @@
   port: ${PORT:8080}
 
 spring:
+  mail:
+    host: ${MAIL_HOST:smtp-relay.brevo.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
   datasource:
     url: jdbc:h2:mem:tasaheel;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
     username: sa
@@ -55,6 +70,12 @@ spring:
       continue-on-error: true
 
 application:
+  email:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:noreply@salabaa.com}
+    from-name: ${MAIL_FROM_NAME:تساهيل}
+    customer-url: ${CUSTOMER_APP_URL:http://localhost:3201}
+    workshop-url: ${WORKSHOP_APP_URL:http://localhost:3102}
   dispatch:
     max-workshops: ${REQUEST_DISPATCH_MAX_WORKSHOPS:10}
     expiry-hours: ${REQUEST_DISPATCH_EXPIRY_HOURS:24}
@@ -89,8 +110,6 @@ application:
       api-key: ""
       model: gemini-1.5-flash
     provider: gemini
-  sendgrid:
-    api-key: ${SENDGRID_API_KEY:}
 
 management:
   endpoints:

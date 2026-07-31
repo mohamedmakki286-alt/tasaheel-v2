@@ -1,57 +1,38 @@
-# Environment Variables — Tasaheel Platform
+# متغيرات بيئة منصة تساهيل
 
-## Backend (Railway Dashboard)
+## الباكند — Oracle Cloud / Docker
 
-| Variable | Source | Required | Default |
-|----------|--------|----------|---------|
-| `SPRING_DATASOURCE_URL` | Supabase PostgreSQL | ✅ | `jdbc:postgresql://localhost:5432/salaba_db` |
-| `SPRING_DATASOURCE_USERNAME` | Supabase PostgreSQL | ✅ | `postgres` |
-| `SPRING_DATASOURCE_PASSWORD` | Supabase PostgreSQL | ✅ | — |
-| `SPRING_PROFILES_ACTIVE` | Fixed | ✅ | `prod` |
-| `APPLICATION_JWT_SECRET` | Custom (256-bit) | ✅ | — |
-| `RESEND_API_KEY` | Resend.com | ❌ | — |
-| `APPLICATION_UPLOAD_DIR` | Custom | ❌ | `/tmp/tasaheel/uploads` |
-| `MOYASAR_SECRET_KEY` | Moyasar | ❌ | — |
-| `GOOGLE_MAPS_API_KEY` | Google Cloud | ❌ | — |
-| `GEMINI_API_KEY` | Google AI | ❌ | — |
+| المتغير | المصدر | مطلوب | الافتراضي |
+|---|---|---:|---|
+| `SPRING_DATASOURCE_URL` | PostgreSQL / Supabase | نعم | — |
+| `SPRING_DATASOURCE_USERNAME` | PostgreSQL / Supabase | نعم | — |
+| `SPRING_DATASOURCE_PASSWORD` | PostgreSQL / Supabase | نعم | — |
+| `SPRING_PROFILES_ACTIVE` | ثابت | نعم | `prod` |
+| `APPLICATION_JWT_SECRET` | سر 256-bit | نعم | — |
+| `MAIL_HOST` | Brevo SMTP | نعم | `smtp-relay.brevo.com` |
+| `MAIL_PORT` | Brevo SMTP | نعم | `587` |
+| `MAIL_USERNAME` | Brevo SMTP login | نعم | — |
+| `MAIL_PASSWORD` | Brevo SMTP key | نعم | — |
+| `MAIL_FROM` | مرسل موثق | نعم | `noreply@salabaa.com` |
+| `MAIL_FROM_NAME` | اسم المرسل | نعم | `تساهيل` |
+| `MAIL_ENABLED` | ثابت | نعم | `true` |
+| `CUSTOMER_APP_URL` | Vercel | نعم | `https://tasaheel-customer.vercel.app` |
+| `WORKSHOP_APP_URL` | Vercel | نعم | `https://tasaheel-workshop.vercel.app` |
+| `APPLICATION_UPLOAD_DIR` | التخزين المحلي الاحتياطي | لا | `/tmp/tasaheel/uploads` |
+| `MOYASAR_SECRET_KEY` | Moyasar | لا | — |
+| `GOOGLE_MAPS_API_KEY` | Google Cloud | لا | — |
+| `GEMINI_API_KEY` | Google AI | لا | — |
 
-## Frontends (Vercel Dashboard)
+تفاصيل إعداد Brevo وDNS موثقة في [BREVO_EMAIL_SETUP.md](BREVO_EMAIL_SETUP.md).
 
-All 3 frontends share the same env var:
+## الواجهات — Vercel
 
-| Variable | Value | Required |
-|----------|-------|----------|
-| `VITE_API_URL` | `https://salaba-backend-xxxxx.up.railway.app/api` | ✅ |
+تستخدم واجهات العميل والورشة والإدارة:
 
-## CI/CD Pipeline (GitHub Actions Secrets)
+| المتغير | القيمة |
+|---|---|
+| `VITE_API_URL` | `https://api.salabaa.com/api` |
 
-| Secret | Required | Used In |
-|--------|----------|---------|
-| `RAILWAY_DEPLOY_HOOK` | ✅ | Railway deploy trigger (POST webhook) |
-| `VERCEL_TOKEN` | ✅ | Vercel CLI authentication |
-| `BACKEND_URL` | ✅ | Post-deploy health check |
-| `SUPABASE_URL` | ❌ | (optional, managed via Railway vars) |
+## التطوير المحلي
 
-Pipeline: `.github/workflows/deploy.yml` — runs on `git push main`
-
-Flow:
-```
-push main → Build Backend → Railway Deploy → Health Check → Build Frontends → Vercel Deploy → Done
-```
-
-## Mobile Apps (not deployed)
-
-| File | Key |
-|------|-----|
-| `mobile-customer/src/utils/env.ts` | `apiUrl` |
-| `mobile-driver/src/utils/constants.ts` | `API_URL` |
-
-## Local Development
-
-| Service | Command | URL |
-|---------|---------|-----|
-| Backend | `cd backend && mvn spring-boot:run` | `http://localhost:8080` |
-| Web-Admin | `cd web-admin && npm run dev` | `http://localhost:5173` |
-| Web-Workshop | `cd web-workshop && npm run dev` | `http://localhost:5174` |
-| Web-Customer | `cd web-customer && npm run dev` | `http://localhost:5175` |
-| Database | Supabase Local CLI | `postgresql://localhost:54322/postgres` |
+اترك `MAIL_ENABLED=false` إذا لم تتوفر بيانات SMTP. سيعمل الباكند، لكن لن يرسل البريد ولن يطبع OTP أو أسراراً في السجلات.

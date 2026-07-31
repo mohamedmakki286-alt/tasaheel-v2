@@ -86,7 +86,9 @@ public class AuthController {
     @PostMapping("/email/resend-verification")
     public ResponseEntity<ApiResponse<Void>> resendVerification(@Valid @RequestBody EmailRequest request) {
         Locale locale = LocaleContextHolder.getLocale();
-        authService.sendEmailVerification(request.getEmail());
+        if (!authService.sendEmailVerification(request.getEmail())) {
+            throw new com.tasaheel.exception.BadRequestException("تعذر إرسال رمز التحقق حالياً. حاول مرة أخرى لاحقاً.");
+        }
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("auth.email.resend.success", null, locale), null));
     }
 

@@ -20,6 +20,7 @@ import com.tasaheel.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,46 +47,73 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
 
     private final Map<String, VerificationEntry> verificationTokens = new ConcurrentHashMap<>();
+    private final Map<String, RequestWindow> verificationRequests = new ConcurrentHashMap<>();
     private final Map<String, ResetEntry> resetTokens = new ConcurrentHashMap<>();
+    private final Map<String, RequestWindow> resetRequests = new ConcurrentHashMap<>();
     private static final SecureRandom RAND = new SecureRandom();
     private static final long TOKEN_EXPIRY_HOURS = 1;
 
-    private record VerificationEntry(String code, long expiresAt) {
+    @Value("${application.email.workshop-url:http://localhost:3102}")
+    private String workshopAppUrl;
+
+    private record VerificationEntry(String codeHash, long expiresAt, int attempts) {
         boolean isExpired() { return System.currentTimeMillis() > expiresAt; }
     }
+
+    private record RequestWindow(long startedAt, int count) {}
 
     private record ResetEntry(String email, String password, long expiresAt) {
         boolean isExpired() { return System.currentTimeMillis() > expiresAt; }
     }
 
     public boolean sendEmailVerification(String email) {
-        String code = String.format("%06d", RAND.nextInt(999999));
-        verificationTokens.put(email, new VerificationEntry(code, System.currentTimeMillis() + 600000));
+        String normalizedEmail = normalizeEmail(email);
+        enforceVerificationRequestLimit(normalizedEmail);
+        if (!emailService.isConfigured()) {
+            log.warn("Verification email skipped: SMTP is not configured (recipient={})", maskEmail(normalizedEmail));
+            return false;
+        }
+        String code = String.format("%06d", RAND.nextInt(1000000));
+        verificationTokens.put(normalizedEmail, new VerificationEntry(passwordEncoder.encode(code), System.currentTimeMillis() + 600000, 0));
         try {
-            emailService.sendOtp(email, code);
+            emailService.sendOtp(normalizedEmail, code);
             return true;
         } catch (Exception e) {
-            log.warn("Email delivery failed for {}, auto-verifying user: {}", email, e.getMessage());
-            verificationTokens.remove(email);
+            log.warn("Verification email failed (recipient={}, error={})", maskEmail(normalizedEmail), e.getClass().getSimpleName());
+            verificationTokens.remove(normalizedEmail);
             return false;
         }
     }
 
     public void verifyEmail(String email, String code) {
-        VerificationEntry entry = verificationTokens.get(email);
-        if (entry == null || entry.isExpired()) throw new BadRequestException("Invalid or expired verification code");
-        if (!entry.code().equals(code)) throw new BadRequestException("Incorrect verification code");
-        verificationTokens.remove(email);
+        String normalizedEmail = normalizeEmail(email);
+        VerificationEntry entry = verificationTokens.get(normalizedEmail);
+        if (entry == null || entry.isExpired()) {
+            verificationTokens.remove(normalizedEmail);
+            throw new BadRequestException("Invalid or expired verification code");
+        }
+        if (entry.attempts() >= 5) {
+            verificationTokens.remove(normalizedEmail);
+            throw new BadRequestException("Verification attempts exceeded. Request a new code.");
+        }
+        if (code == null || !passwordEncoder.matches(code, entry.codeHash())) {
+            verificationTokens.put(normalizedEmail, new VerificationEntry(entry.codeHash(), entry.expiresAt(), entry.attempts() + 1));
+            throw new BadRequestException("Incorrect verification code");
+        }
+        verificationTokens.remove(normalizedEmail);
+        verificationRequests.remove(normalizedEmail);
 
-        Customer customer = customerRepository.findByEmail(email).orElse(null);
+        Customer customer = customerRepository.findByEmail(normalizedEmail).orElse(null);
         if (customer != null) { customer.setEmailVerifiedAt(LocalDateTime.now()); customer.setIsActive(true); customerRepository.save(customer); }
-        Workshop workshop = workshopRepository.findByEmail(email).orElse(null);
+        Workshop workshop = workshopRepository.findByEmail(normalizedEmail).orElse(null);
         if (workshop != null) { workshop.setEmailVerifiedAt(LocalDateTime.now()); workshop.setIsActive(true); workshopRepository.save(workshop); }
-        Technician technician = technicianRepository.findByEmail(email).orElse(null);
+        Technician technician = technicianRepository.findByEmail(normalizedEmail).orElse(null);
         if (technician != null) { technician.setIsActive(true); technicianRepository.save(technician); }
     }
 
     public void forgotPassword(String email) {
+        email = normalizeEmail(email);
+        enforceRequestLimit(resetRequests, email, 5, "Too many password reset requests. Try again later.");
         Customer customer = customerRepository.findByEmail(email).orElse(null);
         Workshop workshop = workshopRepository.findByEmail(email).orElse(null);
         Driver driver = driverRepository.findByEmail(email).orElse(null);
@@ -95,31 +123,33 @@ public class AuthService {
         byte[] bytes = new byte[32];
         RAND.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        resetTokens.put(token, new ResetEntry(email, null, System.currentTimeMillis() + TOKEN_EXPIRY_HOURS * 3600000));
+        resetTokens.put(hashToken(token), new ResetEntry(email, null, System.currentTimeMillis() + TOKEN_EXPIRY_HOURS * 3600000));
         try {
             emailService.sendPasswordReset(email, token);
         } catch (Exception e) {
-            resetTokens.remove(token);
+            resetTokens.remove(hashToken(token));
             log.warn("Password reset email failed for {}: {}", email, e.getMessage());
             throw new BadRequestException("Unable to send password reset email. Please try again later.");
         }
     }
 
+    @Transactional
     public void resetPassword(String token, String newPassword) {
-        ResetEntry entry = resetTokens.get(token);
+        String tokenHash = hashToken(token);
+        ResetEntry entry = resetTokens.get(tokenHash);
         if (entry == null || entry.isExpired()) throw new BadRequestException("Invalid or expired reset token");
         if (entry.password() != null) throw new BadRequestException("Reset token already used");
-        resetTokens.remove(token);
+        resetTokens.remove(tokenHash);
 
         String encoded = passwordEncoder.encode(newPassword);
         Customer customer = customerRepository.findByEmail(entry.email()).orElse(null);
-        if (customer != null) { customer.setPassword(encoded); customerRepository.save(customer); return; }
+        if (customer != null) { customer.setPassword(encoded); customerRepository.save(customer); finishPasswordReset(customer.getId(), "customer", customer.getEmail()); return; }
         Workshop workshop = workshopRepository.findByEmail(entry.email()).orElse(null);
-        if (workshop != null) { workshop.setPassword(encoded); workshop.setPasswordSetupCompleted(true); workshop.setEmailVerifiedAt(LocalDateTime.now()); workshopRepository.save(workshop); return; }
+        if (workshop != null) { workshop.setPassword(encoded); workshop.setPasswordSetupCompleted(true); workshop.setEmailVerifiedAt(LocalDateTime.now()); workshopRepository.save(workshop); finishPasswordReset(workshop.getId(), "workshop", workshop.getEmail()); return; }
         Driver driver = driverRepository.findByEmail(entry.email()).orElse(null);
-        if (driver != null) { driver.setPassword(encoded); driverRepository.save(driver); return; }
+        if (driver != null) { driver.setPassword(encoded); driverRepository.save(driver); finishPasswordReset(driver.getId(), "driver", driver.getEmail()); return; }
         Technician technician = technicianRepository.findByEmail(entry.email()).orElse(null);
-        if (technician != null) { technician.setPassword(encoded); technicianRepository.save(technician); return; }
+        if (technician != null) { technician.setPassword(encoded); technicianRepository.save(technician); finishPasswordReset(technician.getId(), "technician", technician.getEmail()); return; }
         throw new ResourceNotFoundException("User", "email", entry.email());
     }
 
@@ -130,10 +160,10 @@ public class AuthService {
         byte[] bytes = new byte[32]; RAND.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         resetTokens.entrySet().removeIf(e -> workshop.getEmail().equals(e.getValue().email()));
-        resetTokens.put(token, new ResetEntry(workshop.getEmail(), null, System.currentTimeMillis() + 24 * 3600000));
+        resetTokens.put(hashToken(token), new ResetEntry(workshop.getEmail(), null, System.currentTimeMillis() + 24 * 3600000));
         workshop.setLastInvitationSentAt(LocalDateTime.now()); workshopRepository.save(workshop);
         emailService.sendWorkshopInvitation(workshop.getEmail(), workshop.getName(), token);
-        return Map.of("invitationUrl", "http://localhost:3003/set-password?token=" + token, "expiresInHours", 24, "email", workshop.getEmail());
+        return Map.of("invitationUrl", workshopAppUrl + "/set-password?token=" + token, "expiresInHours", 24, "email", workshop.getEmail());
     }
 
     @Transactional
@@ -153,13 +183,7 @@ public class AuthService {
                 .emailVerifiedAt(null)
                 .build();
         customer = customerRepository.save(customer);
-        boolean emailSent = sendEmailVerification(dto.getEmail());
-        if (!emailSent) {
-            log.warn("Auto-verifying customer {} due to email delivery failure", dto.getEmail());
-            customer.setEmailVerifiedAt(LocalDateTime.now());
-            customer.setIsActive(true);
-            customer = customerRepository.save(customer);
-        }
+        sendEmailVerification(dto.getEmail());
         return buildAuthResponse(null, "customer", customer.getId(), customer.getName(),
                 customer.getPhone(), customer.getEmail(), customer.getIsActive(), null, false);
     }
@@ -181,13 +205,7 @@ public class AuthService {
                 .commercialRegistration(commercialRegUrl).municipalityLicense(municipalityUrl)
                 .isActive(false).isApproved(false).emailVerifiedAt(null).build();
         workshop = workshopRepository.save(workshop);
-        boolean emailSent = sendEmailVerification(dto.getEmail());
-        if (!emailSent) {
-            log.warn("Auto-verifying workshop {} due to email delivery failure", dto.getEmail());
-            workshop.setEmailVerifiedAt(LocalDateTime.now());
-            workshop.setIsActive(true);
-            workshop = workshopRepository.save(workshop);
-        }
+        sendEmailVerification(dto.getEmail());
         AuthResponse resp = AuthResponse.builder()
                 .token(null).role("workshop").userId(workshop.getId()).name(workshop.getName())
                 .phone(workshop.getPhone()).email(workshop.getEmail()).isActive(workshop.getIsActive())
@@ -455,5 +473,49 @@ public class AuthService {
                 .phone(phone).email(email).isActive(isActive).isApproved(isApproved)
                 .emailVerified(emailVerified)
                 .build();
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) throw new BadRequestException("Email is required");
+        return email.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private void enforceVerificationRequestLimit(String email) {
+        enforceRequestLimit(verificationRequests, email, 5, "Too many verification requests. Try again later.");
+    }
+
+    private void enforceRequestLimit(Map<String, RequestWindow> requests, String key, int maximum, String message) {
+        long now = System.currentTimeMillis();
+        requests.compute(key, (ignored, current) -> {
+            if (current == null || now - current.startedAt() >= 3_600_000L) return new RequestWindow(now, 1);
+            if (current.count() >= maximum) throw new BadRequestException(message);
+            return new RequestWindow(current.startedAt(), current.count() + 1);
+        });
+    }
+
+    private String maskEmail(String email) {
+        int at = email.indexOf('@');
+        return at > 0 ? email.substring(0, 1) + "***" + email.substring(at) : "***";
+    }
+
+    private String hashToken(String token) {
+        if (token == null || token.isBlank()) throw new BadRequestException("Reset token is required");
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 is unavailable", impossible);
+        }
+    }
+
+    private void finishPasswordReset(Long userId, String role, String email) {
+        refreshTokenRepository.revokeAllByUserIdAndRole(userId, role);
+        resetTokens.entrySet().removeIf(item -> email.equalsIgnoreCase(item.getValue().email()));
+        try {
+            emailService.sendPasswordChanged(email);
+        } catch (Exception ex) {
+            log.warn("Password-change notice could not be delivered (recipient={}, error={})", maskEmail(email), ex.getClass().getSimpleName());
+        }
     }
 }

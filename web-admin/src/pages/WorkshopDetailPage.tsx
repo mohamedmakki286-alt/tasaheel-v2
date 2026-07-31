@@ -267,7 +267,7 @@ export default function WorkshopDetailPage() {
             <div className="flex justify-between"><span className="text-gray-500">حالة الدخول</span><Badge variant={workshop.isActive ? 'success' : 'danger'}>{workshop.isActive ? 'مفعل' : 'موقوف'}</Badge></div>
             {workshop.lastInvitationSentAt && <div className="flex justify-between"><span className="text-gray-500">آخر دعوة</span><span>{formatDate(workshop.lastInvitationSentAt)}</span></div>}
             <Button className="w-full" onClick={() => inviteMutation.mutate()} isLoading={inviteMutation.isPending} disabled={!workshop.email}>إرسال رابط إعداد كلمة المرور</Button>
-            <p className="text-xs text-gray-400">يُرسل عبر Resend، ويُنسخ الرابط أيضاً لاستخدامه يدوياً.</p>
+            <p className="text-xs text-gray-400">يُرسل عبر البريد الإلكتروني، ويُنسخ الرابط أيضاً لاستخدامه يدوياً.</p>
           </div>
         </div>
         <div className="card">
