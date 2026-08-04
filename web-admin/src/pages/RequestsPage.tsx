@@ -26,7 +26,6 @@ export default function RequestsPage() {
   const [sortKey, setSortKey] = useState('id');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['requests', page, search, statusFilter, sortKey, sortOrder],
@@ -51,7 +50,7 @@ export default function RequestsPage() {
   const columns: Column<MaintenanceRequest>[] = [
     { key: 'id', label: '#', sortable: true, width: '60px' },
     {
-      key: 'customerName', label: t('pages.requests.table.customer'), sortable: true,
+      key: 'customerName', label: t('pages.requests.table.customer'),
       render: (r) => (
         <div className="flex items-center gap-3">
           <Avatar name={r.customerName} size="sm" />
@@ -110,8 +109,6 @@ export default function RequestsPage() {
         } : undefined}
         onRowClick={(r) => navigate(`/requests/${r.id}`)}
         keyExtractor={(r) => r.id}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
         filters={
           <div className="flex items-center gap-2">
             <select

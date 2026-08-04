@@ -35,6 +35,8 @@ public class CustomerDTO {
     private String city;
     private String avatar;
     private Boolean isActive;
+    private Long carsCount;
+    private Long requestsCount;
     private String fcmToken;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

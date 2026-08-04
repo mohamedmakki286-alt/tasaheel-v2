@@ -26,6 +26,11 @@ export async function getCustomer(id: number): Promise<Customer> {
   };
 }
 
+export async function updateCustomer(id: number, payload: Pick<Customer, 'name' | 'phone' | 'email' | 'city'>): Promise<Customer> {
+  const { data } = await client.put<Customer>(`/admin/customers/${id}`, payload);
+  return data;
+}
+
 export async function toggleCustomerStatus(id: number, isActive: boolean): Promise<void> {
   await client.put(`/admin/users/customer/${id}/toggle-status`, { isActive });
 }

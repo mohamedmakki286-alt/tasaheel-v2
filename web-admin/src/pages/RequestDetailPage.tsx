@@ -469,7 +469,7 @@ export default function RequestDetailPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500">{t('pages.requests.detail.invoice.invoiceNumber')}</p>
-                      <p className="font-semibold text-gray-900">INV-{request.id}</p>
+                      <p className="font-semibold text-gray-900">{invoice.invoiceNumber || '—'}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">{t('pages.requests.detail.invoice.date')}</p>

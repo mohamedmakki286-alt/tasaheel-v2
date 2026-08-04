@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -19,6 +20,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findFirstByRequestIdAndStatusInOrderByCreatedAtDesc(Long requestId, java.util.Collection<String> statuses);
     Optional<Payment> findFirstByRequestIdAndStatusOrderByCreatedAtDesc(Long requestId, String status);
     Page<Payment> findByStatus(String status, Pageable pageable);
+    @Query("SELECT p FROM Payment p WHERE (:status IS NULL OR p.status = :status) AND (:search IS NULL OR LOWER(p.customer.name) LIKE LOWER(CONCAT('%', :search, '%')) OR p.customer.phone LIKE CONCAT('%', :search, '%') OR p.moyasarPaymentId LIKE CONCAT('%', :search, '%'))")
+    Page<Payment> searchAdmin(@Param("search") String search, @Param("status") String status, Pageable pageable);
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.status = ?1 AND p.createdAt >= ?2")
     Double sumByStatusAndCreatedAtAfter(String status, LocalDateTime after);
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.status = ?1")

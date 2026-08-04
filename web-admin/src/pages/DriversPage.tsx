@@ -25,7 +25,6 @@ export default function DriversPage() {
   const [sortKey, setSortKey] = useState('id');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', phone: '', email: '', password: '', city: '', vehicleType: '', plateNumber: '' });
@@ -150,8 +149,6 @@ export default function DriversPage() {
         } : undefined}
         onRowClick={(d) => navigate(`/drivers/${d.id}`)}
         keyExtractor={(d) => d.id}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
         filters={
           <div className="flex items-center gap-2">
             <select

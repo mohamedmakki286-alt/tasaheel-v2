@@ -40,6 +40,10 @@ public class Customer {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
+
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 

@@ -8,5 +8,6 @@ import java.util.List;
 @Repository
 public interface CustomerCarRepository extends JpaRepository<CustomerCar, Long> {
     List<CustomerCar> findByCustomerId(Long customerId);
+    long countByCustomerId(Long customerId);
     void deleteByCustomerId(Long customerId);
 }

@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Phone, MapPin, Truck, Car, Mail, Calendar, Edit2, Trash2, Award, Activity } from 'lucide-react';
-import { getDriver } from '../api/drivers.api';
+import { deleteDriver, getDriver, updateDriver } from '../api/drivers.api';
+import toast from 'react-hot-toast';
+import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import StatusBadge from '../components/StatusBadge';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
@@ -15,10 +18,27 @@ export default function DriverDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [form, setForm] = useState({ name: '', phone: '', email: '', city: '', vehicleType: '', vehiclePlate: '' });
   const { data: driver, isLoading } = useQuery({
     queryKey: ['driver', id],
     queryFn: () => getDriver(Number(id)),
     enabled: !!id,
+  });
+  useEffect(() => {
+    if (driver) setForm({ name: driver.name || '', phone: driver.phone || '', email: driver.email || '', city: driver.city || '', vehicleType: driver.vehicleType || '', vehiclePlate: driver.vehiclePlate || '' });
+  }, [driver]);
+  const updateMutation = useMutation({
+    mutationFn: () => updateDriver(Number(id), form),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['driver', id] }); queryClient.invalidateQueries({ queryKey: ['drivers'] }); setShowEdit(false); toast.success('تم تحديث بيانات السائق'); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'تعذر تحديث بيانات السائق'),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteDriver(Number(id)),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['drivers'] }); toast.success('تم حذف السائق'); navigate('/drivers', { replace: true }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'تعذر حذف السائق'),
   });
 
   if (isLoading) return <CardSkeleton count={3} />;
@@ -56,10 +76,10 @@ export default function DriverDetailPage() {
               <p className="text-white/60 mt-1">{t('pages.drivers.title')} • {driver.city}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" icon={<Edit2 className="w-4 h-4" />} className="bg-white/10 text-white border-white/20 hover:bg-white/20">
+              <Button variant="secondary" size="sm" icon={<Edit2 className="w-4 h-4" />} onClick={() => setShowEdit(true)} className="bg-white/10 text-white border-white/20 hover:bg-white/20">
                 {t('common.edit')}
               </Button>
-              <Button variant="danger" size="sm" icon={<Trash2 className="w-4 h-4" />}>
+              <Button variant="danger" size="sm" icon={<Trash2 className="w-4 h-4" />} onClick={() => setShowDelete(true)}>
                 {t('common.delete')}
               </Button>
             </div>
@@ -170,6 +190,11 @@ export default function DriverDetailPage() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="تعديل بيانات السائق" footer={<div className="flex gap-2 w-full"><Button variant="secondary" onClick={() => setShowEdit(false)} className="flex-1">إلغاء</Button><Button onClick={() => updateMutation.mutate()} isLoading={updateMutation.isPending} className="flex-1">حفظ</Button></div>}>
+        <div className="space-y-3">{([['name','الاسم'],['phone','رقم الجوال'],['email','البريد الإلكتروني'],['city','المدينة'],['vehicleType','نوع المركبة'],['vehiclePlate','رقم اللوحة']] as const).map(([key,label]) => <label key={key} className="block text-sm font-semibold text-gray-700">{label}<input type={key === 'email' ? 'email' : 'text'} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="input-field mt-1.5" dir={key === 'email' || key === 'phone' ? 'ltr' : undefined} /></label>)}</div>
+      </Modal>
+      <ConfirmDialog isOpen={showDelete} onClose={() => setShowDelete(false)} onConfirm={() => deleteMutation.mutate()} title="حذف السائق" message="هل تريد حذف هذا السائق؟" isLoading={deleteMutation.isPending} />
     </div>
   );
 }

@@ -14,7 +14,6 @@ import {
   Menu,
   ChevronDown,
   Bell,
-  Search,
   ChevronLeft,
   Sun,
   Moon,
@@ -245,14 +244,6 @@ export default function AdminLayout() {
                 <Menu className="w-5 h-5" />
               </button>
 
-              <div className="hidden sm:block relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-surface-500" />
-                <input
-                  type="text"
-                  placeholder={t('layout.header.quickSearch')}
-                  className="w-64 pl-4 pr-9 py-2 text-sm bg-gray-50 dark:bg-surface-800 border border-gray-200 dark:border-surface-700 rounded-xl focus:bg-white dark:focus:bg-surface-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all text-surface-900 dark:text-surface-100 placeholder-surface-400 dark:placeholder-surface-500"
-                />
-              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -304,7 +295,7 @@ export default function AdminLayout() {
                         notifications.slice(0, 10).map((n) => (
                           <div
                             key={n.id}
-                            onClick={() => { if (!n.read) markAsRead(n.id); }}
+                            onClick={() => { if (!n.read) markAsRead(n.id); if (n.requestId) navigate(`/requests/${n.requestId}`); setShowNotifications(false); }}
                             className={`flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer ${
                               n.read
                                 ? 'hover:bg-gray-50 dark:hover:bg-surface-800'

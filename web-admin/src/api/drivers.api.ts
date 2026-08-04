@@ -3,12 +3,22 @@ import type { Driver, PaginatedResponse } from '../types';
 
 export async function getDrivers(params?: Record<string, any>): Promise<PaginatedResponse<Driver>> {
   const { data } = await client.get<any>('/admin/drivers', { params: { ...params, page: params?.page != null ? params.page - 1 : 0 } });
-  return mapPage(data);
+  const page = mapPage<any>(data);
+  return { ...page, data: page.data.map(normalizeDriver) };
 }
 
 export async function getDriver(id: number): Promise<Driver> {
   const { data } = await client.get<Driver>(`/admin/drivers/${id}`);
   return data;
+}
+
+export async function updateDriver(id: number, payload: Partial<Pick<Driver, 'name' | 'phone' | 'email' | 'city' | 'vehicleType' | 'vehiclePlate'>>): Promise<Driver> {
+  const { data } = await client.put<Driver>(`/admin/drivers/${id}`, payload);
+  return normalizeDriver(data);
+}
+
+function normalizeDriver(driver: any): Driver {
+  return { ...driver, vehiclePlate: driver.vehiclePlate ?? driver.plateNumber ?? '', joinedAt: driver.joinedAt ?? driver.createdAt ?? null };
 }
 
 export async function createDriver(driverData: { name: string; phone: string; email?: string; password: string; city?: string; vehicleType: string; plateNumber?: string }): Promise<Driver> {

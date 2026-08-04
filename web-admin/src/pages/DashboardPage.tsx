@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -61,6 +61,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function DashboardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [days, setDays] = useState(7);
   const { data: stats, isLoading } = useQuery({
     queryKey: ['stats'],
     queryFn: getStats,
@@ -126,28 +127,24 @@ export default function DashboardPage() {
           label={t('pages.dashboard.statCards.totalCustomers')}
           value={stats.totalCustomers}
           color="primary"
-          trend={{ value: 12, isUp: true }}
         />
         <StatCard
           icon={<Wrench className="w-6 h-6" />}
           label={t('pages.dashboard.statCards.totalWorkshops')}
           value={stats.totalWorkshops}
           color="accent"
-          trend={{ value: 8, isUp: true }}
         />
         <StatCard
           icon={<Truck className="w-6 h-6" />}
           label={t('pages.dashboard.statCards.totalDrivers')}
           value={stats.totalDrivers}
           color="accent2"
-          trend={{ value: 3, isUp: true }}
         />
         <StatCard
           icon={<ClipboardList className="w-6 h-6" />}
           label={t('pages.dashboard.statCards.totalRequests')}
           value={stats.totalRequests}
           color="blue"
-          trend={{ value: 5, isUp: true }}
         />
         <StatCard
           icon={<DollarSign className="w-6 h-6" />}
@@ -155,7 +152,6 @@ export default function DashboardPage() {
           value={stats.revenueThisMonth}
           color="green"
           formatValue={(v) => formatCurrency(v)}
-          trend={{ value: 15, isUp: true }}
         />
       </div>
 
@@ -164,13 +160,13 @@ export default function DashboardPage() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900">{t('pages.dashboard.charts.dailyRequests')}</h3>
-              <select className="select-field text-sm py-1.5 w-auto">
-                <option>{t('pages.dashboard.charts.last7Days')}</option>
-                <option>{t('pages.dashboard.charts.last30Days')}</option>
+              <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="select-field text-sm py-1.5 w-auto">
+                <option value={7}>{t('pages.dashboard.charts.last7Days')}</option>
+                <option value={30}>{t('pages.dashboard.charts.last30Days')}</option>
               </select>
             </div>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={stats.requestsPerDay}>
+              <AreaChart data={(stats.requestsPerDay || []).slice(-days)}>
                 <defs>
                   <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
@@ -262,7 +258,7 @@ export default function DashboardPage() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900">{t('pages.dashboard.recentActivity')}</h3>
-              <button className="text-sm text-amber-600 hover:text-amber-700 font-medium">{t('pages.dashboard.viewAll')}</button>
+              <button onClick={() => navigate('/requests')} className="text-sm text-amber-600 hover:text-amber-700 font-medium">{t('pages.dashboard.viewAll')}</button>
             </div>
             <div className="space-y-3">
               {recentActivity.map((activity, idx) => (

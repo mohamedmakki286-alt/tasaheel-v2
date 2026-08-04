@@ -30,6 +30,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     long countByStatus(String status);
     @Query("SELECT FUNCTION('date', i.paidAt) as day, SUM(i.grandTotal) FROM Invoice i WHERE i.status = 'paid' AND i.paidAt >= ?1 GROUP BY FUNCTION('date', i.paidAt) ORDER BY day")
     List<Object[]> revenuePerDaySince(LocalDateTime since);
+    @Query("SELECT i.workshop.id, COALESCE(SUM(i.grandTotal), 0) FROM Invoice i WHERE i.status = 'paid' GROUP BY i.workshop.id")
+    List<Object[]> paidRevenueByWorkshop();
 
     @Query("SELECT i FROM Invoice i WHERE i.status = 'paid' AND i.settlement IS NULL ORDER BY i.paidAt ASC")
     List<Invoice> findPaidUnsettled();

@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Phone, MapPin, Calendar, Car, ClipboardList, Mail, Edit2, Trash2 } from 'lucide-react';
-import { getCustomer } from '../api/customers.api';
+import { deleteCustomer, getCustomer, updateCustomer } from '../api/customers.api';
+import toast from 'react-hot-toast';
+import Modal from '../components/Modal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatusBadge from '../components/StatusBadge';
 import Button from '../components/Button';
@@ -17,10 +20,27 @@ export default function CustomerDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [form, setForm] = useState({ name: '', phone: '', email: '', city: '' });
   const { data: customer, isLoading } = useQuery({
     queryKey: ['customer', id],
     queryFn: () => getCustomer(Number(id)),
     enabled: !!id,
+  });
+  useEffect(() => {
+    if (customer) setForm({ name: customer.name || '', phone: customer.phone || '', email: customer.email || '', city: customer.city || '' });
+  }, [customer]);
+  const updateMutation = useMutation({
+    mutationFn: () => updateCustomer(Number(id), form),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customer', id] }); queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowEdit(false); toast.success('تم تحديث بيانات العميل'); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'تعذر تحديث بيانات العميل'),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteCustomer(Number(id)),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); toast.success('تم حذف العميل'); navigate('/customers', { replace: true }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'تعذر حذف العميل'),
   });
 
   if (isLoading) return <CardSkeleton count={3} />;
@@ -57,10 +77,10 @@ export default function CustomerDetailPage() {
               <p className="text-white/60 mt-1">{t('pages.customers.customerDetail.customerSince')} {formatDate(customer.joinedAt)}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" icon={<Edit2 className="w-4 h-4" />} className="bg-white/10 text-white border-white/20 hover:bg-white/20">
+              <Button variant="secondary" size="sm" icon={<Edit2 className="w-4 h-4" />} onClick={() => setShowEdit(true)} className="bg-white/10 text-white border-white/20 hover:bg-white/20">
                 {t('common.edit')}
               </Button>
-              <Button variant="danger" size="sm" icon={<Trash2 className="w-4 h-4" />}>
+              <Button variant="danger" size="sm" icon={<Trash2 className="w-4 h-4" />} onClick={() => setShowDelete(true)}>
                 {t('common.delete')}
               </Button>
             </div>
@@ -137,6 +157,11 @@ export default function CustomerDetailPage() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="تعديل بيانات العميل" footer={<div className="flex gap-2 w-full"><Button variant="secondary" onClick={() => setShowEdit(false)} className="flex-1">إلغاء</Button><Button onClick={() => updateMutation.mutate()} isLoading={updateMutation.isPending} className="flex-1">حفظ</Button></div>}>
+        <div className="space-y-3">{([['name','الاسم'],['phone','رقم الجوال'],['email','البريد الإلكتروني'],['city','المدينة']] as const).map(([key,label]) => <label key={key} className="block text-sm font-semibold text-gray-700">{label}<input type={key === 'email' ? 'email' : 'text'} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="input-field mt-1.5" dir={key === 'email' || key === 'phone' ? 'ltr' : undefined} /></label>)}</div>
+      </Modal>
+      <ConfirmDialog isOpen={showDelete} onClose={() => setShowDelete(false)} onConfirm={() => deleteMutation.mutate()} title="حذف العميل" message="هل تريد حذف هذا العميل؟" isLoading={deleteMutation.isPending} />
     </div>
   );
 }

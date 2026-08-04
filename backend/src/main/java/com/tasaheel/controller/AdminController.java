@@ -71,8 +71,11 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Page<CustomerDTO>>> getCustomers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String search) {
-        Page<CustomerDTO> customers = adminService.getCustomers(page, size, search);
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortOrder) {
+        Page<CustomerDTO> customers = adminService.getCustomers(page, size, search, status, sortBy, sortOrder);
         return ResponseEntity.ok(ApiResponse.success(customers));
     }
 
@@ -82,14 +85,21 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(customer));
     }
 
+    @PutMapping("/customers/{id}")
+    public ResponseEntity<ApiResponse<CustomerDTO>> updateCustomer(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.updateCustomerAdmin(id, body)));
+    }
+
     @GetMapping("/workshops")
     public ResponseEntity<ApiResponse<Page<WorkshopDTO>>> getWorkshops(
             @RequestParam(defaultValue = "0") int page,
               @RequestParam(defaultValue = "20") int size,
               @RequestParam(required = false) String search,
               @RequestParam(required = false) String status,
-              @RequestParam(required = false) String workshopType) {
-        Page<WorkshopDTO> workshops = adminService.getWorkshops(page, size, search, status, workshopType);
+              @RequestParam(required = false) String workshopType,
+              @RequestParam(defaultValue = "id") String sortBy,
+              @RequestParam(defaultValue = "desc") String sortOrder) {
+        Page<WorkshopDTO> workshops = adminService.getWorkshops(page, size, search, status, workshopType, sortBy, sortOrder);
         return ResponseEntity.ok(ApiResponse.success(workshops));
     }
 
@@ -97,8 +107,11 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Page<DriverDTO>>> getDrivers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String search) {
-        Page<DriverDTO> drivers = adminService.getDrivers(page, size, search);
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortOrder) {
+        Page<DriverDTO> drivers = adminService.getDrivers(page, size, search, status, sortBy, sortOrder);
         return ResponseEntity.ok(ApiResponse.success(drivers));
     }
 
@@ -108,12 +121,20 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(driver));
     }
 
+    @PutMapping("/drivers/{id}")
+    public ResponseEntity<ApiResponse<DriverDTO>> updateDriver(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.updateDriverAdmin(id, body)));
+    }
+
     @GetMapping("/technicians")
     public ResponseEntity<ApiResponse<Page<TechnicianDTO>>> getTechnicians(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) Long workshopId) {
-        Page<TechnicianDTO> technicians = adminService.getTechnicians(page, size, workshopId);
+            @RequestParam(required = false) Long workshopId,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortOrder) {
+        Page<TechnicianDTO> technicians = adminService.getTechnicians(page, size, workshopId, search, sortBy, sortOrder);
         return ResponseEntity.ok(ApiResponse.success(technicians));
     }
 
@@ -205,8 +226,10 @@ public class AdminController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status) {
-        Page<MaintenanceRequestDTO> requests = adminService.getAllRequests(page, size, search, status);
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortOrder) {
+        Page<MaintenanceRequestDTO> requests = adminService.getAllRequests(page, size, search, status, sortBy, sortOrder);
         return ResponseEntity.ok(ApiResponse.success(requests));
     }
 

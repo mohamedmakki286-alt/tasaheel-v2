@@ -22,7 +22,6 @@ export default function TechniciansPage() {
   const [sortKey, setSortKey] = useState('id');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [workshopFilter, setWorkshopFilter] = useState('');
 
   const { data, isLoading } = useQuery({
@@ -71,7 +70,7 @@ export default function TechniciansPage() {
     { key: 'phone', label: t('pages.technicians.table.phone'), render: (item) => <span className="text-sm font-mono" dir="ltr">{formatPhone(item.phone)}</span> },
     { key: 'specialty', label: t('pages.technicians.table.specialty') },
     {
-      key: 'workshopName', label: t('pages.technicians.table.workshop'), sortable: true,
+      key: 'workshopName', label: t('pages.technicians.table.workshop'),
       render: (item) => (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-600/10">
           {item.workshopName}
@@ -126,8 +125,6 @@ export default function TechniciansPage() {
           onPageChange: setPage,
         } : undefined}
         keyExtractor={(item) => item.id}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
         filters={
           <div className="flex items-center gap-2">
             <input

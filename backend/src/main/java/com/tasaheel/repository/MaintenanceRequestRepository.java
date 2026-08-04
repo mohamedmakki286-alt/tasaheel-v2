@@ -17,8 +17,11 @@ public interface MaintenanceRequestRepository extends JpaRepository<MaintenanceR
     List<MaintenanceRequest> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
     List<MaintenanceRequest> findByCityAndStatus(String city, String status);
     Page<MaintenanceRequest> findByStatus(String status, Pageable pageable);
+    @Query("SELECT r FROM MaintenanceRequest r WHERE (:status IS NULL OR r.status = :status) AND (:search IS NULL OR LOWER(r.customer.name) LIKE LOWER(CONCAT('%', :search, '%')) OR r.customer.phone LIKE CONCAT('%', :search, '%') OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(r.city) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<MaintenanceRequest> searchAdmin(@Param("search") String search, @Param("status") String status, Pageable pageable);
     List<MaintenanceRequest> findByCityAndStatusIn(String city, List<String> statuses);
     Page<MaintenanceRequest> findByCustomerId(Long customerId, Pageable pageable);
+    long countByCustomerId(Long customerId);
     long countByStatus(String status);
     List<MaintenanceRequest> findTop10ByOrderByCreatedAtDesc();
     @Query("SELECT FUNCTION('date', r.createdAt) as day, COUNT(r) FROM MaintenanceRequest r WHERE r.createdAt >= ?1 GROUP BY FUNCTION('date', r.createdAt) ORDER BY day")

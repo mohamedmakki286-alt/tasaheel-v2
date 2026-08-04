@@ -120,7 +120,7 @@ export default function SettlementsPage() {
   };
 
   const totalCommission = workshopInvoices?.reduce((sum, inv) => {
-    const pct = invoiceCommissions[inv.id] ?? 10;
+    const pct = invoiceCommissions[inv.id] ?? inv.commissionPercentage ?? 0;
     return sum + (inv.grandTotal * pct / 100);
   }, 0) || 0;
 
@@ -342,7 +342,7 @@ export default function SettlementsPage() {
               </thead>
               <tbody>
                 {(workshopInvoices || []).map((inv) => {
-                  const pct = invoiceCommissions[inv.id] ?? 10;
+                  const pct = invoiceCommissions[inv.id] ?? inv.commissionPercentage ?? 0;
                   const commissionAmt = inv.grandTotal * pct / 100;
                   const net = inv.grandTotal - commissionAmt;
                   return (

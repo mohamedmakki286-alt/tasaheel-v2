@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, ToggleLeft, ToggleRight, Eye, Download, Filter, X } from 'lucide-react';
+import { Trash2, ToggleLeft, ToggleRight, Eye, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCustomers, toggleCustomerStatus, deleteCustomer } from '../api/customers.api';
 import DataTable, { Column } from '../components/DataTable';
@@ -24,9 +24,7 @@ export default function CustomersPage() {
   const [sortKey, setSortKey] = useState('id');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [showFilters, setShowFilters] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['customers', page, search, sortKey, sortOrder, statusFilter],
@@ -77,11 +75,11 @@ export default function CustomersPage() {
     },
     { key: 'city', label: t('pages.customers.table.city'), sortable: true },
     {
-      key: 'carsCount', label: t('pages.customers.table.cars'), sortable: true,
+      key: 'carsCount', label: t('pages.customers.table.cars'),
       render: (c) => <BadgeNum value={c.carsCount} />,
     },
     {
-      key: 'requestsCount', label: t('pages.customers.table.requests'), sortable: true,
+      key: 'requestsCount', label: t('pages.customers.table.requests'),
       render: (c) => <BadgeNum value={c.requestsCount} />,
     },
     {
@@ -122,9 +120,6 @@ export default function CustomersPage() {
             }}>
               {t('common.export')}
             </Button>
-          <Button size="sm" icon={<Plus className="w-4 h-4" />}>
-            {t('pages.customers.addCustomer')}
-          </Button>
         </div>
       </div>
 
@@ -145,17 +140,8 @@ export default function CustomersPage() {
         } : undefined}
         onRowClick={(c) => navigate(`/customers/${c.id}`)}
         keyExtractor={(c) => c.id}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
         filters={
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <Filter className="w-3.5 h-3.5" />
-              {t('common.filter')}
-            </button>
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}

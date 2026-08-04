@@ -40,7 +40,6 @@ export default function WorkshopsPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [workshopTypeFilter, setWorkshopTypeFilter] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -160,14 +159,14 @@ export default function WorkshopsPage() {
       },
     },
     {
-      key: 'rating', label: t('pages.workshops.table.rating'), sortable: true,
+      key: 'rating', label: t('pages.workshops.table.rating'),
       render: (w) => (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
           {Number(w.rating ?? 0).toFixed(1)} ★
         </span>
       ),
     },
-    { key: 'servicesCount', label: t('pages.workshops.table.services'), sortable: true, render: (w) => `${getServicesCount(w)}` },
+    { key: 'servicesCount', label: t('pages.workshops.table.services'), render: (w) => `${getServicesCount(w)}` },
     { key: 'status', label: t('pages.workshops.table.status'), render: (w) => <StatusBadge status={getWStatus(w)} /> },
     {
       key: 'actions', label: t('pages.workshops.table.actions'),
@@ -227,8 +226,6 @@ export default function WorkshopsPage() {
         } : undefined}
         onRowClick={(w) => navigate(`/workshops/${w.id}`)}
         keyExtractor={(w) => w.id}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
         filters={
           <div className="flex items-center gap-2">
             <select

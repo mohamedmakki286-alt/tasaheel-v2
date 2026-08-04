@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 public class AdminService {
 
     private final CustomerRepository customerRepository;
+    private final CustomerCarRepository customerCarRepository;
     private final WorkshopRepository workshopRepository;
     private final DriverRepository driverRepository;
     private final TechnicianRepository technicianRepository;
@@ -46,9 +47,9 @@ public class AdminService {
         LocalDateTime monthStart = LocalDateTime.now().minusDays(30);
         LocalDateTime yearStart = LocalDateTime.now().minusMonths(12);
 
-        stats.put("totalCustomers", customerRepository.count());
-        stats.put("totalWorkshops", workshopRepository.count());
-        stats.put("totalDrivers", driverRepository.count());
+        stats.put("totalCustomers", customerRepository.countByIsDeletedFalse());
+        stats.put("totalWorkshops", workshopRepository.countByIsDeletedFalse());
+        stats.put("totalDrivers", driverRepository.countByIsDeletedFalse());
         stats.put("totalRequests", requestRepository.count());
         stats.put("pendingRequests", requestRepository.countByStatus("pending"));
         stats.put("inProgressRequests", requestRepository.countByStatus("in_progress"));
@@ -114,13 +115,17 @@ public class AdminService {
 
         // topWorkshops: [{id, name, requestsCount, revenue}]
         List<Object[]> workshopCounts = requestRepository.countRequestsByWorkshop();
+        Map<Long, Double> workshopRevenue = new HashMap<>();
+        for (Object[] row : invoiceRepository.paidRevenueByWorkshop()) {
+            workshopRevenue.put(((Number) row[0]).longValue(), ((Number) row[1]).doubleValue());
+        }
         List<Map<String, Object>> topWorkshops = new ArrayList<>();
         for (Object[] row : workshopCounts) {
             Map<String, Object> entry = new HashMap<>();
             entry.put("id", row[0] != null ? row[0] : 0);
             entry.put("name", row[1] != null ? row[1] : "");
             entry.put("requestsCount", row[2] != null ? row[2] : 0);
-            entry.put("revenue", 0);
+            entry.put("revenue", workshopRevenue.getOrDefault(((Number) row[0]).longValue(), 0.0));
             topWorkshops.add(entry);
         }
         stats.put("topWorkshops", topWorkshops);
@@ -133,23 +138,45 @@ public class AdminService {
         return stats;
     }
 
-    public Page<CustomerDTO> getCustomers(int page, int size, String search) {
-        Page<Customer> customers;
-        if (search != null && !search.isEmpty()) {
-            customers = customerRepository.findByNameContainingOrPhoneContaining(search, search, PageRequest.of(page, size));
-        } else {
-            customers = customerRepository.findAll(PageRequest.of(page, size));
-        }
+    public Page<CustomerDTO> getCustomers(int page, int size, String search, String status, String sortBy, String sortOrder) {
+        if ("joinedAt".equals(sortBy)) sortBy = "createdAt";
+        String safeSort = Set.of("id", "name", "city", "createdAt").contains(sortBy) ? sortBy : "id";
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(direction, safeSort));
+        Boolean active = status == null || status.isBlank() ? null : "active".equalsIgnoreCase(status);
+        Page<Customer> customers = customerRepository.searchAdmin(search == null || search.isBlank() ? null : search, active, pageable);
         return customers.map(this::toCustomerDTO);
     }
 
     public CustomerDTO getCustomerById(Long id) {
-        Customer customer = customerRepository.findById(id)
+        Customer customer = customerRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer", id));
         return toCustomerDTO(customer);
     }
 
-    public Page<WorkshopDTO> getWorkshops(int page, int size, String search, String status, String workshopType) {
+    @Transactional
+    public CustomerDTO updateCustomerAdmin(Long id, Map<String, String> body) {
+        Customer customer = customerRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer", id));
+        if (body.containsKey("phone") && customerRepository.findByPhone(body.get("phone"))
+                .filter(other -> !other.getId().equals(id)).isPresent()) throw new BadRequestException("Phone number already registered");
+        if (body.containsKey("email") && body.get("email") != null && !body.get("email").isBlank()
+                && customerRepository.findByEmail(body.get("email")).filter(other -> !other.getId().equals(id)).isPresent())
+            throw new BadRequestException("Email already registered");
+        if (body.containsKey("name")) customer.setName(body.get("name"));
+        if (body.containsKey("phone")) customer.setPhone(body.get("phone"));
+        if (body.containsKey("email")) customer.setEmail(body.get("email"));
+        if (body.containsKey("city")) customer.setCity(body.get("city"));
+        return toCustomerDTO(customerRepository.save(customer));
+    }
+
+    public Page<WorkshopDTO> getWorkshops(int page, int size, String search, String status, String workshopType, String sortBy, String sortOrder) {
+        Comparator<Workshop> comparator = switch (sortBy == null ? "id" : sortBy) {
+            case "name" -> Comparator.comparing(w -> Optional.ofNullable(w.getName()).orElse(""), String.CASE_INSENSITIVE_ORDER);
+            case "city" -> Comparator.comparing(w -> Optional.ofNullable(w.getCity()).orElse(""), String.CASE_INSENSITIVE_ORDER);
+            default -> Comparator.comparing(Workshop::getId);
+        };
+        if (!"asc".equalsIgnoreCase(sortOrder)) comparator = comparator.reversed();
         List<Workshop> filtered = workshopRepository.findAll().stream()
                 .filter(w -> !Boolean.TRUE.equals(w.getIsDeleted()))
                 .filter(w -> search == null || search.isBlank() || (w.getName() != null && w.getName().contains(search)) || (w.getCity() != null && w.getCity().contains(search)))
@@ -158,36 +185,51 @@ public class AdminService {
                         || ("approved".equals(status) && Boolean.TRUE.equals(w.getIsApproved()))
                         || ("pending".equals(status) && !Boolean.TRUE.equals(w.getIsApproved()) && (w.getRejectionReason() == null || w.getRejectionReason().isBlank()))
                         || ("rejected".equals(status) && w.getRejectionReason() != null && !w.getRejectionReason().isBlank()))
-                .sorted(Comparator.comparing(Workshop::getId).reversed()).toList();
+                .sorted(comparator).toList();
         int start = Math.min(page * size, filtered.size());
         int end = Math.min(start + size, filtered.size());
         List<WorkshopDTO> content = filtered.subList(start, end).stream().map(this::toWorkshopDTO).toList();
         return new PageImpl<>(content, PageRequest.of(page, size), filtered.size());
     }
 
-    public Page<DriverDTO> getDrivers(int page, int size, String search) {
-        Page<Driver> drivers;
-        if (search != null && !search.isEmpty()) {
-            drivers = driverRepository.findByNameContaining(search, PageRequest.of(page, size));
-        } else {
-            drivers = driverRepository.findAll(PageRequest.of(page, size));
-        }
+    public Page<DriverDTO> getDrivers(int page, int size, String search, String status, String sortBy, String sortOrder) {
+        String safeSort = Set.of("id", "name", "city", "createdAt", "isApproved", "isActive").contains(sortBy) ? sortBy : "id";
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Boolean active = status == null || status.isBlank() ? null : "active".equalsIgnoreCase(status);
+        Page<Driver> drivers = driverRepository.searchAdmin(search == null || search.isBlank() ? null : search, active,
+                PageRequest.of(page, size, Sort.by(direction, safeSort)));
         return drivers.map(this::toDriverDTO);
     }
 
     public DriverDTO getDriverById(Long id) {
-        Driver driver = driverRepository.findById(id)
+        Driver driver = driverRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver", id));
         return toDriverDTO(driver);
     }
 
-    public Page<TechnicianDTO> getTechnicians(int page, int size, Long workshopId) {
-        Page<Technician> technicians;
-        if (workshopId != null) {
-            technicians = technicianRepository.findByWorkshopId(workshopId, PageRequest.of(page, size));
-        } else {
-            technicians = technicianRepository.findAll(PageRequest.of(page, size));
-        }
+    @Transactional
+    public DriverDTO updateDriverAdmin(Long id, Map<String, String> body) {
+        Driver driver = driverRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver", id));
+        if (body.containsKey("phone") && driverRepository.findByPhone(body.get("phone"))
+                .filter(other -> !other.getId().equals(id)).isPresent()) throw new BadRequestException("Phone number already registered");
+        if (body.containsKey("email") && body.get("email") != null && !body.get("email").isBlank()
+                && driverRepository.findByEmail(body.get("email")).filter(other -> !other.getId().equals(id)).isPresent())
+            throw new BadRequestException("Email already registered");
+        if (body.containsKey("name")) driver.setName(body.get("name"));
+        if (body.containsKey("phone")) driver.setPhone(body.get("phone"));
+        if (body.containsKey("email")) driver.setEmail(body.get("email"));
+        if (body.containsKey("city")) driver.setCity(body.get("city"));
+        if (body.containsKey("vehicleType")) driver.setVehicleType(body.get("vehicleType"));
+        if (body.containsKey("vehiclePlate")) driver.setPlateNumber(body.get("vehiclePlate"));
+        return toDriverDTO(driverRepository.save(driver));
+    }
+
+    public Page<TechnicianDTO> getTechnicians(int page, int size, Long workshopId, String search, String sortBy, String sortOrder) {
+        String safeSort = Set.of("id", "name", "specialty", "createdAt", "isActive").contains(sortBy) ? sortBy : "id";
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Page<Technician> technicians = technicianRepository.searchAdmin(search == null || search.isBlank() ? null : search,
+                workshopId, PageRequest.of(page, size, Sort.by(direction, safeSort)));
         return technicians.map(this::toTechnicianDTO);
     }
 
@@ -320,7 +362,7 @@ public class AdminService {
 
     @Transactional
     public void approveDriver(Long driverId) {
-        Driver driver = driverRepository.findById(driverId)
+        Driver driver = driverRepository.findByIdAndIsDeletedFalse(driverId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver", driverId));
         driver.setIsApproved(true);
         driverRepository.save(driver);
@@ -330,7 +372,7 @@ public class AdminService {
     public void toggleUserStatus(String userType, Long userId, boolean isActive) {
         switch (userType.toLowerCase()) {
             case "customer" -> {
-                Customer customer = customerRepository.findById(userId)
+                Customer customer = customerRepository.findByIdAndIsDeletedFalse(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("Customer", userId));
                 customer.setIsActive(isActive);
                 customerRepository.save(customer);
@@ -342,7 +384,7 @@ public class AdminService {
                 workshopRepository.save(workshop);
             }
             case "driver" -> {
-                Driver driver = driverRepository.findById(userId)
+                Driver driver = driverRepository.findByIdAndIsDeletedFalse(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("Driver", userId));
                 driver.setIsActive(isActive);
                 driverRepository.save(driver);
@@ -361,9 +403,10 @@ public class AdminService {
     public void deleteUser(String userType, Long userId) {
         switch (userType.toLowerCase()) {
             case "customer" -> {
-                Customer customer = customerRepository.findById(userId)
+                Customer customer = customerRepository.findByIdAndIsDeletedFalse(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("Customer", userId));
                 customer.setIsActive(false);
+                customer.setIsDeleted(true);
                 customerRepository.save(customer);
             }
             case "workshop" -> {
@@ -374,9 +417,11 @@ public class AdminService {
                 workshopRepository.save(workshop);
             }
             case "driver" -> {
-                Driver driver = driverRepository.findById(userId)
+                Driver driver = driverRepository.findByIdAndIsDeletedFalse(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("Driver", userId));
                 driver.setIsActive(false);
+                driver.setIsOnline(false);
+                driver.setIsDeleted(true);
                 driverRepository.save(driver);
             }
             case "technician" -> {
@@ -386,13 +431,13 @@ public class AdminService {
         }
     }
 
-    public Page<MaintenanceRequestDTO> getAllRequests(int page, int size, String search, String status) {
-        Page<MaintenanceRequest> requests;
-        if (status != null && !status.isEmpty()) {
-            requests = requestRepository.findByStatus(status, PageRequest.of(page, size, Sort.by("createdAt").descending()));
-        } else {
-            requests = requestRepository.findAll(PageRequest.of(page, size, Sort.by("createdAt").descending()));
-        }
+    public Page<MaintenanceRequestDTO> getAllRequests(int page, int size, String search, String status, String sortBy, String sortOrder) {
+        String safeSort = Set.of("id", "status", "city", "createdAt", "updatedAt").contains(sortBy) ? sortBy : "createdAt";
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Page<MaintenanceRequest> requests = requestRepository.searchAdmin(
+                search == null || search.isBlank() ? null : search,
+                status == null || status.isBlank() ? null : status,
+                PageRequest.of(page, size, Sort.by(direction, safeSort)));
         return requests.map(this::toMaintenanceRequestDTO);
     }
 
@@ -410,12 +455,10 @@ public class AdminService {
     }
 
     public Page<PaymentDTO> getAllPayments(int page, int size, String search, String status) {
-        Page<com.tasaheel.entity.Payment> payments;
-        if (status != null && !status.isEmpty()) {
-            payments = paymentRepository.findByStatus(status, PageRequest.of(page, size, Sort.by("createdAt").descending()));
-        } else {
-            payments = paymentRepository.findAll(PageRequest.of(page, size, Sort.by("createdAt").descending()));
-        }
+        Page<com.tasaheel.entity.Payment> payments = paymentRepository.searchAdmin(
+                search == null || search.isBlank() ? null : search,
+                status == null || status.isBlank() ? null : status,
+                PageRequest.of(page, size, Sort.by("createdAt").descending()));
         return payments.map(this::toPaymentDTO);
     }
 
@@ -486,6 +529,8 @@ public class AdminService {
                 .city(c.getCity())
                 .avatar(c.getAvatar())
                 .isActive(c.getIsActive())
+                .carsCount(customerCarRepository.countByCustomerId(c.getId()))
+                .requestsCount(requestRepository.countByCustomerId(c.getId()))
                 .fcmToken(c.getFcmToken())
                 .createdAt(c.getCreatedAt())
                 .updatedAt(c.getUpdatedAt())

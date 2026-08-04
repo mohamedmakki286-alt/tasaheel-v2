@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   BarChart,
@@ -17,7 +17,6 @@ import {
 import {
   Download,
   FileText,
-  Calendar,
   TrendingUp,
   DollarSign,
   ClipboardList,
@@ -52,7 +51,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function ReportsPage() {
   const { t } = useTranslation();
-  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const { data: stats, isLoading } = useQuery({
     queryKey: ['stats'],
     queryFn: getStats,
@@ -123,15 +121,6 @@ export default function ReportsPage() {
           <p className="text-sm text-gray-500 dark:text-surface-400 mt-1">{t('pages.reports.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as any)}
-            className="select-field text-sm py-2 w-auto dark:bg-surface-800 dark:border-surface-700 dark:text-surface-100"
-          >
-            <option value="daily">{t('pages.reports.periods.daily')}</option>
-            <option value="weekly">{t('pages.reports.periods.weekly')}</option>
-            <option value="monthly">{t('pages.reports.periods.monthly')}</option>
-          </select>
           <Button variant="secondary" size="sm" icon={<Download className="w-4 h-4" />} onClick={() => handleExport('csv')}>
             CSV
           </Button>

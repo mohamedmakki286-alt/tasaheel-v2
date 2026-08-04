@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Save, User, Bell, Shield, Palette, ChevronDown, Eye, EyeOff, Sun, Moon, Percent, Building2 } from 'lucide-react';
+import { Save, User, Shield, Palette, Eye, EyeOff, Sun, Moon, Percent } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useThemeStore } from '../stores/themeStore';
 import { useAuthStore } from '../stores/authStore';
@@ -13,10 +13,9 @@ import Avatar from '../components/Avatar';
 import clsx from 'clsx';
 
 export default function SettingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const TABS = [
     { key: 'profile', icon: User },
-    { key: 'notifications', icon: Bell },
     { key: 'accounting', icon: Percent },
     { key: 'security', icon: Shield },
     { key: 'appearance', icon: Palette },
@@ -26,10 +25,13 @@ export default function SettingsPage() {
   const { theme, setTheme } = useThemeStore();
   const { user, setUser } = useAuthStore();
   const [profile, setProfile] = useState({
-    name: user?.name || t('pages.settings.profile.defaultName'),
-    email: user?.email || 'admin@salaba.com',
-    phone: user?.phone || '0500000000',
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
   });
+  React.useEffect(() => {
+    if (user) setProfile({ name: user.name || '', email: user.email || '', phone: user.phone || '' });
+  }, [user]);
   const [password, setPassword] = useState({
     current: '',
     new: '',
@@ -140,9 +142,6 @@ export default function SettingsPage() {
                   <h3 className="font-bold text-gray-900 dark:text-surface-100 text-lg">{profile.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-surface-400">{t('pages.settings.profile.role')}</p>
                 </div>
-                <Button variant="outline" size="sm" className="mr-auto">
-                  {t('pages.settings.profile.changePhoto')}
-                </Button>
               </div>
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -161,28 +160,6 @@ export default function SettingsPage() {
                 </div>
                 <Button type="submit" isLoading={profileMutation.isPending} icon={<Save className="w-4 h-4" />}>{t('pages.settings.profile.save')}</Button>
               </form>
-            </div>
-          )}
-
-          {activeTab === 'notifications' && (
-            <div className="max-w-lg space-y-1">
-              {[
-                { label: t('pages.settings.notifications.newOrders'), desc: t('pages.settings.notifications.newOrdersDesc') },
-                { label: t('pages.settings.notifications.payments'), desc: t('pages.settings.notifications.paymentsDesc') },
-                { label: t('pages.settings.notifications.workshopRegistration'), desc: t('pages.settings.notifications.workshopRegistrationDesc') },
-                { label: t('pages.settings.notifications.reports'), desc: t('pages.settings.notifications.reportsDesc') },
-              ].map((item, idx) => (
-                <div key={item.label} className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-surface-800 transition-colors">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-surface-100 text-sm">{item.label}</p>
-                    <p className="text-xs text-gray-500 dark:text-surface-400 mt-0.5">{item.desc}</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked={idx < 2} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 dark:bg-surface-700 peer-focus:outline-none rounded-full peer peer-checked:bg-amber-500 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:rtl:-translate-x-full" />
-                  </label>
-                </div>
-              ))}
             </div>
           )}
 
@@ -306,7 +283,7 @@ export default function SettingsPage() {
             <div className="max-w-lg space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-surface-300 mb-2">{t('pages.settings.appearance.language')}</label>
-                <select className="select-field dark:bg-surface-800 dark:border-surface-700 dark:text-surface-100">
+                <select value={i18n.language.startsWith('ar') ? 'ar' : 'en'} onChange={(e) => i18n.changeLanguage(e.target.value)} className="select-field dark:bg-surface-800 dark:border-surface-700 dark:text-surface-100">
                   <option value="ar">{t('pages.settings.appearance.arabic')}</option>
                   <option value="en">{t('pages.settings.appearance.english')}</option>
                 </select>
