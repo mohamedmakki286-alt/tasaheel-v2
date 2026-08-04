@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import jakarta.persistence.criteria.Predicate;
 
 @Service
 @RequiredArgsConstructor
@@ -144,7 +146,17 @@ public class AdminService {
         Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
         PageRequest pageable = PageRequest.of(page, size, Sort.by(direction, safeSort));
         Boolean active = status == null || status.isBlank() ? null : "active".equalsIgnoreCase(status);
-        Page<Customer> customers = customerRepository.searchAdmin(search == null || search.isBlank() ? null : search, active, pageable);
+        Specification<Customer> customerSpec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+            if (active != null) predicates.add(cb.equal(root.get("isActive"), active));
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(cb.like(cb.lower(root.get("name")), pattern), cb.like(root.get("phone"), "%" + search + "%")));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        Page<Customer> customers = customerRepository.findAll(customerSpec, pageable);
         return customers.map(this::toCustomerDTO);
     }
 
@@ -196,8 +208,17 @@ public class AdminService {
         String safeSort = Set.of("id", "name", "city", "createdAt", "isApproved", "isActive").contains(sortBy) ? sortBy : "id";
         Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Boolean active = status == null || status.isBlank() ? null : "active".equalsIgnoreCase(status);
-        Page<Driver> drivers = driverRepository.searchAdmin(search == null || search.isBlank() ? null : search, active,
-                PageRequest.of(page, size, Sort.by(direction, safeSort)));
+        Specification<Driver> driverSpec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+            if (active != null) predicates.add(cb.equal(root.get("isActive"), active));
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(cb.like(cb.lower(root.get("name")), pattern), cb.like(root.get("phone"), "%" + search + "%")));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        Page<Driver> drivers = driverRepository.findAll(driverSpec, PageRequest.of(page, size, Sort.by(direction, safeSort)));
         return drivers.map(this::toDriverDTO);
     }
 
@@ -228,8 +249,16 @@ public class AdminService {
     public Page<TechnicianDTO> getTechnicians(int page, int size, Long workshopId, String search, String sortBy, String sortOrder) {
         String safeSort = Set.of("id", "name", "specialty", "createdAt", "isActive").contains(sortBy) ? sortBy : "id";
         Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Page<Technician> technicians = technicianRepository.searchAdmin(search == null || search.isBlank() ? null : search,
-                workshopId, PageRequest.of(page, size, Sort.by(direction, safeSort)));
+        Specification<Technician> technicianSpec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (workshopId != null) predicates.add(cb.equal(root.get("workshop").get("id"), workshopId));
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(cb.like(cb.lower(root.get("name")), pattern), cb.like(root.get("phone"), "%" + search + "%")));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        Page<Technician> technicians = technicianRepository.findAll(technicianSpec, PageRequest.of(page, size, Sort.by(direction, safeSort)));
         return technicians.map(this::toTechnicianDTO);
     }
 
@@ -434,10 +463,18 @@ public class AdminService {
     public Page<MaintenanceRequestDTO> getAllRequests(int page, int size, String search, String status, String sortBy, String sortOrder) {
         String safeSort = Set.of("id", "status", "city", "createdAt", "updatedAt").contains(sortBy) ? sortBy : "createdAt";
         Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Page<MaintenanceRequest> requests = requestRepository.searchAdmin(
-                search == null || search.isBlank() ? null : search,
-                status == null || status.isBlank() ? null : status,
-                PageRequest.of(page, size, Sort.by(direction, safeSort)));
+        Specification<MaintenanceRequest> requestSpec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (status != null && !status.isBlank()) predicates.add(cb.equal(root.get("status"), status));
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(cb.like(cb.lower(root.get("customer").get("name")), pattern),
+                        cb.like(root.get("customer").get("phone"), "%" + search + "%"),
+                        cb.like(cb.lower(root.get("description")), pattern), cb.like(cb.lower(root.get("city")), pattern)));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        Page<MaintenanceRequest> requests = requestRepository.findAll(requestSpec, PageRequest.of(page, size, Sort.by(direction, safeSort)));
         return requests.map(this::toMaintenanceRequestDTO);
     }
 
@@ -455,10 +492,18 @@ public class AdminService {
     }
 
     public Page<PaymentDTO> getAllPayments(int page, int size, String search, String status) {
-        Page<com.tasaheel.entity.Payment> payments = paymentRepository.searchAdmin(
-                search == null || search.isBlank() ? null : search,
-                status == null || status.isBlank() ? null : status,
-                PageRequest.of(page, size, Sort.by("createdAt").descending()));
+        Specification<com.tasaheel.entity.Payment> paymentSpec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (status != null && !status.isBlank()) predicates.add(cb.equal(root.get("status"), status));
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(cb.like(cb.lower(root.get("customer").get("name")), pattern),
+                        cb.like(root.get("customer").get("phone"), "%" + search + "%"),
+                        cb.like(root.get("moyasarPaymentId"), "%" + search + "%")));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        Page<com.tasaheel.entity.Payment> payments = paymentRepository.findAll(paymentSpec, PageRequest.of(page, size, Sort.by("createdAt").descending()));
         return payments.map(this::toPaymentDTO);
     }
 
