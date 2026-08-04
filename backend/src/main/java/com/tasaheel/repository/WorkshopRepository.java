@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface WorkshopRepository extends JpaRepository<Workshop, Long> {
     Optional<Workshop> findByPhone(String phone);
     Optional<Workshop> findByEmail(String email);
+    Optional<Workshop> findByIdAndIsDeletedFalse(Long id);
     boolean existsByPhone(String phone);
     boolean existsByEmail(String email);
     List<Workshop> findByCityAndIsApprovedTrue(String city);

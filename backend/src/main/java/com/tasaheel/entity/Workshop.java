@@ -74,6 +74,10 @@ public class Workshop {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
+
     @Column(name = "is_approved", nullable = false)
     @Builder.Default
     private Boolean isApproved = false;

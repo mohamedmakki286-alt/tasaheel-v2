@@ -151,6 +151,7 @@ public class AdminService {
 
     public Page<WorkshopDTO> getWorkshops(int page, int size, String search, String status, String workshopType) {
         List<Workshop> filtered = workshopRepository.findAll().stream()
+                .filter(w -> !Boolean.TRUE.equals(w.getIsDeleted()))
                 .filter(w -> search == null || search.isBlank() || (w.getName() != null && w.getName().contains(search)) || (w.getCity() != null && w.getCity().contains(search)))
                 .filter(w -> workshopType == null || workshopType.isBlank() || workshopType.equals(w.getWorkshopType()))
                 .filter(w -> status == null || status.isBlank()
@@ -191,7 +192,7 @@ public class AdminService {
     }
 
     public WorkshopDTO getWorkshopById(Long id) {
-        Workshop workshop = workshopRepository.findById(id)
+        Workshop workshop = workshopRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", id));
         return toWorkshopDTO(workshop);
     }
@@ -335,7 +336,7 @@ public class AdminService {
                 customerRepository.save(customer);
             }
             case "workshop" -> {
-                Workshop workshop = workshopRepository.findById(userId)
+                Workshop workshop = workshopRepository.findByIdAndIsDeletedFalse(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("Workshop", userId));
                 workshop.setIsActive(isActive);
                 workshopRepository.save(workshop);
@@ -366,9 +367,10 @@ public class AdminService {
                 customerRepository.save(customer);
             }
             case "workshop" -> {
-                Workshop workshop = workshopRepository.findById(userId)
+                Workshop workshop = workshopRepository.findByIdAndIsDeletedFalse(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("Workshop", userId));
                 workshop.setIsActive(false);
+                workshop.setIsDeleted(true);
                 workshopRepository.save(workshop);
             }
             case "driver" -> {

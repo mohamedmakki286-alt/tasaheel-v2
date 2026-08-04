@@ -267,6 +267,7 @@ public class AuthService {
 
         Workshop workshop = workshopRepository.findByEmail(email).orElse(null);
         if (workshop != null) {
+            if (Boolean.TRUE.equals(workshop.getIsDeleted())) throw new UnauthorizedException("Account has been deleted");
             if (!passwordEncoder.matches(password, workshop.getPassword()))
                 throw new UnauthorizedException("Invalid email or password");
             if (!workshop.getIsActive()) throw new UnauthorizedException("Account is not activated. Check your email.");

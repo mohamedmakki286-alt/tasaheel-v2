@@ -53,8 +53,10 @@ public class WorkshopService {
     }
 
     public WorkshopDTO getPublicWorkshopById(Long id) {
-        Workshop workshop = workshopRepository.findById(id)
+        Workshop workshop = workshopRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", id));
+        if (!Boolean.TRUE.equals(workshop.getIsActive()) || !Boolean.TRUE.equals(workshop.getIsApproved()))
+            throw new ResourceNotFoundException("Workshop", id);
         WorkshopDTO dto = toPublicWorkshopDTO(workshop);
         dto.setReviewCount(reviewRepository.countByWorkshopId(id));
         dto.setCompletedJobs(requestRepository.countByStatusAndWorkshopId("completed", id));
