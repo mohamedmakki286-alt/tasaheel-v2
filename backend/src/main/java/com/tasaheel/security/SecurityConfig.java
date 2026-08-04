@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.HEAD, "/uploads/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/uploads/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/support/**").hasAnyRole("CUSTOMER", "SUPPORT_AGENT", "ADMIN")
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

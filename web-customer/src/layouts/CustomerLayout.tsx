@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/authStore';
 import UnifiedCallHost from '@shared/call/UnifiedCallHost';
 
 const PAGE_TITLES: Record<string, string> = {
+  '/support': 'الدعم والمساعدة',
   '/vehicles': 'سياراتي',
   '/orders': 'طلباتي',
   '/new-request': 'طلب جديد',

@@ -26,6 +26,7 @@ import {
   Globe,
   Gift,
   ShieldAlert,
+  Headphones,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useThemeStore } from '../stores/themeStore';
@@ -34,6 +35,7 @@ import { useAdminWebSocket } from '../hooks/useAdminWebSocket';
 import AIAssistant from '../components/AIAssistant';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../stores/authStore';
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -42,6 +44,7 @@ export default function AdminLayout() {
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [accountingOpen, setAccountingOpen] = useState(false);
   const { user, logout } = useAuth();
+  const role = useAuthStore((s) => s.role);
   const { theme, toggle: toggleTheme } = useThemeStore();
   const { notifications, unreadCount, markAsRead, markAllAsRead, syncFromServer } = useNotificationStore();
   useAdminWebSocket();
@@ -50,7 +53,7 @@ export default function AdminLayout() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { t, i18n } = useTranslation();
 
-  const navItems = [
+  const adminNavItems = [
     { path: '/', label: t('layout.sidebar.dashboard'), icon: LayoutDashboard },
     { path: '/customers', label: t('layout.sidebar.customers'), icon: Users },
     { path: '/workshops', label: t('layout.sidebar.workshops'), icon: Wrench },
@@ -65,6 +68,9 @@ export default function AdminLayout() {
     { path: '/settings', label: t('layout.sidebar.settings'), icon: Cog },
     { path: '/test-data-reset', label: 'حذف البيانات التجريبية', icon: ShieldAlert },
   ];
+  const navItems = role === 'support_agent'
+    ? [{ path: '/support', label: 'خدمة العملاء', icon: Headphones }]
+    : [{ path: '/support', label: 'خدمة العملاء', icon: Headphones }, ...adminNavItems];
   const accountingItems = [
     { path: '/payments', label: 'سجل التحصيلات', icon: DollarSign },
     { path: '/settlements', label: 'تحويلات الورش', icon: Receipt },
@@ -113,6 +119,10 @@ export default function AdminLayout() {
     document.documentElement.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
+
+  useEffect(() => {
+    if (role === 'support_agent' && location.pathname !== '/support') navigate('/support', { replace: true });
+  }, [role, location.pathname, navigate]);
 
   const breadcrumbs = [
     { label: breadcrumbMap[location.pathname] || breadcrumbMap['/'], path: location.pathname },
@@ -191,7 +201,7 @@ export default function AdminLayout() {
               )}
             </NavLink>
           ))}
-          <div className="pt-2 mt-2 border-t border-white/10">
+          {role !== 'support_agent' && <div className="pt-2 mt-2 border-t border-white/10">
             <button onClick={() => setAccountingOpen(v => !v)} className={clsx('w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:bg-white/5 hover:text-white', !sidebarOpen && 'justify-center px-2')}>
               <BookOpen className="w-5 h-5 shrink-0" />
               {sidebarOpen && <><span className="text-sm">المحاسبة المتقدمة</span><ChevronDown className={clsx('w-4 h-4 mr-auto transition-transform', accountingOpen && 'rotate-180')} /></>}
@@ -199,7 +209,7 @@ export default function AdminLayout() {
             {accountingOpen && sidebarOpen && <div className="mt-1 mr-4 space-y-1 border-r border-white/10 pr-2">
               {accountingItems.map(item => <NavLink key={item.path} to={item.path} onClick={() => setMobileSidebar(false)} className={({isActive}) => clsx('flex items-center gap-2 px-3 py-2 rounded-lg text-xs', isActive ? 'bg-amber-500/15 text-amber-400' : 'text-white/50 hover:text-white hover:bg-white/5')}><item.icon className="w-4 h-4"/><span>{item.label}</span></NavLink>)}
             </div>}
-          </div>
+          </div>}
         </nav>
 
         {sidebarOpen && user && (
@@ -404,7 +414,7 @@ export default function AdminLayout() {
         </footer>
       </div>
 
-      <AIAssistant />
+      {role !== 'support_agent' && <AIAssistant />}
     </div>
   );
 }

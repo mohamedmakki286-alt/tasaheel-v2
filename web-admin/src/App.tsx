@@ -30,6 +30,8 @@ const AccountsPage = lazy(() => import('./pages/AccountsPage'));
 const JournalEntriesPage = lazy(() => import('./pages/JournalEntriesPage'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
 const TestDataResetPage = lazy(() => import('./pages/TestDataResetPage'));
+const SupportPage = lazy(() => import('./pages/SupportPage'));
+const SetPasswordPage = lazy(() => import('./pages/SetPasswordPage'));
 
 function PageLoader() {
   return (
@@ -60,8 +62,10 @@ function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+      <Route path="/set-password" element={<SetPasswordPage />} />
       <Route path="/" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
         <Route index element={<DashboardPage />} />
+        <Route path="support" element={<SupportPage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="workshops" element={<WorkshopsPage />} />

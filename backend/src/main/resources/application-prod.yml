@@ -81,6 +81,7 @@ application:
     from-name: ${MAIL_FROM_NAME:تساهيل}
     customer-url: ${CUSTOMER_APP_URL:https://tasaheel-customer.vercel.app}
     workshop-url: ${WORKSHOP_APP_URL:https://tasaheel-workshop.vercel.app}
+    admin-url: ${ADMIN_APP_URL:https://tasaheel-admin.vercel.app}
   dispatch:
     max-workshops: ${REQUEST_DISPATCH_MAX_WORKSHOPS:10}
     expiry-hours: ${REQUEST_DISPATCH_EXPIRY_HOURS:24}

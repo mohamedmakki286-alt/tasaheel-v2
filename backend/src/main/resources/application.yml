@@ -76,6 +76,7 @@ application:
     from-name: ${MAIL_FROM_NAME:تساهيل}
     customer-url: ${CUSTOMER_APP_URL:http://localhost:3201}
     workshop-url: ${WORKSHOP_APP_URL:http://localhost:3102}
+    admin-url: ${ADMIN_APP_URL:http://localhost:3103}
   dispatch:
     max-workshops: ${REQUEST_DISPATCH_MAX_WORKSHOPS:10}
     expiry-hours: ${REQUEST_DISPATCH_EXPIRY_HOURS:24}

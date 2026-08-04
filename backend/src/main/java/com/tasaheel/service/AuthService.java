@@ -6,6 +6,7 @@ import com.tasaheel.entity.Driver;
 import com.tasaheel.entity.RefreshToken;
 import com.tasaheel.entity.Technician;
 import com.tasaheel.entity.Workshop;
+import com.tasaheel.entity.AdminUser;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.exception.UnauthorizedException;
@@ -16,6 +17,7 @@ import com.tasaheel.repository.DriverRepository;
 import com.tasaheel.repository.RefreshTokenRepository;
 import com.tasaheel.repository.TechnicianRepository;
 import com.tasaheel.repository.WorkshopRepository;
+import com.tasaheel.repository.AdminUserRepository;
 import com.tasaheel.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +47,7 @@ public class AuthService {
     private final MediaService mediaService;
     private final EmailService emailService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AdminUserRepository adminUserRepository;
 
     private final Map<String, VerificationEntry> verificationTokens = new ConcurrentHashMap<>();
     private final Map<String, RequestWindow> verificationRequests = new ConcurrentHashMap<>();
@@ -55,6 +58,8 @@ public class AuthService {
 
     @Value("${application.email.workshop-url:http://localhost:3102}")
     private String workshopAppUrl;
+    @Value("${application.email.admin-url:http://localhost:3103}")
+    private String adminAppUrl;
 
     private record VerificationEntry(String codeHash, long expiresAt, int attempts) {
         boolean isExpired() { return System.currentTimeMillis() > expiresAt; }
@@ -118,7 +123,8 @@ public class AuthService {
         Workshop workshop = workshopRepository.findByEmail(email).orElse(null);
         Driver driver = driverRepository.findByEmail(email).orElse(null);
         Technician technician = technicianRepository.findByEmail(email).orElse(null);
-        if (customer == null && workshop == null && driver == null && technician == null) return;
+        AdminUser adminUser = adminUserRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (customer == null && workshop == null && driver == null && technician == null && adminUser == null) return;
 
         byte[] bytes = new byte[32];
         RAND.nextBytes(bytes);
@@ -150,6 +156,8 @@ public class AuthService {
         if (driver != null) { driver.setPassword(encoded); driverRepository.save(driver); finishPasswordReset(driver.getId(), "driver", driver.getEmail()); return; }
         Technician technician = technicianRepository.findByEmail(entry.email()).orElse(null);
         if (technician != null) { technician.setPassword(encoded); technicianRepository.save(technician); finishPasswordReset(technician.getId(), "technician", technician.getEmail()); return; }
+        AdminUser adminUser = adminUserRepository.findByEmailIgnoreCase(entry.email()).orElse(null);
+        if (adminUser != null) { adminUser.setPassword(encoded); adminUser.setPasswordSetupCompleted(true); adminUser.setIsActive(true); adminUserRepository.save(adminUser); finishPasswordReset(adminUser.getId(), adminUser.getRole(), adminUser.getEmail()); return; }
         throw new ResourceNotFoundException("User", "email", entry.email());
     }
 
@@ -164,6 +172,16 @@ public class AuthService {
         workshop.setLastInvitationSentAt(LocalDateTime.now()); workshopRepository.save(workshop);
         emailService.sendWorkshopInvitation(workshop.getEmail(), workshop.getName(), token);
         return Map.of("invitationUrl", workshopAppUrl + "/set-password?token=" + token, "expiresInHours", 24, "email", workshop.getEmail());
+    }
+
+    public Map<String,Object> createSupportAgentInvitation(Long id) {
+        AdminUser agent=adminUserRepository.findById(id).orElseThrow(()->new ResourceNotFoundException("Support agent",id));
+        byte[] bytes=new byte[32]; RAND.nextBytes(bytes); String token=Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        resetTokens.entrySet().removeIf(e->agent.getEmail().equalsIgnoreCase(e.getValue().email()));
+        resetTokens.put(hashToken(token),new ResetEntry(agent.getEmail(),null,System.currentTimeMillis()+24*3600000));
+        agent.setLastInvitationSentAt(LocalDateTime.now()); adminUserRepository.save(agent);
+        emailService.sendSupportAgentInvitation(agent.getEmail(),agent.getName(),token);
+        return Map.of("invitationUrl",adminAppUrl+"/set-password?token="+token,"expiresInHours",24,"email",agent.getEmail());
     }
 
     @Transactional
@@ -227,6 +245,14 @@ public class AuthService {
         if ("admin@salaba.com".equals(email) && "123456".equals(password)) {
             String token = jwtService.generateToken(0L, "admin");
             return buildAuthResponse(token, "admin", 0L, "Admin", email, email, true, true, null);
+        }
+
+        AdminUser adminUser=adminUserRepository.findByEmailIgnoreCase(email).orElse(null);
+        if(adminUser!=null){
+            if(!passwordEncoder.matches(password,adminUser.getPassword()))throw new UnauthorizedException("Invalid email or password");
+            if(!Boolean.TRUE.equals(adminUser.getIsActive()))throw new UnauthorizedException("Account is deactivated");
+            String token=jwtService.generateToken(adminUser.getId(),adminUser.getRole());
+            return buildAuthResponse(token,adminUser.getRole(),adminUser.getId(),adminUser.getName(),adminUser.getPhone(),adminUser.getEmail(),true,true,null);
         }
 
         Customer customer = customerRepository.findByEmail(email).orElse(null);
@@ -308,6 +334,10 @@ public class AuthService {
             adminProfile.put("role", "admin");
             adminProfile.put("avatar", "");
             return adminProfile;
+        }
+        if ("support_agent".equals(role)) {
+            AdminUser a=adminUserRepository.findById(userId).orElseThrow(()->new ResourceNotFoundException("Support agent",userId));
+            Map<String,Object> p=new java.util.HashMap<>(); p.put("id",a.getId());p.put("name",a.getName());p.put("phone",a.getPhone()==null?"":a.getPhone());p.put("email",a.getEmail());p.put("role",a.getRole());p.put("avatar","");return p;
         }
         if ("customer".equals(role)) {
             Customer c = customerRepository.findById(userId)

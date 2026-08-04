@@ -1,0 +1,11 @@
+import client from './client';
+export type SupportAgent={id:number;name:string;email:string;phone?:string;isActive:boolean;passwordSetupCompleted:boolean;lastInvitationSentAt?:string};
+export type SupportTicket={id:number;ticketNumber:string;subject:string;category:string;priority:string;status:string;lastMessageAt:string;unreadCount:number;customer:{id:number;name:string;phone:string};assignedAgent?:{id:number;name:string};requestId?:number;messages?:any[]};
+export const listAgents=async()=>{const{data}=await client.get<SupportAgent[]>('/admin/support-agents');return data};
+export const createAgent=async(body:{name:string;email:string;phone:string})=>{const{data}=await client.post<SupportAgent>('/admin/support-agents',body);return data};
+export const updateAgent=async(id:number,body:Partial<SupportAgent>)=>{const{data}=await client.put<SupportAgent>(`/admin/support-agents/${id}`,body);return data};
+export const inviteAgent=async(id:number)=>{const{data}=await client.post(`/admin/support-agents/${id}/invitation`);return data};
+export const listTickets=async()=>{const{data}=await client.get<SupportTicket[]>('/support/tickets');return data};
+export const getTicket=async(id:number)=>{const{data}=await client.get<SupportTicket>(`/support/tickets/${id}`);return data};
+export const sendReply=async(id:number,message:string,file?:File)=>{const f=new FormData();f.append('message',message);if(file)f.append('file',file);const{data}=await client.post(`/support/tickets/${id}/messages`,f);return data};
+export const setTicketStatus=async(id:number,status:string)=>{const{data}=await client.put(`/support/tickets/${id}/status`,{status});return data};

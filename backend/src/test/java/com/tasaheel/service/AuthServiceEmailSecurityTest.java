@@ -30,8 +30,9 @@ class AuthServiceEmailSecurityTest {
         emailService = mock(EmailService.class);
         service = new AuthService(customers, mock(WorkshopRepository.class), mock(DriverRepository.class),
                 mock(TechnicianRepository.class), mock(JwtService.class), new BCryptPasswordEncoder(),
-                mock(MediaService.class), emailService, mock(RefreshTokenRepository.class));
+                mock(MediaService.class), emailService, mock(RefreshTokenRepository.class), mock(AdminUserRepository.class));
         ReflectionTestUtils.setField(service, "workshopAppUrl", "https://workshop.example");
+        ReflectionTestUtils.setField(service, "adminAppUrl", "https://admin.example");
     }
 
     @Test

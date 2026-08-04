@@ -1,0 +1,12 @@
+package com.tasaheel.service;
+import com.tasaheel.entity.AdminUser; import com.tasaheel.exception.*; import com.tasaheel.repository.AdminUserRepository;
+import lombok.RequiredArgsConstructor; import org.springframework.security.crypto.password.PasswordEncoder; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import java.security.SecureRandom; import java.util.*;
+@Service @RequiredArgsConstructor public class SupportAgentService {
+ private final AdminUserRepository repo; private final PasswordEncoder encoder;
+ public List<Map<String,Object>> list(){return repo.findAll().stream().filter(a->"support_agent".equals(a.getRole())).map(this::view).toList();}
+ @Transactional public Map<String,Object> create(Map<String,String>b){if(repo.findAll().stream().anyMatch(a->"support_agent".equals(a.getRole())))throw new BadRequestException("Only one support supervisor is currently allowed");String name=req(b,"name"),email=req(b,"email").toLowerCase();if(repo.existsByEmailIgnoreCase(email))throw new BadRequestException("Email already registered");byte[] raw=new byte[32];new SecureRandom().nextBytes(raw);AdminUser a=repo.save(AdminUser.builder().name(name).email(email).phone(b.get("phone")).password(encoder.encode(Base64.getEncoder().encodeToString(raw))).role("support_agent").isActive(Boolean.parseBoolean(b.getOrDefault("isActive","true"))).passwordSetupCompleted(false).build());return view(a);}
+ @Transactional public Map<String,Object> update(Long id,Map<String,String>b){AdminUser a=find(id);if(b.containsKey("name"))a.setName(req(b,"name"));if(b.containsKey("phone"))a.setPhone(b.get("phone"));if(b.containsKey("isActive"))a.setIsActive(Boolean.valueOf(b.get("isActive")));return view(repo.save(a));}
+ public AdminUser find(Long id){return repo.findById(id).filter(a->"support_agent".equals(a.getRole())).orElseThrow(()->new ResourceNotFoundException("Support agent",id));}
+ public Map<String,Object> view(AdminUser a){Map<String,Object>m=new LinkedHashMap<>();m.put("id",a.getId());m.put("name",a.getName());m.put("email",a.getEmail());m.put("phone",a.getPhone());m.put("role",a.getRole());m.put("isActive",a.getIsActive());m.put("passwordSetupCompleted",a.getPasswordSetupCompleted());m.put("lastInvitationSentAt",a.getLastInvitationSentAt());m.put("createdAt",a.getCreatedAt());return m;}
+ private String req(Map<String,String>b,String k){String v=b.get(k);if(v==null||v.trim().isEmpty())throw new BadRequestException(k+" is required");return v.trim();}
+}

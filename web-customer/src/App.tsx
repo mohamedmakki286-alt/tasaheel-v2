@@ -30,6 +30,7 @@ const BrowseServicesPage = lazy(() => import('./pages/BrowseServicesPage').then(
 const InvoicesHistoryPage = lazy(() => import('./pages/InvoicesHistoryPage'));
 const CarHistoryPage = lazy(() => import('./pages/CarHistoryPage'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
+const SupportPage = lazy(() => import('./pages/SupportPage'));
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -126,6 +127,9 @@ export default function App() {
             </Route>
             <Route path="/account" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
               <Route index element={<SettingsPage />} />
+            </Route>
+            <Route path="/support" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
+              <Route index element={<SupportPage />} />
             </Route>
 
             {/* Legacy routes redirect */}

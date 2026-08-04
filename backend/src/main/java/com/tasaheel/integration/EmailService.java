@@ -27,6 +27,7 @@ public class EmailService {
     @Value("${application.email.customer-url:http://localhost:3201}") private String customerUrl;
     @Value("${application.email.workshop-url:http://localhost:3102}") private String workshopUrl;
     @Value("${spring.mail.username:}") private String smtpUsername;
+    @Value("${application.email.admin-url:http://localhost:3103}") private String adminUrl;
 
     public void sendOtp(String email, String otp) {
         sendHtml(email, "رمز التحقق - تساهيل", template("رمز التحقق", "استخدم الرمز التالي لإكمال التحقق من بريدك الإلكتروني.",
@@ -67,6 +68,11 @@ public class EmailService {
         String url = workshopUrl + "/set-password?token=" + encodeToken(token);
         sendHtml(email, "دعوة فني إلى تساهيل", template("مرحباً " + escape(name),
                 "أنشأت الورشة حساباً فنياً لك. استخدم الزر التالي لإعداد كلمة المرور.", button(url, "إعداد الحساب")));
+    }
+
+    public void sendSupportAgentInvitation(String email,String name,String token){
+        String url=adminUrl+"/set-password?token="+encodeToken(token);
+        sendHtml(email,"دعوة مشرف خدمة العملاء - تساهيل",template("مرحباً "+escape(name),"أنشأت إدارة تساهيل حساب مشرف خدمة العملاء الخاص بك.",button(url,"إعداد كلمة المرور")+"<p style=\"color:#64748b\">الرابط صالح لمدة 24 ساعة ويستخدم مرة واحدة.</p>"));
     }
 
     public void sendRequestCreated(String email, String name, String requestReference) {

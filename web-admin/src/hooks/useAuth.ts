@@ -16,7 +16,7 @@ export function useAuth() {
     mutationFn: (payload: LoginPayload) => loginApi(payload),
     onSuccess: (data: any) => {
       const d = data;
-      const role = (d.role === 'admin' || d.role === 'super_admin') ? d.role : 'admin';
+      const role = ['admin','super_admin','support_agent'].includes(d.role) ? d.role : 'admin';
       const userData = {
         id: d.userId || d.user?.id,
         name: d.name || d.user?.name || '',
@@ -31,7 +31,7 @@ export function useAuth() {
       }
       setAuth({ user: userData, token: d.token, refreshToken: d.refreshToken, role });
       toast.success(t('toast.success.login', { name: userData.name }));
-      navigate('/', { replace: true });
+      navigate(role === 'support_agent' ? '/support' : '/', { replace: true });
     },
     onError: (err: any) => {
       const message = err?.response?.data?.message || err?.message || t('toast.error.loginFailed');

@@ -67,6 +67,7 @@ application:
     from-name: ${MAIL_FROM_NAME:تساهيل}
     customer-url: ${CUSTOMER_APP_URL:http://localhost:3201}
     workshop-url: ${WORKSHOP_APP_URL:http://localhost:3102}
+    admin-url: ${ADMIN_APP_URL:http://localhost:3103}
   name: Tasaheel
   jwt:
     secret: dGFzYWhlZWwtc2VjcmV0LWtleS1mb3Itand0LXRva2VuLWdlbmVyYXRpb24tYW5kLXZhbGlkYXRpb24tZm9yLXRhc2FoZWVsLXBsYXRmb3JtLTIwMjQ=

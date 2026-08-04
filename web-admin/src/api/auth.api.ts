@@ -4,7 +4,7 @@ import i18n from '../i18n/i18n';
 
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   const { data } = await client.post<LoginResponse>('/auth/login', { email: payload.email, password: payload.password });
-  if (data.role !== 'admin' && data.role !== 'super_admin') throw new Error(i18n.t('toast.error.adminOnly'));
+  if (!['admin','super_admin','support_agent'].includes(data.role || '')) throw new Error(i18n.t('toast.error.adminOnly'));
   return data;
 }
 
