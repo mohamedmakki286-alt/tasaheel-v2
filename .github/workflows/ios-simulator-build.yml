@@ -21,7 +21,7 @@ concurrency:
 jobs:
   build-ios-simulators:
     name: Build customer and workshop
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 45
 
     steps:
