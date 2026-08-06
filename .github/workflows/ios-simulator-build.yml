@@ -1,0 +1,140 @@
+name: iOS Simulator Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/unified-call-system
+    paths:
+      - '.github/workflows/ios-simulator-build.yml'
+      - 'packages/shared/**'
+      - 'web-customer/**'
+      - 'web-workshop/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-simulator-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios-simulators:
+    name: Build customer and workshop
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            packages/shared/package-lock.json
+            web-customer/package-lock.json
+            web-workshop/package-lock.json
+
+      - name: Show build environment
+        run: |
+          xcodebuild -version
+          node --version
+          npm --version
+
+      - name: Validate iOS metadata
+        run: |
+          plutil -lint web-customer/ios/App/App/Info.plist
+          plutil -lint web-customer/ios/App/App/App.entitlements
+          plutil -lint web-customer/ios/App/App/GoogleService-Info.plist
+          plutil -lint web-workshop/ios/App/App/Info.plist
+          plutil -lint web-workshop/ios/App/App/App.entitlements
+          plutil -lint web-workshop/ios/App/App/GoogleService-Info.plist
+          test "$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' web-customer/ios/App/App/GoogleService-Info.plist)" = "com.tasaheel.customer"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' web-workshop/ios/App/App/GoogleService-Info.plist)" = "com.tasaheel.workshop"
+
+      - name: Install shared dependencies
+        working-directory: packages/shared
+        run: npm ci --ignore-scripts
+
+      - name: Build customer web app
+        working-directory: web-customer
+        run: |
+          npm ci
+          npm run build
+          npx cap sync ios
+
+      - name: Build customer iOS simulator app
+        run: |
+          xcodebuild \
+            -project web-customer/ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/customer-derived-data" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/customer-derived-data/Build/Products/Debug-iphonesimulator/App.app" \
+            "$RUNNER_TEMP/tasaheel-customer-simulator.zip"
+
+      - name: Build workshop web app
+        working-directory: web-workshop
+        run: |
+          npm ci
+          npm run build
+          npx cap sync ios
+
+      - name: Build workshop iOS simulator app
+        run: |
+          xcodebuild \
+            -project web-workshop/ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/workshop-derived-data" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/workshop-derived-data/Build/Products/Debug-iphonesimulator/App.app" \
+            "$RUNNER_TEMP/tasaheel-workshop-simulator.zip"
+
+      - name: Launch and smoke-test both apps
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          RUNTIME_ID=$(xcrun simctl list runtimes available -j | python3 -c "import json,sys; r=[x for x in json.load(sys.stdin)['runtimes'] if x['name'].startswith('iOS') and x.get('isAvailable', True)]; print(sorted(r, key=lambda x: tuple(map(int, x['version'].split('.'))))[-1]['identifier'])")
+          DEVICE_TYPE_ID=$(xcrun simctl list devicetypes -j | python3 -c "import json,sys; d=[x for x in json.load(sys.stdin)['devicetypes'] if x['name'].startswith('iPhone')]; print(next((x['identifier'] for x in d if x['name'] == 'iPhone 16 Pro'), d[0]['identifier']))")
+          DEVICE_UDID=$(xcrun simctl create "Tasaheel CI iPhone" "$DEVICE_TYPE_ID" "$RUNTIME_ID")
+          export DEVICE_UDID
+          xcrun simctl boot "$DEVICE_UDID"
+          python3 -c "import os,subprocess; subprocess.run(['xcrun','simctl','bootstatus',os.environ['DEVICE_UDID'],'-b'], check=True, timeout=180)"
+
+          xcrun simctl install "$DEVICE_UDID" "$RUNNER_TEMP/customer-derived-data/Build/Products/Debug-iphonesimulator/App.app"
+          xcrun simctl launch "$DEVICE_UDID" com.tasaheel.customer
+          sleep 8
+          xcrun simctl io "$DEVICE_UDID" screenshot "$RUNNER_TEMP/tasaheel-customer-launch.png"
+          xcrun simctl terminate "$DEVICE_UDID" com.tasaheel.customer
+
+          xcrun simctl install "$DEVICE_UDID" "$RUNNER_TEMP/workshop-derived-data/Build/Products/Debug-iphonesimulator/App.app"
+          xcrun simctl launch "$DEVICE_UDID" com.tasaheel.workshop
+          sleep 8
+          xcrun simctl io "$DEVICE_UDID" screenshot "$RUNNER_TEMP/tasaheel-workshop-launch.png"
+
+      - name: Upload simulator builds
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tasaheel-ios-simulator-builds-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/tasaheel-customer-simulator.zip
+            ${{ runner.temp }}/tasaheel-workshop-simulator.zip
+            ${{ runner.temp }}/tasaheel-customer-launch.png
+            ${{ runner.temp }}/tasaheel-workshop-launch.png
+          if-no-files-found: error
+          retention-days: 7
