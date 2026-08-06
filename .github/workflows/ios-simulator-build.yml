@@ -105,6 +105,7 @@ jobs:
 
       - name: Launch and smoke-test both apps
         continue-on-error: true
+        timeout-minutes: 3
         run: |
           set -euo pipefail
           RUNTIME_ID=$(xcrun simctl list runtimes available -j | python3 -c "import json,sys; r=[x for x in json.load(sys.stdin)['runtimes'] if x['name'].startswith('iOS') and x.get('isAvailable', True)]; print(sorted(r, key=lambda x: tuple(map(int, x['version'].split('.'))))[-1]['identifier'])")
