@@ -4,10 +4,15 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import * as Sentry from '@sentry/react';
+import { Capacitor } from '@capacitor/core';
 import './i18n/i18n';
 import i18n from './i18n/i18n';
 import App from './App';
 import './index.css';
+
+if (Capacitor.isNativePlatform()) {
+  document.documentElement.classList.add('native-app', `native-${Capacitor.getPlatform()}`);
+}
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || '',

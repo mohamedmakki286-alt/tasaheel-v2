@@ -377,6 +377,7 @@ public class ChatService {
                 .customerName(room.getCustomer().getName())
                 .workshopId(room.getWorkshop() != null ? room.getWorkshop().getId() : null)
                 .workshopName(room.getWorkshop() != null ? room.getWorkshop().getName() : null)
+                .workshopPhone(room.getWorkshop() != null ? room.getWorkshop().getPhone() : null)
                 .driverId(room.getDriver() != null ? room.getDriver().getId() : null)
                 .driverName(room.getDriver() != null ? room.getDriver().getName() : null)
                 .technicianId(room.getTechnician() != null ? room.getTechnician().getId() : null)

@@ -1,4 +1,4 @@
-package com.salaba.customer;
+package com.tasaheel.customer;
 
 import com.getcapacitor.BridgeActivity;
 

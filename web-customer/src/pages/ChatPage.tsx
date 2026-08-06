@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import ChatSection from '../components/ChatSection';
 import { getOrCreateRoom } from '../api/chat.api';
 import { useAuthStore } from '../stores/authStore';
-import { useCallStore, type CallState } from '@shared/call/callStore';
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -13,7 +12,6 @@ export default function ChatPage() {
   const workshopId = params.get('workshopId') || undefined;
   const workshopNameParam = params.get('workshopName');
   const userId = useAuthStore((s) => s.customer?.id);
-  const requestCall = useCallStore((s: CallState) => s.requestCall);
 
   const { data: room } = useQuery({
     queryKey: ['chat-room', requestId],
@@ -27,7 +25,7 @@ export default function ChatPage() {
     <header className="flex items-center justify-between border-b border-surface-100 px-4 py-3 dark:border-surface-800">
       <div className="flex items-center gap-3"><button onClick={() => navigate(-1)} className="rounded-xl p-2 text-surface-700 hover:bg-surface-100 dark:text-white dark:hover:bg-surface-800"><ArrowRight size={22} /></button><div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-50 font-black text-accent-600 dark:bg-accent-500/10">و</div><div><h1 className="font-black text-surface-900 dark:text-white">{workshopName}</h1><p className="text-xs text-emerald-600">متاح للمحادثة</p></div></div>
       <div className="flex items-center gap-1 text-accent-600">
-        <button onClick={() => { if (workshopId) { requestCall(Number(workshopId), workshopName, Number(requestId)); } }} className="rounded-xl p-2 hover:bg-accent-50" aria-label="مكالمة صوتية"><Phone size={20} /></button>
+        {room?.workshopPhone && <a href={`tel:${room.workshopPhone.replace(/[^\d+]/g, '')}`} className="rounded-xl p-2 hover:bg-accent-50" aria-label="الاتصال بالورشة"><Phone size={20} /></a>}
       </div>
     </header>
     <div className="flex-1 p-3"><ChatSection requestId={Number(requestId)} workshopId={workshopId ? Number(workshopId) : undefined} workshopName={workshopName} /></div>

@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.salaba.customer"
+    namespace = "com.tasaheel.customer"
     compileSdk = rootProject.ext.compileSdkVersion
     
     signingConfigs {
@@ -14,7 +14,7 @@ android {
     }
     
     defaultConfig {
-        applicationId "com.salaba.customer"
+        applicationId "com.tasaheel.customer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 3

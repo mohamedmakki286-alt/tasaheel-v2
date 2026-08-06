@@ -3,8 +3,6 @@ import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 import BottomNav from '../components/BottomNav';
 import AIAssistant from '../components/AIAssistant';
-import { useAuthStore } from '../stores/authStore';
-import UnifiedCallHost from '@shared/call/UnifiedCallHost';
 
 const PAGE_TITLES: Record<string, string> = {
   '/support': 'الدعم والمساعدة',
@@ -54,14 +52,6 @@ export function CustomerLayout() {
       <BottomNav />
       <AIAssistant />
 
-      {useAuthStore.getState().customer && useAuthStore.getState().token && (
-        <UnifiedCallHost
-          userId={useAuthStore.getState().customer!.id}
-          userName={useAuthStore.getState().customer!.name}
-          userRole="customer"
-          token={useAuthStore.getState().token!}
-        />
-      )}
     </div>
   );
 }

@@ -16,7 +16,6 @@ import { assignTechnician, getTechnicians, unassignTechnician } from '../api/tec
 import { REQUEST_STATUS_COLORS, UPDATABLE_STATUSES } from '../utils/constants';
 import { formatCurrency, formatDateTime, formatPhone, timeAgo } from '../utils/formatters';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
-import { useCallStore } from '@shared/call/callStore';
 import QuoteForm from '../components/QuoteForm';
 import InspectionReportForm from '../components/InspectionReportForm';
 import InvoiceForm from '../components/InvoiceForm';
@@ -229,7 +228,7 @@ export default function RequestDetailPage() {
               <div className="flex items-center gap-3"><Avatar name={customerName} size="md" /><div className="min-w-0 flex-1"><p className="truncate font-black">{customerName}</p><p dir="ltr" className="mt-1 w-fit text-xs text-surface-400">{formatPhone(customerPhone)}</p></div></div>
               <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: 'minmax(0, 1fr) 44px' }}>
                 <button onClick={openChat} className="btn-primary min-h-10 justify-center gap-2"><MessageCircle size={16} /> محادثة العميل</button>
-                <button onClick={() => request.customer?.id && useCallStore.getState().requestCall(Number(request.customer.id), customerName, Number(request.id))} className="flex min-h-10 items-center justify-center rounded-xl border border-surface-200 bg-surface-50 text-surface-600 transition hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300" aria-label="اتصال بالعميل"><PhoneCall size={16} /></button>
+                {customerPhone ? <a href={`tel:${customerPhone.replace(/[^\d+]/g, '')}`} className="flex min-h-10 items-center justify-center rounded-xl border border-surface-200 bg-surface-50 text-surface-600 transition hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300" aria-label="الاتصال بالعميل"><PhoneCall size={16} /></a> : <span className="flex min-h-10 items-center justify-center rounded-xl border border-surface-200 bg-surface-50 text-surface-300 dark:border-surface-700 dark:bg-surface-800" title="رقم العميل غير متوفر"><PhoneCall size={16} /></span>}
               </div>
             </div>
 
