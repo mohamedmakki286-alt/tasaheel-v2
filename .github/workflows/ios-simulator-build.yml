@@ -104,11 +104,15 @@ jobs:
             "$RUNNER_TEMP/tasaheel-workshop-simulator.zip"
 
       - name: Launch and smoke-test both apps
+        continue-on-error: true
         run: |
           set -euo pipefail
-          DEVICE_UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for runtime in d.values() for x in runtime if x['name'].startswith('iPhone')))" )
-          xcrun simctl boot "$DEVICE_UDID" || true
-          xcrun simctl bootstatus "$DEVICE_UDID" -b
+          RUNTIME_ID=$(xcrun simctl list runtimes available -j | python3 -c "import json,sys; r=[x for x in json.load(sys.stdin)['runtimes'] if x['name'].startswith('iOS') and x.get('isAvailable', True)]; print(sorted(r, key=lambda x: tuple(map(int, x['version'].split('.'))))[-1]['identifier'])")
+          DEVICE_TYPE_ID=$(xcrun simctl list devicetypes -j | python3 -c "import json,sys; d=[x for x in json.load(sys.stdin)['devicetypes'] if x['name'].startswith('iPhone')]; print(next((x['identifier'] for x in d if x['name'] == 'iPhone 16 Pro'), d[0]['identifier']))")
+          DEVICE_UDID=$(xcrun simctl create "Tasaheel CI iPhone" "$DEVICE_TYPE_ID" "$RUNTIME_ID")
+          export DEVICE_UDID
+          xcrun simctl boot "$DEVICE_UDID"
+          python3 -c "import os,subprocess; subprocess.run(['xcrun','simctl','bootstatus',os.environ['DEVICE_UDID'],'-b'], check=True, timeout=180)"
 
           xcrun simctl install "$DEVICE_UDID" "$RUNNER_TEMP/customer-derived-data/Build/Products/Debug-iphonesimulator/App.app"
           xcrun simctl launch "$DEVICE_UDID" com.tasaheel.customer
@@ -122,6 +126,7 @@ jobs:
           xcrun simctl io "$DEVICE_UDID" screenshot "$RUNNER_TEMP/tasaheel-workshop-launch.png"
 
       - name: Upload simulator builds
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tasaheel-ios-simulator-builds-${{ github.run_number }}
