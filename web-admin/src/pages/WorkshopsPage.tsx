@@ -167,7 +167,15 @@ export default function WorkshopsPage() {
       ),
     },
     { key: 'servicesCount', label: t('pages.workshops.table.services'), render: (w) => `${getServicesCount(w)}` },
-    { key: 'status', label: t('pages.workshops.table.status'), render: (w) => <StatusBadge status={getWStatus(w)} /> },
+    {
+      key: 'status', label: t('pages.workshops.table.status'),
+      render: (w) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusBadge status={getWStatus(w)} />
+          <StatusBadge status={w.isActive ? 'active' : 'inactive'} />
+        </div>
+      ),
+    },
     {
       key: 'actions', label: t('pages.workshops.table.actions'),
       render: (w) => {
@@ -181,7 +189,7 @@ export default function WorkshopsPage() {
               </>
             )}
             <Button variant="ghost" size="sm" icon={<Eye className="w-4 h-4" />} onClick={() => navigate(`/workshops/${w.id}`)} title={t('common.view')} />
-            <Button variant="ghost" size="sm" icon={w.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />} onClick={() => toggleMutation.mutate({ id: w.id, isActive: !w.isActive })} title={w.isActive ? t('pages.workshops.disable') : t('pages.workshops.enable')} />
+            <Button variant="ghost" size="sm" icon={w.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />} onClick={() => toggleMutation.mutate({ id: w.id, isActive: !w.isActive })} disabled={toggleMutation.isPending} title={w.isActive ? t('pages.workshops.disable') : t('pages.workshops.enable')} />
             <Button variant="ghost" size="sm" icon={<Trash2 className="w-4 h-4 text-red-500" />} onClick={() => setDeleteId(w.id)} title={t('common.delete')} />
           </div>
         );

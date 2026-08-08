@@ -349,6 +349,7 @@ public class AdminService {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", workshopId));
         workshop.setIsApproved(true);
+        workshop.setIsActive(true);
         workshop.setRejectionReason(null);
         workshopRepository.save(workshop);
     }
@@ -358,6 +359,7 @@ public class AdminService {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", workshopId));
         workshop.setIsApproved(false);
+        workshop.setIsActive(false);
         workshop.setRejectionReason(reason);
         workshopRepository.save(workshop);
     }

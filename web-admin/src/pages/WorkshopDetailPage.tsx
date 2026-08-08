@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Phone, MapPin, Star, Wrench, Mail, Calendar, Edit2, Trash2, Building2, Truck, Briefcase, CheckCircle, XCircle, FileText, ExternalLink } from 'lucide-react';
-import { getWorkshop, approveWorkshop, rejectWorkshop, sendWorkshopInvitation, updateWorkshop } from '../api/workshops.api';
+import { ArrowRight, Phone, MapPin, Star, Wrench, Mail, Calendar, Edit2, Trash2, Building2, Truck, Briefcase, CheckCircle, XCircle, FileText, ExternalLink, ToggleLeft, ToggleRight } from 'lucide-react';
+import { getWorkshop, approveWorkshop, rejectWorkshop, sendWorkshopInvitation, updateWorkshop, toggleWorkshopStatus } from '../api/workshops.api';
 import StatusBadge from '../components/StatusBadge';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
@@ -57,6 +57,16 @@ export default function WorkshopDetailPage() {
       setRejectReason('');
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || err?.message || t('toast.error.workshopRejectFailed')),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: () => toggleWorkshopStatus(Number(id), !Boolean(workshop?.isActive)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workshop', id] });
+      queryClient.invalidateQueries({ queryKey: ['workshops'] });
+      toast.success(t('toast.success.statusChanged'));
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || err?.message || t('toast.error.statusChangeFailed')),
   });
 
   const inviteMutation = useMutation({
@@ -121,6 +131,15 @@ export default function WorkshopDetailPage() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="sm" icon={<Edit2 className="w-4 h-4" />} onClick={() => { setEditForm({ ownerName: workshop.ownerName || '', phone: workshop.phone || '', whatsapp: workshop.whatsapp || '', email: workshop.email || '', city: workshop.city || '', address: workshop.address || '', beneficiaryName: workshop.beneficiaryName || '', bankName: workshop.bankName || '', iban: workshop.iban || '', taxNumber: workshop.taxNumber || '', commissionPercentage: workshop.commissionPercentage ?? 10, adminNotes: workshop.adminNotes || '', contractSignedAt: workshop.contractSignedAt || '', contractExpiresAt: workshop.contractExpiresAt || '' }); setShowEditModal(true); }}>تعديل الملف</Button>
+              <Button
+                variant={workshop.isActive ? 'danger' : 'secondary'}
+                size="sm"
+                icon={workshop.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                onClick={() => toggleMutation.mutate()}
+                isLoading={toggleMutation.isPending}
+              >
+                {workshop.isActive ? t('pages.workshops.disable') : t('pages.workshops.enable')}
+              </Button>
               {wStatus === 'pending' && (
                 <>
                   <Button size="sm" icon={<CheckCircle className="w-4 h-4" />} onClick={() => approveMutation.mutate()} isLoading={approveMutation.isPending}>
