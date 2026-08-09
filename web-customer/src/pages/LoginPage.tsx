@@ -51,7 +51,7 @@ export function LoginPage() {
   };
 
   const handleReset = async () => {
-    if (!resetToken.trim() || newPassword.length < 6) return toast.error('تحقق من الرمز وكلمة المرور الجديدة');
+    if (!/^\d{6}$/.test(resetToken.trim()) || newPassword.length < 8) return toast.error('أدخل رمزًا صحيحًا وكلمة مرور من 8 أحرف على الأقل');
     setLoading(true);
     try {
       const r = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/password/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: resetToken.trim(), newPassword }) });
@@ -94,7 +94,7 @@ export function LoginPage() {
           </>}
           {step === 'reset' && <>
             <div className="mb-7"><h1 className="text-3xl font-black text-surface-900 dark:text-white">كلمة مرور جديدة</h1><p className="mt-2 text-surface-500">أدخل الرمز ثم اختر كلمة مرور قوية.</p></div>
-            <div className="space-y-5"><label className="label">رمز التحقق<input value={resetToken} onChange={e=>setResetToken(e.target.value)} placeholder="رمز التحقق" className="input-field mt-1.5 text-center"/></label><label className="label">كلمة المرور الجديدة<input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="••••••••" className="input-field mt-1.5"/></label><button onClick={handleReset} disabled={loading} className="btn-primary w-full">{loading?'جاري الحفظ…':'حفظ كلمة المرور'}</button><button onClick={()=>setStep('credentials')} className="w-full text-sm font-bold text-surface-500">العودة لتسجيل الدخول</button></div>
+            <div className="space-y-5"><label className="label">رمز التحقق<input inputMode="numeric" maxLength={6} value={resetToken} onChange={e=>setResetToken(e.target.value.replace(/\D/g, ''))} placeholder="000000" dir="ltr" className="input-field mt-1.5 text-center tracking-[0.4em]"/></label><label className="label">كلمة المرور الجديدة<input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="••••••••" className="input-field mt-1.5"/></label><button onClick={handleReset} disabled={loading} className="btn-primary w-full">{loading?'جاري الحفظ…':'حفظ كلمة المرور'}</button><button onClick={()=>setStep('credentials')} className="w-full text-sm font-bold text-surface-500">العودة لتسجيل الدخول</button></div>
           </>}
         </div>
       </main>

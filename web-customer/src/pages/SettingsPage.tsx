@@ -20,6 +20,10 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [panel, setPanel] = useState<'email' | 'password' | null>(null);
   const [newEmail, setNewEmail] = useState(customer?.email || '');
+  const [passwordResetSent, setPasswordResetSent] = useState(false);
+  const [passwordResetCode, setPasswordResetCode] = useState('');
+  const [passwordNew, setPasswordNew] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const isDark = theme === 'dark';
   const { data: chatRooms = [] } = useQuery({ queryKey: ['chat-rooms'], queryFn: getRooms, refetchInterval: 15_000 });
@@ -59,8 +63,30 @@ export function SettingsPage() {
   };
 
   const requestPasswordChange = async () => {
-    try { await authApi.forgotPassword(customer?.email || ''); toast.success('أرسلنا رابط تغيير كلمة المرور إلى بريدك'); setPanel(null); }
-    catch { toast.error('تعذر إرسال رابط تغيير كلمة المرور حاليًا'); }
+    setPasswordLoading(true);
+    try {
+      const response = await authApi.forgotPassword(customer?.email || '');
+      if (!response.ok) throw new Error();
+      toast.success('أرسلنا رمز تغيير كلمة المرور إلى بريدك');
+      setPasswordResetSent(true);
+    } catch { toast.error('تعذر إرسال رمز تغيير كلمة المرور حاليًا'); }
+    finally { setPasswordLoading(false); }
+  };
+
+  const confirmPasswordChange = async () => {
+    if (!/^\d{6}$/.test(passwordResetCode)) return toast.error('أدخل رمز التحقق المكوّن من 6 أرقام');
+    if (passwordNew.length < 8) return toast.error('كلمة المرور يجب ألا تقل عن 8 أحرف');
+    setPasswordLoading(true);
+    try {
+      const response = await authApi.resetPassword(passwordResetCode, passwordNew);
+      if (!response.ok) throw new Error();
+      toast.success('تم تغيير كلمة المرور بنجاح');
+      setPanel(null);
+      setPasswordResetSent(false);
+      setPasswordResetCode('');
+      setPasswordNew('');
+    } catch { toast.error('الرمز غير صحيح أو منتهي الصلاحية'); }
+    finally { setPasswordLoading(false); }
   };
 
   return <div className="mx-auto max-w-2xl space-y-5 pb-24" dir="rtl">
@@ -77,7 +103,7 @@ export function SettingsPage() {
       <button onClick={() => navigate('/support')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-500/10"><Headphones size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">الدعم والمساعدة</span><span className="block text-xs text-surface-500">تواصل مع خدمة عملاء تساهيل</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
       <button onClick={() => navigate('/chats')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 dark:bg-accent-500/10"><MessageCircle size={20}/>{unreadMessages > 0 && <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-black text-white">{Math.min(unreadMessages, 99)}</span>}</span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">محادثاتي</span><span className="block text-xs text-surface-500">{unreadMessages > 0 ? `${unreadMessages} رسائل غير مقروءة` : 'محادثاتك مع الورش'}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
       <button onClick={() => setPanel('email')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10"><Mail size={20}/></span><span className="min-w-0 flex-1"><span className="block font-black text-surface-900 dark:text-white">البريد الإلكتروني</span><span className="block truncate text-xs text-surface-500">{customer?.email || 'غير مضاف'}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
-      <button onClick={() => setPanel('password')} className="flex w-full items-center gap-3 p-4 text-right transition hover:bg-surface-50 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><KeyRound size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">كلمة المرور</span><span className="block text-xs text-surface-500">تغيير آمن عبر رابط التحقق</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
+      <button onClick={() => setPanel('password')} className="flex w-full items-center gap-3 p-4 text-right transition hover:bg-surface-50 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><KeyRound size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">كلمة المرور</span><span className="block text-xs text-surface-500">تغيير آمن عبر رمز التحقق</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
     </section>
 
     <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-surface-200 bg-white p-5 dark:border-surface-700 dark:bg-surface-900">
@@ -94,7 +120,7 @@ export function SettingsPage() {
 
     {panel && <div className="fixed inset-0 z-[70] flex items-end bg-black/45 p-0 sm:items-center sm:justify-center sm:p-4" onClick={() => setPanel(null)}><motion.div initial={{y:30,opacity:0}} animate={{y:0,opacity:1}} onClick={(event) => event.stopPropagation()} className="w-full max-w-md rounded-t-[30px] bg-white p-6 shadow-2xl dark:bg-surface-900 sm:rounded-[30px]">
       <div className="mb-5 flex items-center justify-between"><h2 className="font-black text-surface-900 dark:text-white">{panel === 'email' ? 'تغيير البريد الإلكتروني' : 'تغيير كلمة المرور'}</h2><button onClick={() => setPanel(null)} className="rounded-xl p-2 hover:bg-surface-100 dark:hover:bg-surface-800"><X size={19}/></button></div>
-      {panel === 'email' ? <><p className="mb-4 text-sm leading-6 text-surface-500">سنرسل رمز تحقق إلى بريدك الجديد قبل اعتماده.</p><input type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} className="input-field" placeholder="name@example.com" dir="ltr"/><button onClick={requestEmailChange} className="btn-primary mt-4 h-12 w-full">إرسال رمز التحقق</button></> : <><p className="mb-4 text-sm leading-6 text-surface-500">لأمان حسابك سنرسل رابطًا خاصًا لتغيير كلمة المرور إلى بريدك الإلكتروني.</p><div className="flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200"><CheckCircle2 size={16} className="shrink-0"/>سيتم تسجيل خروج الأجهزة الأخرى بعد تغيير كلمة المرور.</div><button onClick={requestPasswordChange} className="btn-primary mt-4 h-12 w-full">إرسال رابط تغيير كلمة المرور</button></>}
+      {panel === 'email' ? <><p className="mb-4 text-sm leading-6 text-surface-500">سنرسل رمز تحقق إلى بريدك الجديد قبل اعتماده.</p><input type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} className="input-field" placeholder="name@example.com" dir="ltr"/><button onClick={requestEmailChange} className="btn-primary mt-4 h-12 w-full">إرسال رمز التحقق</button></> : !passwordResetSent ? <><p className="mb-4 text-sm leading-6 text-surface-500">لأمان حسابك سنرسل رمزًا مؤقتًا لتغيير كلمة المرور إلى بريدك الإلكتروني.</p><div className="flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200"><CheckCircle2 size={16} className="shrink-0"/>الرمز صالح لمدة 10 دقائق ويستخدم مرة واحدة.</div><button onClick={requestPasswordChange} disabled={passwordLoading} className="btn-primary mt-4 h-12 w-full">{passwordLoading ? 'جاري الإرسال…' : 'إرسال رمز تغيير كلمة المرور'}</button></> : <><p className="mb-4 text-sm leading-6 text-surface-500">أدخل الرمز المرسل وكلمة المرور الجديدة.</p><div className="space-y-3"><input inputMode="numeric" maxLength={6} value={passwordResetCode} onChange={event=>setPasswordResetCode(event.target.value.replace(/\D/g,''))} className="input-field text-center tracking-[0.4em]" placeholder="000000" dir="ltr"/><input type="password" value={passwordNew} onChange={event=>setPasswordNew(event.target.value)} className="input-field" placeholder="كلمة المرور الجديدة" autoComplete="new-password"/></div><button onClick={confirmPasswordChange} disabled={passwordLoading} className="btn-primary mt-4 h-12 w-full">{passwordLoading ? 'جاري الحفظ…' : 'حفظ كلمة المرور'}</button><button onClick={requestPasswordChange} disabled={passwordLoading} className="mt-3 w-full text-sm font-bold text-accent-600">إعادة إرسال الرمز</button></>}
     </motion.div></div>}
   </div>;
 }

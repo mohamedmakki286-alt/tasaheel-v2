@@ -49,6 +49,19 @@ class EmailServiceTest {
     }
 
     @Test
+    void passwordResetEmailContainsCodeInsteadOfCustomerLink() throws Exception {
+        service.sendPasswordReset("user@example.com", "654321");
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(sender).send(captor.capture());
+        ByteArrayOutputStream raw = new ByteArrayOutputStream();
+        captor.getValue().writeTo(raw);
+        String message = raw.toString(StandardCharsets.UTF_8);
+
+        assertThat(message).contains("654321").doesNotContain("reset-password?token=");
+    }
+
+    @Test
     void buildsResponsiveArabicTemplate() {
         String html = service.template("عنوان", "مقدمة", "محتوى");
         assertThat(html).contains("lang=\"ar\"").contains("dir=\"rtl\"")

@@ -54,7 +54,7 @@ public class AuthService {
     private final Map<String, ResetEntry> resetTokens = new ConcurrentHashMap<>();
     private final Map<String, RequestWindow> resetRequests = new ConcurrentHashMap<>();
     private static final SecureRandom RAND = new SecureRandom();
-    private static final long TOKEN_EXPIRY_HOURS = 1;
+    private static final long RESET_CODE_EXPIRY_MILLIS = 10 * 60 * 1000L;
 
     @Value("${application.email.workshop-url:http://localhost:3102}")
     private String workshopAppUrl;
@@ -117,24 +117,23 @@ public class AuthService {
     }
 
     public void forgotPassword(String email) {
-        email = normalizeEmail(email);
-        enforceRequestLimit(resetRequests, email, 5, "Too many password reset requests. Try again later.");
-        Customer customer = customerRepository.findByEmail(email).orElse(null);
-        Workshop workshop = workshopRepository.findByEmail(email).orElse(null);
-        Driver driver = driverRepository.findByEmail(email).orElse(null);
-        Technician technician = technicianRepository.findByEmail(email).orElse(null);
-        AdminUser adminUser = adminUserRepository.findByEmailIgnoreCase(email).orElse(null);
+        String normalizedEmail = normalizeEmail(email);
+        enforceRequestLimit(resetRequests, normalizedEmail, 5, "Too many password reset requests. Try again later.");
+        Customer customer = customerRepository.findByEmail(normalizedEmail).orElse(null);
+        Workshop workshop = workshopRepository.findByEmail(normalizedEmail).orElse(null);
+        Driver driver = driverRepository.findByEmail(normalizedEmail).orElse(null);
+        Technician technician = technicianRepository.findByEmail(normalizedEmail).orElse(null);
+        AdminUser adminUser = adminUserRepository.findByEmailIgnoreCase(normalizedEmail).orElse(null);
         if (customer == null && workshop == null && driver == null && technician == null && adminUser == null) return;
 
-        byte[] bytes = new byte[32];
-        RAND.nextBytes(bytes);
-        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        resetTokens.put(hashToken(token), new ResetEntry(email, null, System.currentTimeMillis() + TOKEN_EXPIRY_HOURS * 3600000));
+        String token = String.format("%06d", RAND.nextInt(1_000_000));
+        resetTokens.entrySet().removeIf(entry -> normalizedEmail.equalsIgnoreCase(entry.getValue().email()));
+        resetTokens.put(hashToken(token), new ResetEntry(normalizedEmail, null, System.currentTimeMillis() + RESET_CODE_EXPIRY_MILLIS));
         try {
-            emailService.sendPasswordReset(email, token);
+            emailService.sendPasswordReset(normalizedEmail, token);
         } catch (Exception e) {
             resetTokens.remove(hashToken(token));
-            log.warn("Password reset email failed for {}: {}", email, e.getMessage());
+            log.warn("Password reset email failed for {}: {}", normalizedEmail, e.getMessage());
             throw new BadRequestException("Unable to send password reset email. Please try again later.");
         }
     }
