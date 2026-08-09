@@ -88,7 +88,8 @@ public class GeminiService {
         body.set("contents", contents);
 
         ObjectNode config = objectMapper.createObjectNode();
-        config.put("maxOutputTokens", 700);
+        config.put("maxOutputTokens", 1_000);
+        config.set("thinkingConfig", objectMapper.createObjectNode().put("thinkingLevel", "minimal"));
         body.set("generationConfig", config);
 
         HttpHeaders headers = new HttpHeaders();
@@ -97,11 +98,26 @@ public class GeminiService {
                 url, HttpMethod.POST,
                 new HttpEntity<>(objectMapper.writeValueAsString(body), headers),
                 String.class);
-        JsonNode candidates = objectMapper.readTree(response.getBody()).path("candidates");
+        return extractResponseText(response.getBody());
+    }
+
+    private String extractResponseText(String responseBody) throws Exception {
+        JsonNode candidates = objectMapper.readTree(responseBody).path("candidates");
         if (!candidates.isArray() || candidates.isEmpty()) throw new IllegalStateException("No Gemini candidates");
-        String text = candidates.get(0).path("content").path("parts").path(0).path("text").asText("");
+        JsonNode parts = candidates.get(0).path("content").path("parts");
+        if (!parts.isArray()) throw new IllegalStateException("No Gemini content parts");
+        StringBuilder answer = new StringBuilder();
+        for (JsonNode part : parts) {
+            if (part.path("thought").asBoolean(false)) continue;
+            String value = part.path("text").asText("").trim();
+            if (!value.isBlank()) {
+                if (!answer.isEmpty()) answer.append("\n");
+                answer.append(value);
+            }
+        }
+        String text = answer.toString().trim();
         if (text.isBlank()) throw new IllegalStateException("Empty Gemini response");
-        return text.trim();
+        return text;
     }
 
     private String safetyResponse(String message) {

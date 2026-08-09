@@ -64,4 +64,20 @@ class GeminiServiceTest {
         assertThat(reply).contains("غير متاحة مؤقتاً");
         assertThat(reply).doesNotContain("سنة الصنع، العداد، الأعراض");
     }
+
+    @Test
+    void geminiResponseCombinesAllAnswerPartsAndSkipsThoughtParts() {
+        String body = """
+                {"candidates":[{"content":{"parts":[
+                  {"text":"تحليل داخلي","thought":true},
+                  {"text":"افحص البطارية أولاً."},
+                  {"text":"ثم افحص الدينمو."}
+                ]}}]}
+                """;
+
+        String reply = ReflectionTestUtils.invokeMethod(service, "extractResponseText", body);
+
+        assertThat(reply).isEqualTo("افحص البطارية أولاً.\nثم افحص الدينمو.");
+        assertThat(reply).doesNotContain("تحليل داخلي");
+    }
 }
