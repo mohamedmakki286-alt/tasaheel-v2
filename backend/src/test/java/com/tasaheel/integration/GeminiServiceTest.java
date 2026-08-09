@@ -44,4 +44,24 @@ class GeminiServiceTest {
         assertThat(reply).contains("السعر الملزم يظهر في عرض الورشة");
         assertThat(reply).doesNotContain("150-300");
     }
+
+    @Test
+    void fallbackAnswersDifferentIntentsInsteadOfRepeatingGenericPrompt() {
+        String battery = service.chat("السيارة ما تدق سلف والأنوار ضعيفة", List.of(), "المستخدم زائر");
+        String ac = service.chat("المكيف ما يبرد أثناء الوقوف", List.of(), "المستخدم زائر");
+        String booking = service.chat("كيف أطلب خدمة صيانة؟", List.of(), "المستخدم زائر");
+
+        assertThat(battery).contains("البطارية");
+        assertThat(ac).contains("المكيف", "الفريون");
+        assertThat(booking).contains("من الرئيسية اختر الخدمة");
+        assertThat(battery).isNotEqualTo(ac).isNotEqualTo(booking);
+    }
+
+    @Test
+    void unknownFallbackExplainsTemporaryAiUnavailabilityWithoutRepeatingVehicleChecklist() {
+        String reply = service.chat("هل يمكن أن تشرح لي هذا بطريقة أخرى؟", List.of(), "المستخدم زائر");
+
+        assertThat(reply).contains("غير متاحة مؤقتاً");
+        assertThat(reply).doesNotContain("سنة الصنع، العداد، الأعراض");
+    }
 }
