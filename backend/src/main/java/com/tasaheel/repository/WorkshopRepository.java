@@ -4,6 +4,8 @@ import com.tasaheel.entity.Workshop;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +22,14 @@ public interface WorkshopRepository extends JpaRepository<Workshop, Long> {
     List<Workshop> findByIsApproved(Boolean isApproved);
     List<Workshop> findByIsApprovedAndIsActive(Boolean isApproved, Boolean isActive);
     List<Workshop> findByCityAndIsApprovedAndIsActive(String city, Boolean isApproved, Boolean isActive);
+    @Query("""
+            SELECT w FROM Workshop w
+            WHERE LOWER(TRIM(w.city)) = LOWER(TRIM(:city))
+              AND w.isApproved = true
+              AND w.isActive = true
+              AND w.isDeleted = false
+            """)
+    List<Workshop> findActiveApprovedByNormalizedCity(@Param("city") String city);
     Page<Workshop> findByNameContainingOrCityContaining(String name, String city, Pageable pageable);
     List<Workshop> findByCityAndWorkshopTypeIn(String city, List<String> workshopTypes);
 }

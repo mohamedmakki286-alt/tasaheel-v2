@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -63,8 +64,8 @@ public class AIAssistantContextService {
                     .append("، للطلب رقم ").append(invoice.getRequest().getId()).append(".\n");
         }
 
-        List<Workshop> workshops = customer.getCity() == null ? List.of()
-                : workshopRepository.findByCityAndIsApprovedAndIsActive(customer.getCity(), true, true);
+        List<Workshop> workshops = customer.getCity() == null ? new ArrayList<>()
+                : new ArrayList<>(workshopRepository.findActiveApprovedByNormalizedCity(customer.getCity()));
         workshops.sort(Comparator.comparing(Workshop::getRating, Comparator.nullsLast(Comparator.reverseOrder())));
         if (workshops.isEmpty()) {
             out.append("الورش النشطة المعتمدة في مدينة العميل: لا توجد نتائج حالياً.");
