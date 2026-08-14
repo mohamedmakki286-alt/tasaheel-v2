@@ -1,9 +1,7 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Car, ClipboardList, Info, MapPin, Phone, Video, Wrench } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ArrowRight, Car, ClipboardList, Info, MapPin, Phone, Wrench } from 'lucide-react';
 import ChatSection from '../components/ChatSection';
-import { useCallStore } from '@shared/call/callStore';
 import { getRequestDetail } from '../api/requests.api';
 import { REQUEST_STATUS_LABELS } from '../utils/constants';
 import Avatar from '../components/Avatar';
@@ -18,15 +16,7 @@ export default function ChatPage() {
     enabled: !!requestId,
   });
   const customerName = request?.customer?.name || params.get('customerName') || 'العميل';
-  const customerId = request?.customer?.id || params.get('customerId');
-  const requestCall = useCallStore((state) => state.requestCall);
-  const handleCall = () => {
-    if (!customerId) {
-      toast.error('معرّف العميل غير متوفر');
-      return;
-    }
-    requestCall(Number(customerId), customerName, Number(requestId));
-  };
+  const customerPhone = request?.customer?.phone?.replace(/[^\d+]/g, '');
 
   return (
     <div className="grid w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]" dir="rtl">
@@ -41,8 +31,7 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="flex shrink-0 gap-1 text-primary-600 dark:text-primary-400">
-            <button onClick={handleCall} className="rounded-xl p-2 hover:bg-primary-50 dark:hover:bg-primary-500/10" aria-label="اتصال صوتي"><Phone size={19} /></button>
-            <button onClick={() => toast('مكالمة الفيديو ستتوفر قريباً')} className="hidden rounded-xl p-2 hover:bg-primary-50 sm:block dark:hover:bg-primary-500/10" aria-label="مكالمة فيديو"><Video size={19} /></button>
+            {customerPhone && <a href={`tel:${customerPhone}`} className="rounded-xl p-2 hover:bg-primary-50 dark:hover:bg-primary-500/10" aria-label="الاتصال بالعميل"><Phone size={19} /></a>}
             <button onClick={() => navigate(`/requests/${requestId}`)} className="rounded-xl p-2 hover:bg-primary-50 dark:hover:bg-primary-500/10" aria-label="تفاصيل الطلب"><Info size={19} /></button>
           </div>
         </header>

@@ -18,7 +18,9 @@ Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || '',
   environment: import.meta.env.MODE,
   integrations: [Sentry.browserTracingIntegration()],
-  tracesSampleRate: 0.05,
+  // Keep native collection limited to crash diagnostics. Performance tracing
+  // remains available for the web dashboard without expanding mobile labels.
+  tracesSampleRate: Capacitor.isNativePlatform() ? 0 : 0.05,
 });
 
 const queryClient = new QueryClient({

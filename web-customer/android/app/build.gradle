@@ -1,15 +1,28 @@
 apply plugin: 'com.android.application'
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+def releaseStoreFile = System.getenv('TASAHEEL_KEYSTORE_FILE') ?: keystoreProperties.getProperty('storeFile')
+def releaseStorePassword = System.getenv('TASAHEEL_KEYSTORE_PASSWORD') ?: keystoreProperties.getProperty('storePassword')
+def releaseKeyAlias = System.getenv('TASAHEEL_KEY_ALIAS') ?: keystoreProperties.getProperty('keyAlias')
+def releaseKeyPassword = System.getenv('TASAHEEL_KEY_PASSWORD') ?: keystoreProperties.getProperty('keyPassword')
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
+
 android {
     namespace = "com.tasaheel.customer"
     compileSdk = rootProject.ext.compileSdkVersion
     
     signingConfigs {
-        release {
-            storeFile file('C:/Users/pc/Desktop/Tasaheel-Android-Signing/tasaheel-release.jks')
-            storePassword 'Tasaheel@2026'
-            keyAlias 'tasaheel'
-            keyPassword 'Tasaheel@2026'
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
         }
     }
     
@@ -28,7 +41,7 @@ android {
     }
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (hasReleaseSigning) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

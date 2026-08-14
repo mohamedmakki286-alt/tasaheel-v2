@@ -1,6 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
 import WorkshopLayout from './layouts/WorkshopLayout';
 import TechnicianLayout from './layouts/TechnicianLayout';
@@ -27,10 +26,7 @@ const HomeServicePage = lazy(() => import('./pages/HomeServicePage'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
 const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
-const ProtectedRoute = lazy(() => import('./components/guards/ProtectedRoute'));
 const GuestRoute = lazy(() => import('./components/guards/GuestRoute'));
-
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 function preloadCommonRoutes() {
   void Promise.allSettled([
@@ -78,7 +74,6 @@ function AppRoutes() {
     return null;
   }
   return (
-    <GoogleOAuthProvider clientId={googleClientId || ''}>
     <AuthInit>
     <Suspense fallback={<PageLoader />}>
     <Routes>
@@ -113,7 +108,6 @@ function AppRoutes() {
     </Routes>
     </Suspense>
     </AuthInit>
-    </GoogleOAuthProvider>
   );
 }
 

@@ -3,6 +3,7 @@ package com.tasaheel.security;
 import com.tasaheel.entity.Workshop;
 import com.tasaheel.repository.TechnicianRepository;
 import com.tasaheel.repository.WorkshopRepository;
+import com.tasaheel.repository.CustomerRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -25,7 +26,12 @@ class JwtAuthFilterWorkshopFreezeTest {
     void rejectsExistingWorkshopTokenImmediatelyAfterFreeze() throws Exception {
         JwtService jwtService = mock(JwtService.class);
         WorkshopRepository workshops = mock(WorkshopRepository.class);
-        JwtAuthFilter filter = new JwtAuthFilter(jwtService, mock(TechnicianRepository.class), workshops);
+        JwtAuthFilter filter = new JwtAuthFilter(
+                jwtService,
+                mock(TechnicianRepository.class),
+                workshops,
+                mock(CustomerRepository.class)
+        );
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer valid-token");
         MockHttpServletResponse response = new MockHttpServletResponse();

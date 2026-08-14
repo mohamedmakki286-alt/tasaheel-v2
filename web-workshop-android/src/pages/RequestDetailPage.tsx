@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import {
   ArrowLeft, ArrowRight, Building2, CalendarClock, Car, Check, CheckCircle2,
   ChevronDown, ClipboardCheck, ClipboardList, Clock3, ExternalLink, FileCheck2,
-  FileSignature, Image, MapPin, MessageCircle, MoreHorizontal, Pencil, Phone,
+  FileSignature, Image, MapPin, MessageCircle, MoreHorizontal, Pencil, Phone, Download,
   PhoneCall, Receipt, Send, Trash2, UserRoundCog, Wrench, XCircle,
 } from 'lucide-react';
 import { getRequestDetail } from '../api/requests.api';
@@ -16,13 +16,15 @@ import { assignTechnician, getTechnicians, unassignTechnician } from '../api/tec
 import { REQUEST_STATUS_COLORS, UPDATABLE_STATUSES } from '../utils/constants';
 import { formatCurrency, formatDateTime, formatPhone, timeAgo } from '../utils/formatters';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
-import { useCallStore } from '@shared/call/callStore';
+import { googleMapsDirectionsUrl, openExternalUrl } from '../utils/externalNavigation';
 import QuoteForm from '../components/QuoteForm';
 import InspectionReportForm from '../components/InspectionReportForm';
 import InvoiceForm from '../components/InvoiceForm';
 import StatusUpdateModal from '../components/StatusUpdateModal';
 import Avatar from '../components/Avatar';
 import Skeleton from '../components/Skeleton';
+
+const brandedDocuments = () => import('../utils/brandedDocuments');
 
 type WorkDocument = 'quote' | 'inspection' | 'invoice';
 
@@ -229,7 +231,7 @@ export default function RequestDetailPage() {
               <div className="flex items-center gap-3"><Avatar name={customerName} size="md" /><div className="min-w-0 flex-1"><p className="truncate font-black">{customerName}</p><p dir="ltr" className="mt-1 w-fit text-xs text-surface-400">{formatPhone(customerPhone)}</p></div></div>
               <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: 'minmax(0, 1fr) 44px' }}>
                 <button onClick={openChat} className="btn-primary min-h-10 justify-center gap-2"><MessageCircle size={16} /> محادثة العميل</button>
-                <button onClick={() => request.customer?.id && useCallStore.getState().requestCall(Number(request.customer.id), customerName, Number(request.id))} className="flex min-h-10 items-center justify-center rounded-xl border border-surface-200 bg-surface-50 text-surface-600 transition hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300" aria-label="اتصال بالعميل"><PhoneCall size={16} /></button>
+                {customerPhone ? <a href={`tel:${customerPhone.replace(/[^\d+]/g, '')}`} className="flex min-h-10 items-center justify-center rounded-xl border border-surface-200 bg-surface-50 text-surface-600 transition hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300" aria-label="الاتصال بالعميل"><PhoneCall size={16} /></a> : <span className="flex min-h-10 items-center justify-center rounded-xl border border-surface-200 bg-surface-50 text-surface-300 dark:border-surface-700 dark:bg-surface-800" title="رقم العميل غير متوفر"><PhoneCall size={16} /></span>}
               </div>
             </div>
 
@@ -271,6 +273,7 @@ export default function RequestDetailPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><span className="text-sm text-surface-500">قيمة العرض</span><strong>{formatCurrency(latestQuote.price)}</strong></div>
                   {latestQuote.notes && <p className="text-sm leading-6 text-surface-500">{latestQuote.notes}</p>}
+                  <button onClick={() => void brandedDocuments().then(({ exportTableDocument }) => exportTableDocument('عرض سعر', `الطلب #${request.id} • ${latestQuote.workshopName || ''}`, ['الخدمة','قيمة العرض','المدة المقدرة','الضمان','ملاحظات'], [[request.serviceTypes?.map((service:any) => service.name).filter(Boolean).join('، ') || 'خدمة صيانة', formatCurrency(latestQuote.price), `${latestQuote.estimatedDays || '—'} يوم`, `${latestQuote.warrantyMonths || 0} شهر`, latestQuote.notes || '—']], `عرض-سعر-تساهيل-${request.id}`))} className="btn-secondary w-full justify-center"><Download size={15}/> تنزيل عرض السعر PDF</button>
                   {request.status === 'pending' && <button onClick={() => setShowQuoteForm(true)} className="btn-primary w-full justify-center">إرسال عرض جديد</button>}
                 </div>
               ) : <button onClick={() => setShowQuoteForm(true)} className="btn-primary w-full justify-center"><Send size={16} /> إنشاء وإرسال العرض</button>}
@@ -286,7 +289,10 @@ export default function RequestDetailPage() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3"><div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><p className="text-xs text-surface-400">البنود</p><p className="mt-1 font-black">{(report.parts?.length || 0) + (report.labor?.length || 0)}</p></div><div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><p className="text-xs text-surface-400">الإجمالي</p><p className="mt-1 font-black">{formatCurrency(report.grandTotal)}</p></div></div>
                   {report.notes && <p className="text-sm leading-6 text-surface-500">{report.notes}</p>}
-                  <button onClick={() => setShowInspectionForm(true)} className="btn-secondary w-full justify-center"><Pencil size={15} /> عرض وتعديل التقرير</button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setShowInspectionForm(true)} className="btn-secondary justify-center"><Pencil size={15} /> عرض وتعديل</button>
+                    <button onClick={() => void brandedDocuments().then(({ exportInspectionDocument }) => exportInspectionDocument(report, { requestId: request.id, workshopName: latestQuote?.workshopName || invoice?.workshopName, customerName, vehicle: carName }))} className="btn-secondary justify-center"><Download size={15} /> PDF</button>
+                  </div>
                 </div>
               ) : (
                 <button onClick={() => setShowInspectionForm(true)} disabled={!['accepted', 'inspection_report', 'customer_approved', 'in_progress'].includes(request.status)} className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"><ClipboardCheck size={16} /> إنشاء تقرير الفحص</button>
@@ -306,6 +312,7 @@ export default function RequestDetailPage() {
                     {(invoice.status === 'pending_approval' || invoice.status === 'rejected') && <button onClick={() => setShowInvoiceForm(true)} className="btn-primary justify-center"><Pencil size={15} /> تعديل</button>}
                     {(invoice.status === 'pending_approval' || invoice.status === 'rejected') && <button onClick={async () => { if (window.confirm('هل تريد حذف الفاتورة؟')) { try { await deleteInvoice(request.id); toast.success('تم حذف الفاتورة'); refreshRequest(); } catch { toast.error('فشل حذف الفاتورة'); } } }} className="btn-secondary justify-center text-danger-500"><Trash2 size={15} /> حذف</button>}
                   </div>
+                  <button onClick={() => void brandedDocuments().then(({ exportInvoiceDocument }) => exportInvoiceDocument(invoice, { requestId: request.id, workshopName: invoice.workshopName || latestQuote?.workshopName, customerName, vehicle: carName }))} className="btn-secondary w-full justify-center"><Download size={15} /> تنزيل الفاتورة PDF</button>
                 </div>
               ) : (
                 <button onClick={() => setShowInvoiceForm(true)} disabled={!['awaiting_payment', 'completed'].includes(request.status)} title={!['awaiting_payment', 'completed'].includes(request.status) ? 'يجب إكمال العمل واعتماد تقرير الفحص أولاً' : undefined} className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"><Receipt size={16} /> إنشاء الفاتورة</button>
@@ -350,7 +357,7 @@ export default function RequestDetailPage() {
               <div className="flex items-center gap-3"><CalendarClock size={16} className="text-surface-400" /><span>{formatDateTime(request.createdAt)}</span></div>
               <div className="flex items-center gap-3"><MapPin size={16} className="text-surface-400" /><span>{request.city || 'الموقع غير محدد'}</span></div>
             </div>
-            {request.locationLat && request.locationLng && <a href={`https://www.google.com/maps?q=${request.locationLat},${request.locationLng}`} target="_blank" rel="noreferrer" className="btn-secondary mt-4 flex w-full justify-center gap-2"><MapPin size={15} /> فتح الخريطة</a>}
+            {request.locationLat != null && request.locationLng != null && request.locationLat !== 0 && request.locationLng !== 0 && <button type="button" onClick={() => void openExternalUrl(googleMapsDirectionsUrl(request.locationLat!, request.locationLng!))} className="btn-secondary mt-4 flex w-full justify-center gap-2"><MapPin size={15} /> فتح الخريطة</button>}
           </section>
         </aside>
       </div>

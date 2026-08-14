@@ -224,6 +224,7 @@ public class AuthService {
 
         Customer customer = customerRepository.findByEmail(email).orElse(null);
         if (customer != null) {
+            if (Boolean.TRUE.equals(customer.getIsDeleted())) throw new UnauthorizedException("Account has been deleted");
             if (!passwordEncoder.matches(password, customer.getPassword()))
                 throw new UnauthorizedException("Invalid email or password");
             if (!customer.getIsActive()) throw new UnauthorizedException("Account is not activated. Check your email.");

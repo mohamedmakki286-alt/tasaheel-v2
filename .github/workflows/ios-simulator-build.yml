@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - feature/unified-call-system
     paths:
       - '.github/workflows/ios-simulator-build.yml'
@@ -49,9 +50,11 @@ jobs:
           plutil -lint web-customer/ios/App/App/Info.plist
           plutil -lint web-customer/ios/App/App/App.entitlements
           plutil -lint web-customer/ios/App/App/GoogleService-Info.plist
+          plutil -lint web-customer/ios/App/App/PrivacyInfo.xcprivacy
           plutil -lint web-workshop/ios/App/App/Info.plist
           plutil -lint web-workshop/ios/App/App/App.entitlements
           plutil -lint web-workshop/ios/App/App/GoogleService-Info.plist
+          plutil -lint web-workshop/ios/App/App/PrivacyInfo.xcprivacy
           test "$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' web-customer/ios/App/App/GoogleService-Info.plist)" = "com.tasaheel.customer"
           test "$(/usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' web-workshop/ios/App/App/GoogleService-Info.plist)" = "com.tasaheel.workshop"
 

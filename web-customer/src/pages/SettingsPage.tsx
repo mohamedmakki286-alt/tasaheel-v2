@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { authApi } from '../api/auth.api';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
-import { Camera, CheckCircle2, ChevronLeft, KeyRound, LogOut, Mail, MapPin, Moon, Save, ShieldCheck, Sun, UserRound, X, MessageCircle, Headphones } from 'lucide-react';
+import { Camera, CheckCircle2, ChevronLeft, KeyRound, LogOut, Mail, MapPin, Moon, Save, ShieldCheck, Sun, UserRound, X, MessageCircle, Headphones, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +24,10 @@ export function SettingsPage() {
   const [passwordResetCode, setPasswordResetCode] = useState('');
   const [passwordNew, setPasswordNew] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const isDark = theme === 'dark';
   const { data: chatRooms = [] } = useQuery({ queryKey: ['chat-rooms'], queryFn: getRooms, refetchInterval: 15_000 });
@@ -89,6 +93,21 @@ export function SettingsPage() {
     finally { setPasswordLoading(false); }
   };
 
+  const deleteAccount = async () => {
+    if (deleteConfirmation.trim() !== 'حذف حسابي') return toast.error('اكتب «حذف حسابي» للتأكيد');
+    setDeleting(true);
+    try {
+      await authApi.deleteAccount(deletePassword || undefined);
+      logout();
+      navigate('/', { replace: true });
+      toast.success('تم حذف حسابك وبياناتك الشخصية');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || error.friendlyMessage || 'تعذر حذف الحساب');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return <div className="mx-auto max-w-2xl space-y-5 pb-24" dir="rtl">
     <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-surface-950 to-surface-800 p-6 text-white shadow-xl">
       <div className="absolute -left-10 -top-12 h-40 w-40 rounded-full bg-accent-500/20 blur-2xl" />
@@ -100,7 +119,7 @@ export function SettingsPage() {
     </section>
 
     <section className="overflow-hidden rounded-3xl border border-surface-200 bg-white dark:border-surface-700 dark:bg-surface-900">
-      <button onClick={() => navigate('/support')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-500/10"><Headphones size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">الدعم والمساعدة</span><span className="block text-xs text-surface-500">تواصل مع خدمة عملاء تساهيل</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
+      <button onClick={() => navigate('/account/support')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-500/10"><Headphones size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">الدعم والمساعدة</span><span className="block text-xs text-surface-500">تواصل مع خدمة عملاء تساهيل</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
       <button onClick={() => navigate('/chats')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 dark:bg-accent-500/10"><MessageCircle size={20}/>{unreadMessages > 0 && <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-black text-white">{Math.min(unreadMessages, 99)}</span>}</span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">محادثاتي</span><span className="block text-xs text-surface-500">{unreadMessages > 0 ? `${unreadMessages} رسائل غير مقروءة` : 'محادثاتك مع الورش'}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
       <button onClick={() => setPanel('email')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10"><Mail size={20}/></span><span className="min-w-0 flex-1"><span className="block font-black text-surface-900 dark:text-white">البريد الإلكتروني</span><span className="block truncate text-xs text-surface-500">{customer?.email || 'غير مضاف'}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
       <button onClick={() => setPanel('password')} className="flex w-full items-center gap-3 p-4 text-right transition hover:bg-surface-50 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><KeyRound size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">كلمة المرور</span><span className="block text-xs text-surface-500">تغيير آمن عبر رمز التحقق</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
@@ -117,10 +136,23 @@ export function SettingsPage() {
     <section className="rounded-3xl border border-surface-200 bg-white p-4 dark:border-surface-700 dark:bg-surface-900"><button onClick={toggleTheme} className="flex w-full items-center justify-between"><span className="flex items-center gap-3 font-black text-surface-900 dark:text-white">{isDark ? <Moon className="text-accent-500"/> : <Sun className="text-amber-500"/>}الوضع الليلي</span><span className={`relative h-7 w-12 rounded-full ${isDark ? 'bg-accent-500' : 'bg-surface-300'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isDark ? 'right-1' : 'right-6'}`}/></span></button></section>
     <section className="rounded-3xl border border-surface-200 bg-white p-4 dark:border-surface-700 dark:bg-surface-900"><div className="flex gap-3"><ShieldCheck className="mt-0.5 shrink-0 text-emerald-500" size={20}/><div><h2 className="font-black text-surface-900 dark:text-white">خصوصيتك مهمة</h2><p className="mt-1 text-xs leading-5 text-surface-500">لا تتم مشاركة موقعك إلا أثناء الطلب النشط، وتُستخدم بياناتك لتقديم الخدمة فقط.</p></div></div></section>
     <button onClick={() => { logout(); navigate('/'); }} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 py-3.5 font-black text-red-600 transition hover:bg-red-100 dark:bg-red-500/10"><LogOut size={18}/>تسجيل الخروج</button>
+    <section className="rounded-3xl border border-red-200 bg-red-50/60 p-4 dark:border-red-500/20 dark:bg-red-500/5">
+      <div className="flex items-start gap-3">
+        <Trash2 className="mt-0.5 shrink-0 text-red-600" size={20}/>
+        <div className="flex-1"><h2 className="font-black text-red-700 dark:text-red-400">حذف الحساب والبيانات</h2><p className="mt-1 text-xs leading-5 text-surface-600 dark:text-surface-400">سيتم إيقاف الحساب وإزالة بيانات الاتصال والصورة ورمز الإشعارات نهائياً. تُحفظ السجلات المالية اللازمة فقط دون بيانات دخول قابلة للاستخدام.</p></div>
+      </div>
+      <button type="button" onClick={() => setDeleteOpen(true)} className="mt-4 w-full rounded-2xl border border-red-300 py-3 text-sm font-black text-red-700 transition hover:bg-red-100 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10">طلب حذف الحساب</button>
+    </section>
 
     {panel && <div className="fixed inset-0 z-[70] flex items-end bg-black/45 p-0 sm:items-center sm:justify-center sm:p-4" onClick={() => setPanel(null)}><motion.div initial={{y:30,opacity:0}} animate={{y:0,opacity:1}} onClick={(event) => event.stopPropagation()} className="w-full max-w-md rounded-t-[30px] bg-white p-6 shadow-2xl dark:bg-surface-900 sm:rounded-[30px]">
       <div className="mb-5 flex items-center justify-between"><h2 className="font-black text-surface-900 dark:text-white">{panel === 'email' ? 'تغيير البريد الإلكتروني' : 'تغيير كلمة المرور'}</h2><button onClick={() => setPanel(null)} className="rounded-xl p-2 hover:bg-surface-100 dark:hover:bg-surface-800"><X size={19}/></button></div>
       {panel === 'email' ? <><p className="mb-4 text-sm leading-6 text-surface-500">سنرسل رمز تحقق إلى بريدك الجديد قبل اعتماده.</p><input type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} className="input-field" placeholder="name@example.com" dir="ltr"/><button onClick={requestEmailChange} className="btn-primary mt-4 h-12 w-full">إرسال رمز التحقق</button></> : !passwordResetSent ? <><p className="mb-4 text-sm leading-6 text-surface-500">لأمان حسابك سنرسل رمزًا مؤقتًا لتغيير كلمة المرور إلى بريدك الإلكتروني.</p><div className="flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200"><CheckCircle2 size={16} className="shrink-0"/>الرمز صالح لمدة 10 دقائق ويستخدم مرة واحدة.</div><button onClick={requestPasswordChange} disabled={passwordLoading} className="btn-primary mt-4 h-12 w-full">{passwordLoading ? 'جاري الإرسال…' : 'إرسال رمز تغيير كلمة المرور'}</button></> : <><p className="mb-4 text-sm leading-6 text-surface-500">أدخل الرمز المرسل وكلمة المرور الجديدة.</p><div className="space-y-3"><input inputMode="numeric" maxLength={6} value={passwordResetCode} onChange={event=>setPasswordResetCode(event.target.value.replace(/\D/g,''))} className="input-field text-center tracking-[0.4em]" placeholder="000000" dir="ltr"/><input type="password" value={passwordNew} onChange={event=>setPasswordNew(event.target.value)} className="input-field" placeholder="كلمة المرور الجديدة" autoComplete="new-password"/></div><button onClick={confirmPasswordChange} disabled={passwordLoading} className="btn-primary mt-4 h-12 w-full">{passwordLoading ? 'جاري الحفظ…' : 'حفظ كلمة المرور'}</button><button onClick={requestPasswordChange} disabled={passwordLoading} className="mt-3 w-full text-sm font-bold text-accent-600">إعادة إرسال الرمز</button></>}
+    </motion.div></div>}
+    {deleteOpen && <div className="fixed inset-0 z-[80] flex items-end bg-black/55 sm:items-center sm:justify-center sm:p-4" onClick={() => !deleting && setDeleteOpen(false)}><motion.div initial={{y:30,opacity:0}} animate={{y:0,opacity:1}} onClick={(event) => event.stopPropagation()} className="w-full max-w-md rounded-t-[30px] bg-white p-6 shadow-2xl dark:bg-surface-900 sm:rounded-[30px]">
+      <div className="flex items-center justify-between"><h2 className="text-lg font-black text-red-700 dark:text-red-400">حذف الحساب نهائياً</h2><button disabled={deleting} onClick={() => setDeleteOpen(false)} className="rounded-xl p-2 hover:bg-surface-100 dark:hover:bg-surface-800"><X size={19}/></button></div>
+      <p className="mt-3 text-sm leading-6 text-surface-600 dark:text-surface-300">لا يمكن التراجع عن هذه العملية. أدخل كلمة المرور، ثم اكتب <strong>حذف حسابي</strong> للتأكيد. حسابات Google يمكنها ترك حقل كلمة المرور فارغاً.</p>
+      <div className="mt-4 space-y-3"><input type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} className="input-field" placeholder="كلمة المرور الحالية" autoComplete="current-password"/><input value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} className="input-field" placeholder="اكتب: حذف حسابي"/></div>
+      <button disabled={deleting || deleteConfirmation.trim() !== 'حذف حسابي'} onClick={deleteAccount} className="mt-4 h-12 w-full rounded-2xl bg-red-600 font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">{deleting ? 'جاري حذف الحساب…' : 'حذف الحساب والبيانات'}</button>
     </motion.div></div>}
   </div>;
 }

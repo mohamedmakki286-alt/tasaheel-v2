@@ -740,7 +740,7 @@ export function LandingPage() {
                 <Mail size={28} className="text-accent-400" />
               </div>
               <h3 className="font-bold text-white mb-2">{t('landing.contact.email')}</h3>
-              <p className="text-surface-400 text-sm" dir="ltr">info@salaba.sa</p>
+              <p className="text-surface-400 text-sm" dir="ltr">info@salabaa.com</p>
             </div>
             <div className="text-center group card-hover bg-surface-800/30 backdrop-blur-sm border border-surface-700/40 rounded-2xl p-6 lg:p-8"
               style={{ animation: 'slide-up 0.5s ease-out 0.3s forwards', opacity: 0 }}>
@@ -802,16 +802,16 @@ export function LandingPage() {
             <div>
               <h4 className="text-white font-bold text-sm mb-3">{t('landing.footer.quickLinks')}</h4>
               <div className="space-y-2">
-                <a href="#" className="block text-surface-500 text-sm hover:text-accent-400 transition-colors">{t('landing.footer.privacy')}</a>
-                <a href="#" className="block text-surface-500 text-sm hover:text-accent-400 transition-colors">{t('landing.footer.terms')}</a>
-                <a href="#" className="block text-surface-500 text-sm hover:text-accent-400 transition-colors">{t('landing.footer.faq')}</a>
+                <a href="/privacy" className="block text-surface-500 text-sm hover:text-accent-400 transition-colors">{t('landing.footer.privacy')}</a>
+                <a href="/terms" className="block text-surface-500 text-sm hover:text-accent-400 transition-colors">{t('landing.footer.terms')}</a>
+                <a href="/support" className="block text-surface-500 text-sm hover:text-accent-400 transition-colors">{t('landing.footer.faq')}</a>
               </div>
             </div>
             <div>
               <h4 className="text-white font-bold text-sm mb-3">{t('landing.footer.contact')}</h4>
               <div className="space-y-2 text-surface-500 text-sm">
                 <p>📞 0575903086</p>
-                <p>✉️ info@salaba.sa</p>
+                <p>✉️ info@salabaa.com</p>
                 <p>📍 {t('landing.contact.saudiArabia')}</p>
               </div>
             </div>

@@ -16,6 +16,7 @@ import { assignTechnician, getTechnicians, unassignTechnician } from '../api/tec
 import { REQUEST_STATUS_COLORS, UPDATABLE_STATUSES } from '../utils/constants';
 import { formatCurrency, formatDateTime, formatPhone, timeAgo } from '../utils/formatters';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
+import { googleMapsDirectionsUrl, openExternalUrl } from '../utils/externalNavigation';
 import QuoteForm from '../components/QuoteForm';
 import InspectionReportForm from '../components/InspectionReportForm';
 import InvoiceForm from '../components/InvoiceForm';
@@ -356,7 +357,7 @@ export default function RequestDetailPage() {
               <div className="flex items-center gap-3"><CalendarClock size={16} className="text-surface-400" /><span>{formatDateTime(request.createdAt)}</span></div>
               <div className="flex items-center gap-3"><MapPin size={16} className="text-surface-400" /><span>{request.city || 'الموقع غير محدد'}</span></div>
             </div>
-            {request.locationLat && request.locationLng && <a href={`https://www.google.com/maps?q=${request.locationLat},${request.locationLng}`} target="_blank" rel="noreferrer" className="btn-secondary mt-4 flex w-full justify-center gap-2"><MapPin size={15} /> فتح الخريطة</a>}
+            {request.locationLat != null && request.locationLng != null && request.locationLat !== 0 && request.locationLng !== 0 && <button type="button" onClick={() => void openExternalUrl(googleMapsDirectionsUrl(request.locationLat!, request.locationLng!))} className="btn-secondary mt-4 flex w-full justify-center gap-2"><MapPin size={15} /> فتح الخريطة</button>}
           </section>
         </aside>
       </div>

@@ -2,7 +2,6 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
 import { initTheme } from './stores/themeStore';
 import { useBackButton } from './hooks/useBackButton';
@@ -31,6 +30,10 @@ const InvoicesHistoryPage = lazy(() => import('./pages/InvoicesHistoryPage'));
 const CarHistoryPage = lazy(() => import('./pages/CarHistoryPage'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
+const AccountDeletionPage = lazy(() => import('./pages/AccountDeletionPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const PublicSupportPage = lazy(() => import('./pages/PublicSupportPage'));
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -46,8 +49,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
 function preloadCommonRoutes() {
   void Promise.allSettled([
     import('./pages/HomePage'),
@@ -90,7 +91,6 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <GoogleOAuthProvider clientId={googleClientId || ''}>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <BackButtonHandler />
@@ -111,6 +111,10 @@ export default function App() {
             {/* Auth-only routes */}
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
             <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+            <Route path="/account-deletion" element={<AccountDeletionPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/support" element={<PublicSupportPage />} />
 
             {/* Protected routes - auth screen if not logged in */}
             <Route path="/vehicles" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
@@ -155,7 +159,7 @@ export default function App() {
             <Route path="/account" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
               <Route index element={<SettingsPage />} />
             </Route>
-            <Route path="/support" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
+            <Route path="/account/support" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
               <Route index element={<SupportPage />} />
             </Route>
 
@@ -168,7 +172,6 @@ export default function App() {
         </AuthInit>
       </BrowserRouter>
     </QueryClientProvider>
-    </GoogleOAuthProvider>
     </ErrorBoundary>
   );
 }

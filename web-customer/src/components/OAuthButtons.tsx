@@ -1,9 +1,18 @@
 import { useTranslation } from 'react-i18next';
+import { Capacitor } from '@capacitor/core';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 export default function OAuthButtons() {
   const { t } = useTranslation();
+
+  // Apple requires an equivalent privacy-preserving login option when a native
+  // iOS app exposes a third-party social login. Until Sign in with Apple is
+  // configured, keep the existing email/password flow and hide Google on iOS.
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+    return null;
+  }
+
   const handleGoogleLogin = () => {
     const redirectUri = window.location.origin;
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent('email profile openid')}`;

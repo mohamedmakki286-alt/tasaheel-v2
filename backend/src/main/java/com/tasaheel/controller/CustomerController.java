@@ -78,6 +78,15 @@ public class CustomerController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/account")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @Valid @RequestBody DeleteAccountRequest request) {
+        customerService.deleteAccount(user.getUserId(), request.getCurrentPassword(), request.getConfirmation());
+        return ResponseEntity.ok(ApiResponse.success("تم حذف الحساب والبيانات الشخصية", null));
+    }
+
     @GetMapping("/cars/{carId}/history")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<List<CarHistoryDTO>>> getCarHistory(

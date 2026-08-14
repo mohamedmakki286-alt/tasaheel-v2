@@ -12,11 +12,13 @@ export default function LoginPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const { theme, toggle } = useThemeStore();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'login' | 'forgot' | 'sent'>('login');
+  const [mode, setMode] = useState<'login' | 'forgot' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   if (isAuthenticated) return <Navigate to="/" replace />;
 
@@ -46,8 +48,28 @@ export default function LoginPage() {
     try {
       const r = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/password/forgot`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim() }) });
       if (!r.ok) throw new Error();
-      setMode('sent');
-    } catch { toast.error('تعذر إرسال رابط الاسترجاع'); }
+      setMode('reset');
+      toast.success('تم إرسال رمز الاسترجاع إلى بريدك');
+    } catch { toast.error('تعذر إرسال رمز الاسترجاع'); }
+    finally { setLoading(false); }
+  };
+
+  const handleReset = async () => {
+    if (!/^\d{6}$/.test(resetCode.trim())) return toast.error('أدخل رمز التحقق المكوّن من 6 أرقام');
+    if (newPassword.length < 8) return toast.error('كلمة المرور يجب ألا تقل عن 8 أحرف');
+    setLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/password/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetCode.trim(), newPassword }),
+      });
+      if (!response.ok) throw new Error();
+      toast.success('تم تغيير كلمة المرور بنجاح');
+      setMode('login');
+      setResetCode('');
+      setNewPassword('');
+    } catch { toast.error('الرمز غير صحيح أو منتهي الصلاحية'); }
     finally { setLoading(false); }
   };
 
@@ -74,8 +96,8 @@ export default function LoginPage() {
             </form>
             <p className="mt-6 text-center text-sm text-surface-500">لإنشاء حساب ورشة جديد تواصل مع إدارة تساهيل.</p>
           </>}
-          {mode === 'forgot' && <><div className="mb-7"><h1 className="text-3xl font-black text-surface-900 dark:text-white">استرجاع كلمة المرور</h1><p className="mt-2 text-surface-500">سنرسل رابطاً آمناً إلى البريد المسجل.</p></div><div className="space-y-5"><label className="label">البريد الإلكتروني<div className="relative mt-1.5"><Mail size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400"/><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="workshop@example.com" dir="ltr" className="input-field pr-10 text-left"/></div></label><button onClick={handleForgot} disabled={loading} className="btn-primary w-full">{loading?'جاري الإرسال…':'إرسال رابط الاسترجاع'}</button><button onClick={()=>setMode('login')} className="w-full text-sm font-bold text-surface-500">العودة لتسجيل الدخول</button></div></>}
-          {mode === 'sent' && <div className="text-center"><span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-500"><Mail size={30}/></span><h1 className="mt-5 text-2xl font-black text-surface-900 dark:text-white">راجع بريدك الإلكتروني</h1><p className="mt-2 text-surface-500">إذا كان البريد مسجلاً ستصلك رسالة تحتوي رابطاً آمناً لتعيين كلمة مرور جديدة.</p><button onClick={()=>setMode('login')} className="btn-primary mt-6 w-full">العودة لتسجيل الدخول</button></div>}
+          {mode === 'forgot' && <><div className="mb-7"><h1 className="text-3xl font-black text-surface-900 dark:text-white">استرجاع كلمة المرور</h1><p className="mt-2 text-surface-500">سنرسل رمز تحقق إلى البريد المسجل.</p></div><div className="space-y-5"><label className="label">البريد الإلكتروني<div className="relative mt-1.5"><Mail size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400"/><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="workshop@example.com" dir="ltr" className="input-field pr-10 text-left"/></div></label><button onClick={handleForgot} disabled={loading} className="btn-primary w-full">{loading?'جاري الإرسال…':'إرسال رمز التحقق'}</button><button onClick={()=>setMode('login')} className="w-full text-sm font-bold text-surface-500">العودة لتسجيل الدخول</button></div></>}
+          {mode === 'reset' && <><div className="mb-7"><h1 className="text-3xl font-black text-surface-900 dark:text-white">تعيين كلمة مرور جديدة</h1><p className="mt-2 text-surface-500">أدخل الرمز المرسل إلى بريدك وكلمة المرور الجديدة.</p></div><div className="space-y-5"><label className="label">رمز التحقق<input inputMode="numeric" maxLength={6} value={resetCode} onChange={e=>setResetCode(e.target.value.replace(/\D/g, ''))} placeholder="000000" dir="ltr" className="input-field mt-1.5 text-center tracking-[0.4em]"/></label><label className="label">كلمة المرور الجديدة<input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="••••••••" className="input-field mt-1.5" autoComplete="new-password"/></label><button onClick={handleReset} disabled={loading} className="btn-primary w-full">{loading?'جاري الحفظ…':'حفظ كلمة المرور'}</button><button onClick={()=>setMode('login')} className="w-full text-sm font-bold text-surface-500">العودة لتسجيل الدخول</button></div></>}
         </div>
       </main>
     </div>

@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { AuthResponse, LoginPayload, RegisterPayload, UpdateProfilePayload, Workshop } from '../types';
+import type { AuthResponse, LoginPayload, UpdateProfilePayload, Workshop } from '../types';
 import i18n from '../i18n/i18n';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -56,22 +56,6 @@ export async function loginAsWorkshop(payload: LoginPayload): Promise<AuthRespon
     refreshToken: resp.refreshToken,
     workshop: mapWorkshopData(resp),
   };
-}
-
-export async function register(payload: RegisterPayload): Promise<AuthResponse> {
-  const formData = new FormData();
-  const workshopData: Record<string, any> = {
-    name: payload.name, ownerName: payload.ownerName, email: payload.email, password: payload.password,
-    address: payload.address, city: payload.city, workshopType: payload.workshopType,
-    services: Array.isArray(payload.services) ? payload.services.join(',') : '',
-  };
-  if (payload.phone) workshopData.phone = payload.phone;
-  formData.append('workshop', new Blob([JSON.stringify(workshopData)], { type: 'application/json' }));
-  if (payload.commercialRegistration) formData.append('commercialRegistration', payload.commercialRegistration);
-  if (payload.municipalityLicense) formData.append('municipalityLicense', payload.municipalityLicense);
-  const response = await apiClient.post('/auth/register/workshop', formData, { headers: { 'Content-Type': undefined } });
-  const resp = response.data;
-  return { token: resp.token, refreshToken: resp.refreshToken, workshop: mapWorkshopData({ ...resp, services: Array.isArray(payload.services) ? payload.services.join(',') : '' }) };
 }
 
 export async function getProfile(): Promise<Workshop> {

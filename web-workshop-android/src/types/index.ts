@@ -255,20 +255,6 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface RegisterPayload {
-  name: string;
-  ownerName: string;
-  phone: string;
-  email?: string;
-  password: string;
-  address: string;
-  city: string;
-  workshopType: WorkshopType;
-  services: string[];
-  commercialRegistration?: File;
-  municipalityLicense?: File;
-}
-
 export interface UpdateProfilePayload {
   name?: string;
   ownerName?: string;

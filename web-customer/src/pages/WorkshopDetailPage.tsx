@@ -10,6 +10,7 @@ import {
 import { workshopsApi } from '../api/workshops.api';
 import { useState } from 'react';
 import { getWorkshopOpenStatus } from '../utils/workingHours';
+import { googleMapsDirectionsUrl, openExternalUrl } from '../utils/externalNavigation';
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const } }) };
 
@@ -167,13 +168,13 @@ export function WorkshopDetailPage() {
               <span className="text-[10px] font-semibold text-surface-600 dark:text-surface-300">{t('pages.workshopDetail.whatsapp')}</span>
             </a>
           )}
-          {workshop.latitude && workshop.longitude && (
-            <a href={`https://www.google.com/maps/dir/?api=1&destination=${workshop.latitude},${workshop.longitude}`} target="_blank" rel="noopener" className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-surface-50 dark:bg-surface-800/60 border border-surface-200/60 dark:border-surface-700/30 hover:border-accent-500/30 transition-colors">
+          {workshop.latitude != null && workshop.longitude != null && workshop.latitude !== 0 && workshop.longitude !== 0 && (
+            <button type="button" onClick={() => void openExternalUrl(googleMapsDirectionsUrl(workshop.latitude!, workshop.longitude!))} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-surface-50 dark:bg-surface-800/60 border border-surface-200/60 dark:border-surface-700/30 hover:border-accent-500/30 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
                 <MapPin size={18} className="text-blue-500" />
               </div>
               <span className="text-[10px] font-semibold text-surface-600 dark:text-surface-300">{t('pages.workshopDetail.directions')}</span>
-            </a>
+            </button>
           )}
           <button onClick={handleRequestService} className="flex min-h-[84px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-brand bg-brand p-3 text-white shadow-md shadow-brand/15 transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
@@ -362,15 +363,14 @@ export function WorkshopDetailPage() {
               />
             </div>
             <p className="text-sm text-surface-500 dark:text-surface-400">{workshop.city}{workshop.address ? ` - ${workshop.address}` : ''}</p>
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${workshop.latitude},${workshop.longitude}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => void openExternalUrl(googleMapsDirectionsUrl(workshop.latitude!, workshop.longitude!))}
               className="btn-secondary w-full flex items-center justify-center gap-2 py-2.5 text-sm"
             >
               <ExternalLink size={16} />
               {t('pages.workshopDetail.openInMaps')}
-            </a>
+            </button>
           </div>
         </motion.div>
       )}

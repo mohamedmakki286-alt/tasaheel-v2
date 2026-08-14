@@ -1,6 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
 import LoginPage from './pages/LoginPage';
 import AdminLayout from './layouts/AdminLayout';
@@ -8,7 +7,6 @@ import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
 import AppErrorBoundary from './components/AppErrorBoundary';
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CustomersPage = lazy(() => import('./pages/CustomersPage'));
 const CustomerDetailPage = lazy(() => import('./pages/CustomerDetailPage'));
@@ -70,7 +68,6 @@ function AppRoutes() {
     return null;
   }
   return (
-    <GoogleOAuthProvider clientId={googleClientId || ''}>
     <AuthInit>
     <AppErrorBoundary resetKey={location.pathname}>
     <Suspense fallback={<PageLoader />}>
@@ -106,7 +103,6 @@ function AppRoutes() {
     </Suspense>
     </AppErrorBoundary>
     </AuthInit>
-    </GoogleOAuthProvider>
   );
 }
 

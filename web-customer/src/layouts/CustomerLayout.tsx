@@ -5,7 +5,7 @@ import BottomNav from '../components/BottomNav';
 import AIAssistant from '../components/AIAssistant';
 
 const PAGE_TITLES: Record<string, string> = {
-  '/support': 'الدعم والمساعدة',
+  '/account/support': 'الدعم والمساعدة',
   '/vehicles': 'سياراتي',
   '/orders': 'طلباتي',
   '/new-request': 'طلب جديد',

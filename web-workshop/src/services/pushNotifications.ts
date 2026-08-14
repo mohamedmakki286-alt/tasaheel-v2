@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { PushNotifications, type Token } from '@capacitor/push-notifications';
+import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import client from '../api/client';
 import { playNotificationSound } from './notificationSound';
 
@@ -21,7 +21,7 @@ async function configureNotificationChannel() {
     vibration: true,
   };
   await Promise.all([
-    PushNotifications.createChannel(channel),
+    FirebaseMessaging.createChannel(channel),
     LocalNotifications.createChannel(channel),
   ]);
 }
@@ -51,14 +51,12 @@ export async function registerPushNotifications(
     try {
       if (!listenersReady) {
         listenersReady = true;
-        await PushNotifications.addListener('registration', (token: Token) => {
-          sendTokenToBackend(token.value).catch(() => {});
+        await FirebaseMessaging.addListener('tokenReceived', (event) => {
+          sendTokenToBackend(event.token).catch(() => {});
         });
-        await PushNotifications.addListener('registrationError', (error) => {
-          console.error('Push registration error:', error);
-        });
-        await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-          const data = notification.data || {};
+        await FirebaseMessaging.addListener('notificationReceived', (event) => {
+          const notification = event.notification;
+          const data = (notification.data || {}) as Record<string, any>;
           const eventType = String(data.eventType || data.type || 'STATUS_UPDATED');
           const requestId = data.requestId ? String(data.requestId) : undefined;
           if (!shouldDisplay(eventType, requestId)) return;
@@ -75,22 +73,23 @@ export async function registerPushNotifications(
             }],
           }).catch((error) => console.error('Failed to display notification:', error));
         });
-        await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-          openNotification(action.notification.data);
+        await FirebaseMessaging.addListener('notificationActionPerformed', (action) => {
+          openNotification(action.notification.data as Record<string, any> | undefined);
         });
         await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
           openNotification(action.notification.extra);
         });
       }
 
-      let permission = await PushNotifications.checkPermissions();
+      let permission = await FirebaseMessaging.checkPermissions();
       if (permission.receive !== 'granted') {
-        permission = await PushNotifications.requestPermissions();
+        permission = await FirebaseMessaging.requestPermissions();
       }
       if (permission.receive !== 'granted') return;
 
       await configureNotificationChannel();
-      await PushNotifications.register();
+      const token = await FirebaseMessaging.getToken();
+      await sendTokenToBackend(token.token);
     } catch (error) {
       registrationPromise = null;
       console.error('Failed to register push notifications:', error);
@@ -114,6 +113,6 @@ async function sendTokenToBackend(fcmToken: string) {
 
 export async function unregisterPushNotifications() {
   if (!Capacitor.isNativePlatform()) return;
-  await PushNotifications.unregister().catch(() => {});
+  await FirebaseMessaging.deleteToken().catch(() => {});
   registrationPromise = null;
 }

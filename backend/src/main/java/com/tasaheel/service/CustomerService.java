@@ -8,9 +8,12 @@ import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.repository.CustomerCarRepository;
 import com.tasaheel.repository.CustomerRepository;
+import com.tasaheel.repository.OAuthAccountRepository;
+import com.tasaheel.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,15 +24,18 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final CustomerCarRepository customerCarRepository;
+    private final OAuthAccountRepository oauthAccountRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public CustomerDTO getProfile(Long id) {
-        Customer customer = customerRepository.findById(id)
+        Customer customer = customerRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer", id));
         return toCustomerDTO(customer);
     }
 
     public CustomerDTO updateProfile(Long id, CustomerDTO dto) {
-        Customer customer = customerRepository.findById(id)
+        Customer customer = customerRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer", id));
 
         if (dto.getName() != null) customer.setName(dto.getName());
@@ -93,6 +99,43 @@ public class CustomerService {
         CustomerCar car = customerCarRepository.findById(carId)
                 .orElseThrow(() -> new ResourceNotFoundException("Car", carId));
         customerCarRepository.delete(car);
+    }
+
+    @Transactional
+    public void deleteAccount(Long customerId, String currentPassword, String confirmation) {
+        if (!"DELETE".equals(confirmation)) {
+            throw new BadRequestException("Account deletion confirmation is required");
+        }
+        Customer customer = customerRepository.findByIdAndIsDeletedFalse(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer", customerId));
+
+        boolean oauthAccount = oauthAccountRepository.existsByUserTypeAndUserId("customer", customerId);
+        if (!oauthAccount && (currentPassword == null ||
+                !passwordEncoder.matches(currentPassword, customer.getPassword()))) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+
+        customerCarRepository.findByCustomerId(customerId).forEach(car -> {
+            car.setPlateNumber(null);
+            car.setColor(null);
+            car.setNextOilChangeDate(null);
+            car.setNextOilChangeMileage(null);
+            car.setNextAppointmentDate(null);
+        });
+
+        customer.setName("Deleted customer " + customerId);
+        customer.setEmail("deleted-" + customerId + "@deleted.tasaheel.invalid");
+        customer.setPhone(null);
+        customer.setCity(null);
+        customer.setAvatar(null);
+        customer.setFcmToken(null);
+        customer.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+        customer.setIsActive(false);
+        customer.setIsDeleted(true);
+        customerRepository.save(customer);
+
+        oauthAccountRepository.deleteByUserTypeAndUserId("customer", customerId);
+        refreshTokenRepository.revokeAllByUserIdAndRole(customerId, "customer");
     }
 
     private CustomerDTO toCustomerDTO(Customer c) {

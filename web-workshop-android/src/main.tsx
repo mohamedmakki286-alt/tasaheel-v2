@@ -4,16 +4,23 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import * as Sentry from '@sentry/react';
+import { Capacitor } from '@capacitor/core';
 import './i18n/i18n';
 import i18n from './i18n/i18n';
 import App from './App';
 import './index.css';
 
+if (Capacitor.isNativePlatform()) {
+  document.documentElement.classList.add('native-app', `native-${Capacitor.getPlatform()}`);
+}
+
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || '',
   environment: import.meta.env.MODE,
   integrations: [Sentry.browserTracingIntegration()],
-  tracesSampleRate: 0.2,
+  // Keep native collection limited to crash diagnostics. Performance tracing
+  // remains available for the web dashboard without expanding mobile labels.
+  tracesSampleRate: Capacitor.isNativePlatform() ? 0 : 0.05,
 });
 
 const queryClient = new QueryClient({
@@ -21,7 +28,9 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       staleTime: 30000,
+      gcTime: 10 * 60_000,
     },
   },
 });
