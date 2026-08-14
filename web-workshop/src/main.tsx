@@ -18,7 +18,7 @@ Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || '',
   environment: import.meta.env.MODE,
   integrations: [Sentry.browserTracingIntegration()],
-  tracesSampleRate: 0.2,
+  tracesSampleRate: 0.05,
 });
 
 const queryClient = new QueryClient({
@@ -26,7 +26,9 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       staleTime: 30000,
+      gcTime: 10 * 60_000,
     },
   },
 });

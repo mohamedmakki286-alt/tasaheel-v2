@@ -100,6 +100,8 @@ export default function ChatSection({ requestId, workshopId, workshopName }: Cha
     queryKey: ['chat-room', requestId],
     queryFn: () => getOrCreateRoom(requestId, Number(userId), workshopId ? Number(workshopId) : undefined),
     enabled: !!userId,
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
   });
 
   useEffect(() => {

@@ -33,6 +33,16 @@ const TestDataResetPage = lazy(() => import('./pages/TestDataResetPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
 const SetPasswordPage = lazy(() => import('./pages/SetPasswordPage'));
 
+function preloadCommonRoutes() {
+  void Promise.allSettled([
+    import('./pages/DashboardPage'),
+    import('./pages/CustomersPage'),
+    import('./pages/WorkshopsPage'),
+    import('./pages/RequestsPage'),
+    import('./pages/SupportPage'),
+  ]);
+}
+
 function PageLoader() {
   return (
     <div className="min-h-[45vh] grid place-items-center" role="status" aria-label="جاري تحميل الصفحة">
@@ -45,6 +55,10 @@ function AuthInit({ children }: { children: React.ReactNode }) {
   const isLoading = useAuthStore((s) => s.isLoading);
   const setLoading = useAuthStore((s) => s.setLoading);
   useEffect(() => { setLoading(false); }, [setLoading]);
+  useEffect(() => {
+    const preloadTimer = window.setTimeout(preloadCommonRoutes, 1000);
+    return () => window.clearTimeout(preloadTimer);
+  }, []);
   if (isLoading) return null;
   return <>{children}</>;
 }

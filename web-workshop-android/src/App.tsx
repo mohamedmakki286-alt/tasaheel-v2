@@ -32,6 +32,17 @@ const GuestRoute = lazy(() => import('./components/guards/GuestRoute'));
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+function preloadCommonRoutes() {
+  void Promise.allSettled([
+    import('./pages/DashboardPage'),
+    import('./pages/RequestsPage'),
+    import('./pages/RequestDetailPage'),
+    import('./pages/ChatsPage'),
+    import('./pages/ProfilePage'),
+    import('./pages/ServicesPage'),
+  ]);
+}
+
 function PageLoader() {
   return (
     <div className="min-h-screen bg-surface-50 flex items-center justify-center">
@@ -41,15 +52,21 @@ function PageLoader() {
 }
 
 function AuthInit({ children }: { children: React.ReactNode }) {
-  const [showOpening, setShowOpening] = React.useState(true);
+  const [showOpening, setShowOpening] = React.useState(() => sessionStorage.getItem('tasaheel-workshop-opening-seen') !== '1');
   const isLoading = useAuthStore((s) => s.isLoading);
   const setLoading = useAuthStore((s) => s.setLoading);
   useEffect(() => {
     setLoading(false);
   }, [setLoading]);
   useEffect(() => {
-    const openingTimer = window.setTimeout(() => setShowOpening(false), 3000);
+    if (!showOpening) return;
+    sessionStorage.setItem('tasaheel-workshop-opening-seen', '1');
+    const openingTimer = window.setTimeout(() => setShowOpening(false), 850);
     return () => window.clearTimeout(openingTimer);
+  }, [showOpening]);
+  useEffect(() => {
+    const preloadTimer = window.setTimeout(preloadCommonRoutes, 1000);
+    return () => window.clearTimeout(preloadTimer);
   }, []);
   if (showOpening || isLoading) return <LoadingScreen />;
   return <>{children}</>;

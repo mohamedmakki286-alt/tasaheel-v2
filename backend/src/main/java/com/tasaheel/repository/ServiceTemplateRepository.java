@@ -15,7 +15,7 @@ public interface ServiceTemplateRepository extends JpaRepository<ServiceTemplate
     @Query("SELECT t FROM ServiceTemplate t WHERE t.category.id = :categoryId AND t.isActive = true ORDER BY t.id ASC")
     List<ServiceTemplate> findActiveByCategoryId(@Param("categoryId") Long categoryId);
 
-    @Query("SELECT t FROM ServiceTemplate t WHERE t.isActive = true ORDER BY t.category.displayOrder ASC, t.id ASC")
+    @Query("SELECT t FROM ServiceTemplate t JOIN FETCH t.category c WHERE t.isActive = true AND c.isActive = true ORDER BY c.displayOrder ASC, t.id ASC")
     List<ServiceTemplate> findAllActive();
 
     @Query("SELECT t FROM ServiceTemplate t WHERE t.isActive = true AND (t.name LIKE %:search% OR t.nameEn LIKE %:search%)")

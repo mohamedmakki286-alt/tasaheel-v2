@@ -24,7 +24,11 @@ import { REQUEST_STATUSES } from '../utils/constants';
 import Modal from '../components/Modal';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
-import { exportFinancialDocument } from '../utils/exportPdf';
+
+const exportFinancialDocument = async (...args: Parameters<typeof import('../utils/exportPdf')['exportFinancialDocument']>) => {
+  const pdf = await import('../utils/exportPdf');
+  return pdf.exportFinancialDocument(...args);
+};
 
 const TABS = ['quotes', 'inspection', 'invoice', 'chat'] as const;
 const TAB_ICONS: Record<string, React.ReactNode> = {

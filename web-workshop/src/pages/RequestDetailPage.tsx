@@ -22,7 +22,8 @@ import InvoiceForm from '../components/InvoiceForm';
 import StatusUpdateModal from '../components/StatusUpdateModal';
 import Avatar from '../components/Avatar';
 import Skeleton from '../components/Skeleton';
-import { exportInspectionDocument, exportInvoiceDocument, exportTableDocument } from '../utils/brandedDocuments';
+
+const brandedDocuments = () => import('../utils/brandedDocuments');
 
 type WorkDocument = 'quote' | 'inspection' | 'invoice';
 
@@ -271,7 +272,7 @@ export default function RequestDetailPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><span className="text-sm text-surface-500">قيمة العرض</span><strong>{formatCurrency(latestQuote.price)}</strong></div>
                   {latestQuote.notes && <p className="text-sm leading-6 text-surface-500">{latestQuote.notes}</p>}
-                  <button onClick={() => exportTableDocument('عرض سعر', `الطلب #${request.id} • ${latestQuote.workshopName || ''}`, ['الخدمة','قيمة العرض','المدة المقدرة','الضمان','ملاحظات'], [[request.serviceTypes?.map((service:any) => service.name).filter(Boolean).join('، ') || 'خدمة صيانة', formatCurrency(latestQuote.price), `${latestQuote.estimatedDays || '—'} يوم`, `${latestQuote.warrantyMonths || 0} شهر`, latestQuote.notes || '—']], `عرض-سعر-تساهيل-${request.id}`)} className="btn-secondary w-full justify-center"><Download size={15}/> تنزيل عرض السعر PDF</button>
+                  <button onClick={() => void brandedDocuments().then(({ exportTableDocument }) => exportTableDocument('عرض سعر', `الطلب #${request.id} • ${latestQuote.workshopName || ''}`, ['الخدمة','قيمة العرض','المدة المقدرة','الضمان','ملاحظات'], [[request.serviceTypes?.map((service:any) => service.name).filter(Boolean).join('، ') || 'خدمة صيانة', formatCurrency(latestQuote.price), `${latestQuote.estimatedDays || '—'} يوم`, `${latestQuote.warrantyMonths || 0} شهر`, latestQuote.notes || '—']], `عرض-سعر-تساهيل-${request.id}`))} className="btn-secondary w-full justify-center"><Download size={15}/> تنزيل عرض السعر PDF</button>
                   {request.status === 'pending' && <button onClick={() => setShowQuoteForm(true)} className="btn-primary w-full justify-center">إرسال عرض جديد</button>}
                 </div>
               ) : <button onClick={() => setShowQuoteForm(true)} className="btn-primary w-full justify-center"><Send size={16} /> إنشاء وإرسال العرض</button>}
@@ -289,7 +290,7 @@ export default function RequestDetailPage() {
                   {report.notes && <p className="text-sm leading-6 text-surface-500">{report.notes}</p>}
                   <div className="grid grid-cols-2 gap-2">
                     <button onClick={() => setShowInspectionForm(true)} className="btn-secondary justify-center"><Pencil size={15} /> عرض وتعديل</button>
-                    <button onClick={() => exportInspectionDocument(report, { requestId: request.id, workshopName: latestQuote?.workshopName || invoice?.workshopName, customerName, vehicle: carName })} className="btn-secondary justify-center"><Download size={15} /> PDF</button>
+                    <button onClick={() => void brandedDocuments().then(({ exportInspectionDocument }) => exportInspectionDocument(report, { requestId: request.id, workshopName: latestQuote?.workshopName || invoice?.workshopName, customerName, vehicle: carName }))} className="btn-secondary justify-center"><Download size={15} /> PDF</button>
                   </div>
                 </div>
               ) : (
@@ -310,7 +311,7 @@ export default function RequestDetailPage() {
                     {(invoice.status === 'pending_approval' || invoice.status === 'rejected') && <button onClick={() => setShowInvoiceForm(true)} className="btn-primary justify-center"><Pencil size={15} /> تعديل</button>}
                     {(invoice.status === 'pending_approval' || invoice.status === 'rejected') && <button onClick={async () => { if (window.confirm('هل تريد حذف الفاتورة؟')) { try { await deleteInvoice(request.id); toast.success('تم حذف الفاتورة'); refreshRequest(); } catch { toast.error('فشل حذف الفاتورة'); } } }} className="btn-secondary justify-center text-danger-500"><Trash2 size={15} /> حذف</button>}
                   </div>
-                  <button onClick={() => exportInvoiceDocument(invoice, { requestId: request.id, workshopName: invoice.workshopName || latestQuote?.workshopName, customerName, vehicle: carName })} className="btn-secondary w-full justify-center"><Download size={15} /> تنزيل الفاتورة PDF</button>
+                  <button onClick={() => void brandedDocuments().then(({ exportInvoiceDocument }) => exportInvoiceDocument(invoice, { requestId: request.id, workshopName: invoice.workshopName || latestQuote?.workshopName, customerName, vehicle: carName }))} className="btn-secondary w-full justify-center"><Download size={15} /> تنزيل الفاتورة PDF</button>
                 </div>
               ) : (
                 <button onClick={() => setShowInvoiceForm(true)} disabled={!['awaiting_payment', 'completed'].includes(request.status)} title={!['awaiting_payment', 'completed'].includes(request.status) ? 'يجب إكمال العمل واعتماد تقرير الفحص أولاً' : undefined} className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"><Receipt size={16} /> إنشاء الفاتورة</button>

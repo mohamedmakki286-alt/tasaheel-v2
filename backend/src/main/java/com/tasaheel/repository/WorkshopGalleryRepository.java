@@ -8,6 +8,7 @@ import java.util.List;
 @Repository
 public interface WorkshopGalleryRepository extends JpaRepository<WorkshopGallery, Long> {
     List<WorkshopGallery> findByWorkshopIdAndIsDeletedFalseOrderByDisplayOrderAsc(Long workshopId);
+    List<WorkshopGallery> findByWorkshopIdInAndIsDeletedFalseOrderByWorkshopIdAscDisplayOrderAsc(List<Long> workshopIds);
     List<WorkshopGallery> findByWorkshopIdAndIsDeletedFalseAndIsCoverTrue(Long workshopId);
     void deleteByWorkshopId(Long workshopId);
 }

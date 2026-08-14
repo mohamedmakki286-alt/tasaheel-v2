@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 @RestController
@@ -35,8 +36,22 @@ public class ServiceCatalogController {
     public ResponseEntity<ApiResponse<List<ServiceCatalogDTO>>> getCatalog(
             @RequestParam(required = false) String search) {
         String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
-        List<ServiceCatalogDTO> result = categoryRepository.findByIsActiveTrueOrderByDisplayOrderAsc().stream()
-                .map(category -> toCatalogDTO(category, normalizedSearch))
+        List<ServiceCategory> categories = categoryRepository.findByIsActiveTrueOrderByDisplayOrderAsc();
+        Map<Long, List<ServiceTemplate>> templatesByCategory = templateRepository.findAllActive().stream()
+                .collect(Collectors.groupingBy(template -> template.getCategory().getId()));
+        List<Long> categoryIds = categories.stream().map(ServiceCategory::getId).toList();
+        Map<Long, Long> workshopCounts = categoryIds.isEmpty()
+                ? Collections.emptyMap()
+                : listingRepository.countWorkshopsByCategoryIds(categoryIds).stream()
+                    .collect(Collectors.toMap(
+                            row -> ((Number) row[0]).longValue(),
+                            row -> ((Number) row[1]).longValue()));
+        List<ServiceCatalogDTO> result = categories.stream()
+                .map(category -> toCatalogDTO(
+                        category,
+                        normalizedSearch,
+                        templatesByCategory.getOrDefault(category.getId(), Collections.emptyList()),
+                        workshopCounts.getOrDefault(category.getId(), 0L)))
                 .filter(dto -> normalizedSearch.isBlank()
                         || dto.getCategoryName().toLowerCase(Locale.ROOT).contains(normalizedSearch)
                         || (dto.getCategoryNameEn() != null
@@ -90,8 +105,19 @@ public class ServiceCatalogController {
     }
 
     private ServiceCatalogDTO toCatalogDTO(ServiceCategory category, String search) {
-        List<ServiceTemplateDTO> templates = templateRepository
-                .findByCategory_IdAndIsActiveTrueOrderByIdAsc(category.getId()).stream()
+        return toCatalogDTO(
+                category,
+                search,
+                templateRepository.findByCategory_IdAndIsActiveTrueOrderByIdAsc(category.getId()),
+                listingRepository.countWorkshopsByCategoryId(category.getId()));
+    }
+
+    private ServiceCatalogDTO toCatalogDTO(
+            ServiceCategory category,
+            String search,
+            List<ServiceTemplate> categoryTemplates,
+            long workshopCount) {
+        List<ServiceTemplateDTO> templates = categoryTemplates.stream()
                 .filter(template -> search.isBlank()
                         || template.getName().toLowerCase(Locale.ROOT).contains(search)
                         || (template.getNameEn() != null
@@ -105,8 +131,7 @@ public class ServiceCatalogController {
                 .categoryIcon(category.getIcon())
                 .displayOrder(category.getDisplayOrder())
                 .templates(templates)
-                .workshopCount(Math.toIntExact(
-                        listingRepository.countWorkshopsByCategoryId(category.getId())))
+                .workshopCount(Math.toIntExact(workshopCount))
                 .build();
     }
 

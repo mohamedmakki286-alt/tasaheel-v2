@@ -35,19 +35,46 @@ import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingScreen from './components/guards/LoadingScreen';
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 10 * 60_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+function preloadCommonRoutes() {
+  void Promise.allSettled([
+    import('./pages/HomePage'),
+    import('./pages/BrowseServicesPage'),
+    import('./pages/CarsPage'),
+    import('./pages/MyRequestsPage'),
+    import('./pages/ChatsPage'),
+    import('./pages/SettingsPage'),
+  ]);
+}
+
 function AuthInit({ children }: { children: React.ReactNode }) {
-  const [showOpening, setShowOpening] = useState(true);
+  const [showOpening, setShowOpening] = useState(() => sessionStorage.getItem('tasaheel-customer-opening-seen') !== '1');
   const isLoading = useAuthStore((s) => s.isLoading);
   const setLoading = useAuthStore((s) => s.setLoading);
   useEffect(() => {
     setLoading(false);
   }, [setLoading]);
   useEffect(() => {
-    const openingTimer = window.setTimeout(() => setShowOpening(false), 3000);
+    if (!showOpening) return;
+    sessionStorage.setItem('tasaheel-customer-opening-seen', '1');
+    const openingTimer = window.setTimeout(() => setShowOpening(false), 850);
     return () => window.clearTimeout(openingTimer);
+  }, [showOpening]);
+  useEffect(() => {
+    const preloadTimer = window.setTimeout(preloadCommonRoutes, 1000);
+    return () => window.clearTimeout(preloadTimer);
   }, []);
   if (showOpening || isLoading) return <LoadingScreen />;
   return <>{children}</>;

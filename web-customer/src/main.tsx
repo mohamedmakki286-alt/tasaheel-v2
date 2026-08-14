@@ -14,7 +14,7 @@ Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || '',
   environment: import.meta.env.MODE,
   integrations: [Sentry.browserTracingIntegration()],
-  tracesSampleRate: 0.2,
+  tracesSampleRate: Capacitor.isNativePlatform() ? 0 : 0.05,
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
