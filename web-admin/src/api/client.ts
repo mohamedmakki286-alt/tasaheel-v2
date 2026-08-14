@@ -33,7 +33,17 @@ client.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/refresh' && originalRequest.url !== '/auth/login') {
+    const status = error.response?.status;
+    // Some deployed Spring Security versions answer with 403 when an expired or
+    // otherwise invalid JWT leaves the request unauthenticated. Refresh once for
+    // both statuses; a genuine permission error remains 403 after the single retry.
+    const shouldRefresh = (status === 401 || status === 403)
+      && originalRequest
+      && !originalRequest._retry
+      && originalRequest.url !== '/auth/refresh'
+      && originalRequest.url !== '/auth/login';
+
+    if (shouldRefresh) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -71,8 +81,11 @@ client.interceptors.response.use(
         failedQueue = [];
       }
     }
-    if (error.response?.status === 401) {
+    if (status === 401) {
       useAuthStore.getState().logout();
+    }
+    if (status === 403) {
+      error.message = 'انتهت صلاحية الجلسة أو لا تملك صلاحية تنفيذ هذا الإجراء';
     }
     if (!error.response && (error.code === 'ECONNABORTED' || !error.code)) {
       const cfg = error.config;
