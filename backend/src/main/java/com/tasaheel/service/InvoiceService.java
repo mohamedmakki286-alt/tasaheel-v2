@@ -19,6 +19,8 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -133,6 +135,7 @@ public class InvoiceService {
             existing.setTax(safeTax);
             existing.setTaxPercent(finalTaxPercent);
             existing.setGrandTotal(safeGrandTotal);
+            applyTaxSnapshot(existing, workshop, safeGrandTotal, safeTax, existing.getCreatedAt() != null ? existing.getCreatedAt() : LocalDateTime.now());
             existing.setStatus("pending_approval");
             // Remove old items and add new ones
             existing.getItems().clear();
@@ -160,6 +163,11 @@ public class InvoiceService {
                 .customer(customer)
                 .workshop(workshop)
                 .invoiceNumber(invoiceNumber)
+                .supplierLegalName(workshop.getName())
+                .supplierAddress(workshop.getAddress())
+                .supplierTaxNumber(workshop.getTaxNumber())
+                .supplierCommercialRegistration(workshop.getCommercialRegistration())
+                .zatcaQrPayload(buildZatcaQrPayload(workshop.getName(), workshop.getTaxNumber(), LocalDateTime.now(), safeGrandTotal, safeTax))
                 .partsTotal(safeParts)
                 .laborTotal(safeLabor)
                 .totalAmount(safeTotalAmount)
@@ -201,6 +209,32 @@ public class InvoiceService {
         return BigDecimal.valueOf(taxInclusiveAmount)
                 .divide(BigDecimal.ONE.add(BigDecimal.valueOf(taxPercent).movePointLeft(2)), 2, RoundingMode.HALF_UP)
                 .doubleValue();
+    }
+
+    private void applyTaxSnapshot(Invoice invoice, Workshop workshop, double total, double tax, LocalDateTime issuedAt) {
+        if (invoice.getSupplierLegalName() == null) invoice.setSupplierLegalName(workshop.getName());
+        if (invoice.getSupplierAddress() == null) invoice.setSupplierAddress(workshop.getAddress());
+        if (invoice.getSupplierTaxNumber() == null) invoice.setSupplierTaxNumber(workshop.getTaxNumber());
+        if (invoice.getSupplierCommercialRegistration() == null) invoice.setSupplierCommercialRegistration(workshop.getCommercialRegistration());
+        invoice.setZatcaQrPayload(buildZatcaQrPayload(invoice.getSupplierLegalName(), invoice.getSupplierTaxNumber(), issuedAt, total, tax));
+    }
+
+    private String buildZatcaQrPayload(String supplierName, String taxNumber, LocalDateTime timestamp, double total, double tax) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        writeTlv(output, 1, supplierName);
+        writeTlv(output, 2, taxNumber);
+        writeTlv(output, 3, timestamp.toString());
+        writeTlv(output, 4, String.format(Locale.ROOT, "%.2f", total));
+        writeTlv(output, 5, String.format(Locale.ROOT, "%.2f", tax));
+        return Base64.getEncoder().encodeToString(output.toByteArray());
+    }
+
+    private void writeTlv(ByteArrayOutputStream output, int tag, String value) {
+        byte[] bytes = Objects.toString(value, "").getBytes(StandardCharsets.UTF_8);
+        if (bytes.length > 255) throw new BadRequestException("Tax invoice field is too long for QR encoding");
+        output.write(tag);
+        output.write(bytes.length);
+        output.writeBytes(bytes);
     }
 
     public InvoiceDTO getInvoiceForUser(Long requestId, Long userId, String role) {
@@ -312,6 +346,11 @@ public class InvoiceService {
                 .workshopId(invoice.getWorkshop().getId())
                 .workshopName(invoice.getWorkshop().getName())
                 .invoiceNumber(invoice.getInvoiceNumber())
+                .supplierLegalName(invoice.getSupplierLegalName())
+                .supplierAddress(invoice.getSupplierAddress())
+                .supplierTaxNumber(invoice.getSupplierTaxNumber())
+                .supplierCommercialRegistration(invoice.getSupplierCommercialRegistration())
+                .zatcaQrPayload(invoice.getZatcaQrPayload())
                 .partsTotal(invoice.getPartsTotal())
                 .laborTotal(invoice.getLaborTotal())
                 .totalAmount(invoice.getTotalAmount())

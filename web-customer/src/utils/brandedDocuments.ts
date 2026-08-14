@@ -1,5 +1,6 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]!));
 const sar = (v: unknown) => `${Number(v || 0).toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ر.س`;
@@ -15,8 +16,9 @@ async function download(title: string, subtitle: string, meta: string, body: str
 
 export async function exportInvoicePdf(invoice: any, request: any) {
   const vat = Number(invoice.taxPercent ?? 15), total = Number(invoice.grandTotal || 0), base = Number(invoice.totalAmount ?? total / (1 + vat / 100)), tax = Number(invoice.taxAmount ?? invoice.tax ?? total - base);
+  const qr = invoice.zatcaQrPayload ? await QRCode.toDataURL(invoice.zatcaQrPayload, { width: 150, margin: 1, errorCorrectionLevel: 'M' }) : '';
   const meta = `<div><small>رقم الفاتورة</small><b>${esc(invoice.invoiceNumber || invoice.id)}</b></div><div><small>رقم الطلب</small><b>#${esc(request.id)}</b></div><div><small>تاريخ الإصدار</small><b>${new Date(invoice.createdAt).toLocaleDateString('ar-SA-u-ca-gregory')}</b></div><div><small>الحالة</small><b>${esc(invoice.status)}</b></div>`;
-  const body = `<div class="parties"><div class="party"><b>مقدم الخدمة</b>${esc(invoice.workshopName || 'ورشة تساهيل')}</div><div class="party"><b>العميل والمركبة</b>${esc(request.customerName || 'عميل تساهيل')}<br>${esc([request.carMake, request.carModel, request.carYear].filter(Boolean).join(' ') || '—')}</div></div><h2>تفاصيل البنود</h2><table><thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة شامل الضريبة</th><th>الإجمالي</th></tr></thead><tbody>${rows(invoice.items)}</tbody></table><div class="totals"><div class="r"><span>الإجمالي قبل الضريبة</span><b>${sar(base)}</b></div><div class="r"><span>ضريبة القيمة المضافة (${vat}%)</span><b>${sar(tax)}</b></div><div class="r final"><span>الإجمالي النهائي</span><span>${sar(total)}</span></div></div><div class="note">أسعار البنود شاملة ضريبة القيمة المضافة، وتم استخراج الضريبة من الإجمالي.</div>`;
+  const body = `<div class="parties"><div class="party"><b>مقدم الخدمة</b>${esc(invoice.supplierLegalName || invoice.workshopName || 'ورشة تساهيل')}<br>${esc(invoice.supplierAddress || '')}<br>الرقم الضريبي: ${esc(invoice.supplierTaxNumber || 'غير مسجل')}<br>السجل التجاري: ${esc(invoice.supplierCommercialRegistration || '—')}</div><div class="party"><b>العميل والمركبة</b>${esc(request.customerName || 'عميل تساهيل')}<br>${esc([request.carMake, request.carModel, request.carYear].filter(Boolean).join(' ') || '—')}${qr ? `<br><img src="${qr}" style="width:92px;height:92px;margin-top:8px" alt="QR ضريبي">` : ''}</div></div><h2>تفاصيل البنود</h2><table><thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة شامل الضريبة</th><th>الإجمالي</th></tr></thead><tbody>${rows(invoice.items)}</tbody></table><div class="totals"><div class="r"><span>الإجمالي قبل الضريبة</span><b>${sar(base)}</b></div><div class="r"><span>ضريبة القيمة المضافة (${vat}%)</span><b>${sar(tax)}</b></div><div class="r final"><span>الإجمالي النهائي</span><span>${sar(total)}</span></div></div><div class="note">أسعار البنود شاملة ضريبة القيمة المضافة، وتم استخراج الضريبة من الإجمالي.</div>`;
   await download('فاتورة ضريبية مبسطة', 'فاتورة خدمات صيانة سيارات', meta, body, `فاتورة-تساهيل-${invoice.invoiceNumber || request.id}.pdf`);
 }
 
@@ -24,4 +26,16 @@ export async function exportInspectionPdf(report: any, request: any) {
   const meta = `<div><small>رقم التقرير</small><b>${esc(report.id)}</b></div><div><small>رقم الطلب</small><b>#${esc(request.id)}</b></div><div><small>تاريخ الفحص</small><b>${new Date(report.createdAt).toLocaleDateString('ar-SA-u-ca-gregory')}</b></div><div><small>الأولوية</small><b>${esc(report.priority || 'عادية')}</b></div>`;
   const body = `<div class="parties"><div class="party"><b>الورشة</b>${esc(request.workshopName || 'ورشة تساهيل')}</div><div class="party"><b>المركبة</b>${esc([request.carMake, request.carModel, request.carYear].filter(Boolean).join(' ') || '—')}</div></div>${report.parts?.length ? `<h2>قطع الغيار المقترحة</h2><table><thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${rows(report.parts)}</tbody></table>` : ''}${report.labor?.length ? `<h2>أعمال الصيانة</h2><table><thead><tr><th>العمل</th><th>الساعات</th><th>سعر الساعة</th><th>الإجمالي</th></tr></thead><tbody>${rows(report.labor, 'description')}</tbody></table>` : ''}<h2>ملاحظات الفني</h2><div class="party">${esc(report.notes || 'لا توجد ملاحظات إضافية.')}</div><div class="totals"><div class="r final"><span>التكلفة التقديرية</span><span>${sar(report.grandTotal)}</span></div></div>`;
   await download('تقرير فحص فني', 'نتائج الفحص والتوصيات الفنية', meta, body, `تقرير-فحص-تساهيل-${request.id}.pdf`);
+}
+
+export async function exportCustomerTablePdf(title: string, filename: string, headers: string[], data: unknown[][], summary?: string) {
+  const meta = `<div><small>تاريخ الإصدار</small><b>${new Date().toLocaleString('ar-SA-u-ca-gregory')}</b></div><div><small>عدد السجلات</small><b>${data.length}</b></div>`;
+  const body = `<h2>${esc(title)}</h2><table><thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${data.map(row => `<tr>${row.map(value => `<td>${esc(value)}</td>`).join('')}</tr>`).join('')}</tbody></table>${summary ? `<div class="note">${esc(summary)}</div>` : ''}`;
+  await download(title, 'مستند صادر من حساب العميل', meta, body, `${filename}.pdf`);
+}
+
+export async function exportPaymentReceiptPdf(payment: any, requestId: string | number) {
+  const meta = `<div><small>رقم العملية</small><b>${esc(payment.id || payment.paymentId || '—')}</b></div><div><small>رقم الطلب</small><b>#${esc(requestId)}</b></div><div><small>تاريخ الدفع</small><b>${new Date(payment.paidAt || payment.updatedAt || Date.now()).toLocaleString('ar-SA-u-ca-gregory')}</b></div><div><small>الحالة</small><b>${esc(payment.status || 'completed')}</b></div>`;
+  const body = `<div class="parties"><div class="party"><b>نوع المستند</b>إيصال سداد إلكتروني</div><div class="party"><b>طريقة الدفع</b>${esc(payment.method || payment.paymentMethod || 'دفع إلكتروني')}</div></div><div class="totals"><div class="r final"><span>المبلغ المدفوع</span><span>${sar(payment.total || payment.amount)}</span></div></div><div class="note">هذا الإيصال يثبت نجاح عملية الدفع للطلب المشار إليه، ولا يحل محل الفاتورة الضريبية.</div>`;
+  await download('إيصال دفع', 'تأكيد تحصيل إلكتروني', meta, body, `إيصال-دفع-تساهيل-${requestId}.pdf`);
 }

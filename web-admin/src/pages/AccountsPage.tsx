@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen, ChevronLeft, Search, DollarSign, Building2,
-  TrendingUp, TrendingDown, PieChart
+  TrendingUp, TrendingDown, PieChart, Download
 } from 'lucide-react';
 import { getAccounts, getTrialBalance } from '../api/financial.api';
 import { formatCurrency } from '../utils/formatters';
 import { CardSkeleton } from '../components/Skeleton';
 import clsx from 'clsx';
+import { exportDataToPDF } from '../utils/exportPdf';
 
 const typeIcons: Record<string, React.ReactNode> = {
   ASSET: <DollarSign className="w-4 h-4" />,
@@ -105,13 +106,13 @@ export default function AccountsPage() {
           <h1 className="text-2xl font-bold text-gray-900">{t('pages.accounts.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('pages.accounts.subtitle')}</p>
         </div>
-        <button
+        <div className="flex gap-2"><button onClick={() => exportDataToPDF((showTrialBalance ? (trialBalance || []) : filtered).map((a:any) => ({ الرمز: a.code, الحساب: a.name, النوع: a.type, مدين: a.debit ?? '', دائن: a.credit ?? '', الرصيد: a.balance ?? '' })), showTrialBalance ? 'ميزان-المراجعة' : 'دليل-الحسابات', showTrialBalance ? 'ميزان المراجعة' : 'دليل الحسابات')} className="px-4 py-2 text-sm font-medium border rounded-xl flex items-center gap-2"><Download size={16}/> PDF</button><button
           onClick={() => setShowTrialBalance(!showTrialBalance)}
           className="px-4 py-2 text-sm font-medium bg-amber-50 text-amber-700 rounded-xl hover:bg-amber-100 transition-colors flex items-center gap-2"
         >
           <PieChart className="w-4 h-4" />
           {showTrialBalance ? t('pages.accounts.showChart') : t('pages.accounts.trialBalance')}
-        </button>
+        </button></div>
       </div>
 
       {!showTrialBalance ? (

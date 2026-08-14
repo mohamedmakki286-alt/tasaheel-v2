@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { invoicesApi } from '../api/invoices.api';
-import { FileText, CheckCircle2, Clock, XCircle, Eye, WalletCards } from 'lucide-react';
+import { FileText, CheckCircle2, Clock, XCircle, Eye, WalletCards, Download } from 'lucide-react';
+import { exportInvoicePdf, exportCustomerTablePdf } from '../utils/brandedDocuments';
 
 export default function InvoicesHistoryPage() {
   const { t } = useTranslation();
@@ -33,9 +34,12 @@ export default function InvoicesHistoryPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('pages.invoicesHistory.title')}</h1>
         <p className="text-surface-400 text-sm mt-1">{t('pages.invoicesHistory.subtitle')}</p>
+        </div>
+        {visibleInvoices.length > 0 && <button onClick={() => exportCustomerTablePdf('كشف الفواتير', 'كشف-فواتير-تساهيل', ['رقم الفاتورة','الورشة','التاريخ','المبلغ','الحالة'], visibleInvoices.map((inv:any) => [inv.invoiceNumber || inv.id, inv.workshopName, new Date(inv.createdAt).toLocaleDateString('ar-SA-u-ca-gregory'), `${inv.grandTotal} ر.س`, inv.status]), `إجمالي الصفحة: ${pageTotal.toLocaleString('ar-SA')} ر.س`)} className="btn-secondary flex items-center gap-2"><Download size={16}/> كشف PDF</button>}
       </div>
 
       {invoices.length > 0 && <>
@@ -92,6 +96,7 @@ export default function InvoicesHistoryPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
+                      <button onClick={() => exportInvoicePdf(inv, { id: inv.requestId })} className="ml-3 inline-flex items-center text-accent-500" title="تنزيل الفاتورة"><Download size={14}/></button>
                       <Link
                         to={`/orders/${inv.requestId}`}
                         className="inline-flex items-center gap-1 text-accent-400 hover:text-accent-300 text-xs font-medium"

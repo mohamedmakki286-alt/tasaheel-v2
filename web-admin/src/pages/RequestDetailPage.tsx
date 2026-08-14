@@ -5,7 +5,7 @@ import {
   ArrowRight, Phone, MapPin, Car, FileText, MessageCircle,
   User, Building2, Calendar, CheckCircle2, Circle, Clock,
   Wrench, Shield, Quote, FileSpreadsheet, CreditCard,
-  Send, Paperclip, Check, X, Star, ChevronDown, AlertTriangle,
+  Send, Paperclip, Check, X, Star, ChevronDown, AlertTriangle, Download,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getRequest } from '../api/requests.api';
@@ -24,6 +24,7 @@ import { REQUEST_STATUSES } from '../utils/constants';
 import Modal from '../components/Modal';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
+import { exportFinancialDocument } from '../utils/exportPdf';
 
 const TABS = ['quotes', 'inspection', 'invoice', 'chat'] as const;
 const TAB_ICONS: Record<string, React.ReactNode> = {
@@ -322,6 +323,7 @@ export default function RequestDetailPage() {
                 <div className="flex justify-center py-12"><LoadingSpinner /></div>
               ) : inspectionReport ? (
                 <>
+                  <div className="flex justify-end"><button onClick={() => exportFinancialDocument(`تقرير فحص الطلب #${request.id}`, `تقرير-فحص-${request.id}`, { الورشة: request.workshopName || '—', العميل: request.customerName, المركبة: `${request.carMake} ${request.carModel}`, الحالة: inspectionReport.status }, [{ title: 'قطع الغيار', rows: (inspectionReport.parts || []).map((part:any) => ({ البيان: part.name, الكمية: part.quantity, 'سعر الوحدة': formatCurrency(part.unitPrice), الإجمالي: formatCurrency(part.total) })) }, { title: 'أعمال الصيانة', rows: (inspectionReport.labor || []).map((item:any) => ({ العمل: item.description, الساعات: item.hours, 'سعر الساعة': formatCurrency(item.hourlyRate), الإجمالي: formatCurrency(item.total) })) }])} className="btn-secondary flex items-center gap-2"><Download size={15}/> تقرير الفحص PDF</button></div>
                   <div className={`flex items-center gap-3 p-4 rounded-2xl border ${
                     inspectionReport.status === 'approved' ? 'bg-emerald-50 border-emerald-100' :
                     inspectionReport.status === 'rejected' ? 'bg-red-50 border-red-100' :
@@ -458,6 +460,7 @@ export default function RequestDetailPage() {
                 <div className="flex justify-center py-12"><LoadingSpinner /></div>
               ) : invoice ? (
                 <>
+                  <div className="flex justify-end"><button onClick={() => exportFinancialDocument(`فاتورة ${invoice.invoiceNumber || invoice.id}`, `فاتورة-${invoice.invoiceNumber || invoice.id}`, { 'رقم الطلب': request.id, الورشة: request.workshopName || invoice.workshopName, العميل: request.customerName, الحالة: invoice.status }, [{ title: 'بنود الفاتورة', rows: (invoice.items || []).map((item:any) => ({ البيان: item.name, الكمية: item.quantity, 'سعر الوحدة شامل الضريبة': formatCurrency(item.unitPrice), الإجمالي: formatCurrency(item.total) })) }, { title: 'الإجماليات', rows: [{ البيان: 'قبل الضريبة', المبلغ: formatCurrency(invoice.totalAmount) }, { البيان: `ضريبة القيمة المضافة ${invoice.taxPercent || 15}%`, المبلغ: formatCurrency(invoice.tax || invoice.taxAmount || 0) }, { البيان: 'الإجمالي النهائي', المبلغ: formatCurrency(invoice.grandTotal) }] }])} className="btn-secondary flex items-center gap-2"><Download size={15}/> الفاتورة PDF</button></div>
                   <div className="text-center pb-6 border-b border-gray-100">
                     <div className="inline-flex items-center justify-center w-16 h-16 gradient-accent rounded-2xl shadow-lg mb-4">
                       <Wrench className="w-8 h-8 text-white" />

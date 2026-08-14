@@ -4,13 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import {
   DollarSign, TrendingUp, TrendingDown, Building2, Clock,
   Wallet, ArrowUpRight, ArrowDownRight, Receipt, PiggyBank,
-  RefreshCw, AlertCircle
+  RefreshCw, AlertCircle, Download
 } from 'lucide-react';
 import { getDashboard } from '../api/financial.api';
 import { CardSkeleton } from '../components/Skeleton';
 import { formatCurrency } from '../utils/formatters';
 import clsx from 'clsx';
 import { Link } from 'react-router-dom';
+import { exportFinancialDocument } from '../utils/exportPdf';
 
 export default function FinancialDashboardPage() {
   const { t } = useTranslation();
@@ -28,9 +29,13 @@ export default function FinancialDashboardPage() {
   const recentTransactions = dashboard?.recentTransactions || [];
 
   const maxGross = Math.max(...monthlyRevenue.map((m) => m.gross), 1);
+  const exportDashboard = () => exportFinancialDocument('التقرير المالي الشامل', 'تقرير-مالي-تساهيل', {
+    'إجمالي الإيرادات': formatCurrency(summary?.totalRevenue || 0), 'عمولة المنصة': formatCurrency(summary?.totalCommission || 0), 'صافي الورش': formatCurrency(summary?.totalNetToWorkshops || 0), 'بانتظار التسوية': formatCurrency(summary?.totalPendingSettlement || 0),
+  }, [{ title: 'الإيرادات الشهرية', rows: monthlyRevenue.map(m => ({ الشهر: m.month, الإجمالي: formatCurrency(m.gross), العمولة: formatCurrency(m.commission), الضريبة: formatCurrency(m.tax), الصافي: formatCurrency(m.net) })) }, { title: 'أداء الورش', rows: workshopPerformance.map(w => ({ الورشة: w.workshopName, الفواتير: w.invoiceCount, الإجمالي: formatCurrency(w.totalGross), العمولة: formatCurrency(w.totalCommission), الصافي: formatCurrency(w.totalNet), الحالة: w.settlementStatus })) }]);
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end"><button onClick={exportDashboard} className="btn-secondary flex items-center gap-2 px-4 py-2"><Download size={16}/> تصدير التقرير المالي PDF</button></div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">المالية</h1>

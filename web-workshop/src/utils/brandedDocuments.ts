@@ -1,5 +1,6 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 
 type Line = { name: string; quantity: number; unitPrice: number; total: number };
 type PartyContext = {
@@ -55,13 +56,13 @@ async function savePdf(html: string, filename: string) {
 }
 
 export async function exportInvoiceDocument(invoice: any, context: PartyContext) {
-  const taxPercent = Number(invoice.taxPercent ?? 15);
-  const grandTotal = Number(invoice.grandTotal || 0);
+  const taxPercent = Number(invoice.taxPercent ?? 15), grandTotal = Number(invoice.grandTotal || 0);
   const subtotal = Number(invoice.totalAmount ?? grandTotal / (1 + taxPercent / 100));
   const tax = Number(invoice.taxAmount ?? invoice.tax ?? grandTotal - subtotal);
+  const qr = invoice.zatcaQrPayload ? await QRCode.toDataURL(invoice.zatcaQrPayload, { width: 150, margin: 1, errorCorrectionLevel: 'M' }) : '';
   const rows = (invoice.items || []).map((item: Line, i: number) => `<tr><td>${i + 1}. ${escapeHtml(item.name)}</td><td>${item.quantity}</td><td>${money(item.unitPrice)}</td><td>${money(item.total)}</td></tr>`).join('');
   const meta = `<div><small>رقم الفاتورة</small><strong>${escapeHtml(invoice.invoiceNumber || invoice.id)}</strong></div><div><small>رقم الطلب</small><strong>#${escapeHtml(context.requestId)}</strong></div><div><small>تاريخ الإصدار</small><strong>${date(invoice.createdAt)}</strong></div><div><small>الحالة</small><strong>${escapeHtml(invoice.status || 'صادرة')}</strong></div>`;
-  const content = `<section class="parties"><div class="party"><strong>مقدم الخدمة</strong>${escapeHtml(context.workshopName || invoice.workshopName || 'ورشة تساهيل')}</div><div class="party"><strong>العميل والمركبة</strong>${escapeHtml(context.customerName || invoice.customerName || 'عميل تساهيل')}<br/>${escapeHtml(context.vehicle || '—')}</div></section><section class="section"><h2>تفاصيل البنود</h2><table><thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة شامل الضريبة</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table></section><div class="totals"><div class="total-row"><span>الإجمالي قبل الضريبة</span><strong>${money(subtotal)}</strong></div><div class="total-row"><span>ضريبة القيمة المضافة (${taxPercent}%)</span><strong>${money(tax)}</strong></div><div class="total-row final"><span>الإجمالي النهائي</span><span>${money(grandTotal)}</span></div></div><div class="note">أسعار البنود أعلاه شاملة ضريبة القيمة المضافة، وتم استخراج قيمة الضريبة من الإجمالي.</div>`;
+  const content = `<section class="parties"><div class="party"><strong>مقدم الخدمة</strong>${escapeHtml(invoice.supplierLegalName || context.workshopName || invoice.workshopName || 'ورشة تساهيل')}<br/>${escapeHtml(invoice.supplierAddress || '')}<br/>الرقم الضريبي: ${escapeHtml(invoice.supplierTaxNumber || 'غير مسجل')}<br/>السجل التجاري: ${escapeHtml(invoice.supplierCommercialRegistration || '—')}</div><div class="party"><strong>العميل والمركبة</strong>${escapeHtml(context.customerName || invoice.customerName || 'عميل تساهيل')}<br/>${escapeHtml(context.vehicle || '—')}${qr ? `<br/><img src="${qr}" style="width:92px;height:92px;margin-top:8px" alt="QR ضريبي"/>` : ''}</div></section><section class="section"><h2>تفاصيل البنود</h2><table><thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة شامل الضريبة</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table></section><div class="totals"><div class="total-row"><span>الإجمالي قبل الضريبة</span><strong>${money(subtotal)}</strong></div><div class="total-row"><span>ضريبة القيمة المضافة (${taxPercent}%)</span><strong>${money(tax)}</strong></div><div class="total-row final"><span>الإجمالي النهائي</span><span>${money(grandTotal)}</span></div></div><div class="note">أسعار البنود شاملة ضريبة القيمة المضافة، وتم استخراج قيمة الضريبة من الإجمالي.</div>`;
   await savePdf(shell('فاتورة ضريبية مبسطة', 'فاتورة خدمات صيانة سيارات', meta, content), `فاتورة-تساهيل-${invoice.invoiceNumber || context.requestId}`);
 }
 
@@ -71,4 +72,12 @@ export async function exportInspectionDocument(report: any, context: PartyContex
   const meta = `<div><small>رقم التقرير</small><strong>${escapeHtml(report.id)}</strong></div><div><small>رقم الطلب</small><strong>#${escapeHtml(context.requestId)}</strong></div><div><small>تاريخ الفحص</small><strong>${date(report.createdAt)}</strong></div><div><small>الأولوية</small><strong>${escapeHtml(report.priority || 'عادية')}</strong></div>`;
   const content = `<section class="parties"><div class="party"><strong>الورشة</strong>${escapeHtml(context.workshopName || 'ورشة تساهيل')}</div><div class="party"><strong>العميل والمركبة</strong>${escapeHtml(context.customerName || 'عميل تساهيل')}<br/>${escapeHtml(context.vehicle || '—')}</div></section>${parts ? `<section class="section"><h2>قطع الغيار المقترحة</h2><table><thead><tr><th>البيان</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${parts}</tbody></table></section>` : ''}${labor ? `<section class="section"><h2>أعمال الصيانة</h2><table><thead><tr><th>العمل</th><th>الساعات</th><th>سعر الساعة</th><th>الإجمالي</th></tr></thead><tbody>${labor}</tbody></table></section>` : ''}<section class="section"><h2>ملاحظات الفني</h2><div class="notes">${escapeHtml(report.notes || 'لا توجد ملاحظات إضافية.')}</div></section><div class="totals"><div class="total-row final"><span>التكلفة التقديرية</span><span>${money(report.grandTotal)}</span></div></div>`;
   await savePdf(shell('تقرير فحص فني', 'نتائج الفحص والتوصيات الفنية', meta, content), `تقرير-فحص-تساهيل-${context.requestId}`);
+}
+
+export async function exportTableDocument(title: string, subtitle: string, headers: string[], data: unknown[][], filename: string, summary?: Array<[string, unknown]>) {
+  const meta = `<div><small>تاريخ الإصدار</small><strong>${new Date().toLocaleString('ar-SA-u-ca-gregory')}</strong></div><div><small>عدد السجلات</small><strong>${data.length}</strong></div>`;
+  const tableRows = data.map(row => `<tr>${row.map(value => `<td>${escapeHtml(value)}</td>`).join('')}</tr>`).join('');
+  const totals = summary?.length ? `<div class="totals">${summary.map(([label, value], index) => `<div class="total-row ${index === summary.length - 1 ? 'final' : ''}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}</div>` : '';
+  const content = `<section class="section"><h2>${escapeHtml(title)}</h2><table><thead><tr>${headers.map(value => `<th>${escapeHtml(value)}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table></section>${totals}`;
+  await savePdf(shell(title, subtitle, meta, content), filename);
 }

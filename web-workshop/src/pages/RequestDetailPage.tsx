@@ -22,7 +22,7 @@ import InvoiceForm from '../components/InvoiceForm';
 import StatusUpdateModal from '../components/StatusUpdateModal';
 import Avatar from '../components/Avatar';
 import Skeleton from '../components/Skeleton';
-import { exportInspectionDocument, exportInvoiceDocument } from '../utils/brandedDocuments';
+import { exportInspectionDocument, exportInvoiceDocument, exportTableDocument } from '../utils/brandedDocuments';
 
 type WorkDocument = 'quote' | 'inspection' | 'invoice';
 
@@ -271,6 +271,7 @@ export default function RequestDetailPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><span className="text-sm text-surface-500">قيمة العرض</span><strong>{formatCurrency(latestQuote.price)}</strong></div>
                   {latestQuote.notes && <p className="text-sm leading-6 text-surface-500">{latestQuote.notes}</p>}
+                  <button onClick={() => exportTableDocument('عرض سعر', `الطلب #${request.id} • ${latestQuote.workshopName || ''}`, ['الخدمة','قيمة العرض','المدة المقدرة','الضمان','ملاحظات'], [[request.serviceTypes?.map((service:any) => service.name).filter(Boolean).join('، ') || 'خدمة صيانة', formatCurrency(latestQuote.price), `${latestQuote.estimatedDays || '—'} يوم`, `${latestQuote.warrantyMonths || 0} شهر`, latestQuote.notes || '—']], `عرض-سعر-تساهيل-${request.id}`)} className="btn-secondary w-full justify-center"><Download size={15}/> تنزيل عرض السعر PDF</button>
                   {request.status === 'pending' && <button onClick={() => setShowQuoteForm(true)} className="btn-primary w-full justify-center">إرسال عرض جديد</button>}
                 </div>
               ) : <button onClick={() => setShowQuoteForm(true)} className="btn-primary w-full justify-center"><Send size={16} /> إنشاء وإرسال العرض</button>}

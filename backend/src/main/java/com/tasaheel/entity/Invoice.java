@@ -35,6 +35,21 @@ public class Invoice {
     @Column(name = "invoice_number", unique = true, nullable = false)
     private String invoiceNumber;
 
+    @Column(name = "supplier_legal_name", columnDefinition = "TEXT")
+    private String supplierLegalName;
+
+    @Column(name = "supplier_address", columnDefinition = "TEXT")
+    private String supplierAddress;
+
+    @Column(name = "supplier_tax_number", columnDefinition = "TEXT")
+    private String supplierTaxNumber;
+
+    @Column(name = "supplier_commercial_registration", columnDefinition = "TEXT")
+    private String supplierCommercialRegistration;
+
+    @Column(name = "zatca_qr_payload", columnDefinition = "TEXT")
+    private String zatcaQrPayload;
+
     @Column(name = "parts_total")
     private Double partsTotal;
 
