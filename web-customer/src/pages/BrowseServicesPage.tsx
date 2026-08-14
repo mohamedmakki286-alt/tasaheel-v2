@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Clock, Search, Wrench, Star, Users } from 'lucide-react';
+import { ArrowLeft, Clock, Search, Wrench, Star, Users, Cog, Settings, Disc3, type LucideIcon } from 'lucide-react';
 import { workshopsApi, type ServiceCatalogCategory, type ServiceTemplateItem } from '../api/workshops.api';
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const } }) };
@@ -18,9 +18,22 @@ const CATEGORY_ICONS: Record<string, string> = {
   inspection: '🔍',
 };
 
+const NAMED_CATEGORY_ICONS: Record<string, LucideIcon> = {
+  wrench: Wrench,
+  cog: Cog,
+  settings: Settings,
+  disc: Disc3,
+};
+
 function CategoryIcon({ category, className = 'text-2xl' }: { category: ServiceCatalogCategory; className?: string }) {
   const categoryKey = category.categoryNameEn?.trim().toLowerCase() || '';
   const icon = CATEGORY_ICONS[categoryKey];
+  const rawIcon = category.categoryIcon?.trim().toLowerCase() || '';
+  const NamedIcon = NAMED_CATEGORY_ICONS[rawIcon];
+
+  if (NamedIcon) {
+    return <NamedIcon className="h-7 w-7" strokeWidth={2.2} aria-hidden="true" />;
+  }
 
   // The periodic-maintenance emoji renders as an English-style wrench on some Android devices.
   // Replace only that symbol; keep every other category's original icon.
