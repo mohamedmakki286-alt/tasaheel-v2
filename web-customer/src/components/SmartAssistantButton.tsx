@@ -190,7 +190,7 @@ export default function SmartAssistantButton() {
         </div>
       )}
 
-      <div className="fixed bottom-[calc(64px+16px)] left-4 z-50 flex flex-col items-start">
+      <div className="fixed bottom-[88px] left-3 z-50 flex flex-col items-start">
         {showTooltip && (
           <div className="mb-2 px-3 py-1.5 bg-surface-900 dark:bg-surface-800 text-white text-xs font-medium rounded-[10px] shadow-lg whitespace-nowrap" style={{ animation: 'ai-slide-up 0.2s ease-out both' }}>
             اسأل مساعد تساهيل
@@ -199,7 +199,7 @@ export default function SmartAssistantButton() {
         )}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-[52px] h-[52px] rounded-[16px] bg-surface-900 dark:bg-surface-800 shadow-fab flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95"
+          className="w-12 h-12 rounded-[16px] bg-surface-900 dark:bg-surface-800 shadow-fab flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95"
           aria-label="اسأل مساعد تساهيل"
         >
           {isOpen ? (

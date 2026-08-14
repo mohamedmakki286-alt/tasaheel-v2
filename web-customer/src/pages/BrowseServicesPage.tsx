@@ -8,11 +8,6 @@ import { workshopsApi, type ServiceCatalogCategory, type ServiceTemplateItem } f
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const } }) };
 
-const CATEGORY_ICONS: Record<string, string> = {
-  periodic: '🔧', mechanical: '⚙️', electrical: '⚡', ac: '❄️',
-  tires: '🛞', bodywork: '🎨', emergency: '🚨', inspection: '🔍',
-};
-
 const CATEGORY_COLORS: Record<string, string> = {
   periodic: 'bg-brand-50 text-brand',
   mechanical: 'bg-surface-100 text-surface-600',
@@ -111,7 +106,7 @@ export function BrowseServicesPage() {
                 className="card text-center p-5 hover:shadow-card-hover transition-all duration-200 cursor-pointer"
               >
                 <div className={`w-14 h-14 rounded-[16px] mx-auto mb-3 flex items-center justify-center ${colorClass}`}>
-                  <span className="text-2xl">{CATEGORY_ICONS[cat.categoryNameEn || ''] || '🔧'}</span>
+                  <Wrench className="h-7 w-7" strokeWidth={2.2} aria-hidden="true" />
                 </div>
                 <p className="font-bold text-sm text-primary-500 dark:text-white mb-1">{cat.categoryName}</p>
                 <p className="text-xs text-surface-400 dark:text-surface-500">{cat.templates.length} {t('pages.browseServices.servicesCount', 'خدمة')}</p>
@@ -122,7 +117,7 @@ export function BrowseServicesPage() {
       ) : selectedCategory && !search ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">{CATEGORY_ICONS[selectedCategory.categoryNameEn || ''] || '🔧'}</span>
+            <Wrench className="h-5 w-5 text-brand" strokeWidth={2.2} aria-hidden="true" />
             <h3 className="font-bold text-sm text-primary-500 dark:text-white">{selectedCategory.categoryName}</h3>
             <span className="text-xs text-surface-400">({selectedCategory.templates.length})</span>
           </div>
@@ -170,7 +165,7 @@ export function BrowseServicesPage() {
             return (
               <motion.div key={cat.categoryId} custom={ci} variants={fadeUp} initial="hidden" animate="visible">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg">{CATEGORY_ICONS[cat.categoryNameEn || ''] || '🔧'}</span>
+                  <Wrench className="h-5 w-5 text-brand" strokeWidth={2.2} aria-hidden="true" />
                   <h3 className="font-bold text-sm text-primary-500 dark:text-white">{cat.categoryName}</h3>
                   <button onClick={() => { setSelectedCategoryId(cat.categoryId); setSearch(''); }} className="text-xs text-brand mr-auto font-medium">عرض الكل</button>
                 </div>

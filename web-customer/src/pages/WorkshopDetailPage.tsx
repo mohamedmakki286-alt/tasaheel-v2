@@ -150,7 +150,7 @@ export function WorkshopDetailPage() {
 
       {/* Quick Action Buttons */}
       <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {workshop.phone && (
             <a href={`tel:${workshop.phone}`} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-surface-50 dark:bg-surface-800/60 border border-surface-200/60 dark:border-surface-700/30 hover:border-accent-500/30 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
@@ -175,11 +175,11 @@ export function WorkshopDetailPage() {
               <span className="text-[10px] font-semibold text-surface-600 dark:text-surface-300">{t('pages.workshopDetail.directions')}</span>
             </a>
           )}
-          <button onClick={handleRequestService} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-surface-50 dark:bg-surface-800/60 border border-accent-200/60 dark:border-accent-700/30 hover:border-accent-500/30 transition-colors">
-            <div className="w-10 h-10 rounded-xl bg-accent-50 dark:bg-accent-500/10 flex items-center justify-center">
-              <Sparkles size={18} className="text-accent-500" />
+          <button onClick={handleRequestService} className="flex min-h-[84px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-brand bg-brand p-3 text-white shadow-md shadow-brand/15 transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+              <Sparkles size={18} className="text-white" />
             </div>
-            <span className="text-[10px] font-semibold text-accent-600 dark:text-accent-400">{t('pages.workshopDetail.requestService', { name: '' }).trim()}</span>
+            <span className="text-xs font-bold leading-5">{t('pages.workshopDetail.requestService', { name: '' }).trim()}</span>
           </button>
         </div>
       </motion.div>
