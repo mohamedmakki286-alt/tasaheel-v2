@@ -108,13 +108,16 @@ jobs:
 
       - name: Launch and smoke-test both apps
         continue-on-error: true
-        timeout-minutes: 3
+        # A cold simulator boot can consume the previous three-minute limit by
+        # itself on a busy hosted runner. Leave enough time to launch both apps.
+        timeout-minutes: 7
         run: |
           set -euo pipefail
           RUNTIME_ID=$(xcrun simctl list runtimes available -j | python3 -c "import json,sys; r=[x for x in json.load(sys.stdin)['runtimes'] if x['name'].startswith('iOS') and x.get('isAvailable', True)]; print(sorted(r, key=lambda x: tuple(map(int, x['version'].split('.'))))[-1]['identifier'])")
           DEVICE_TYPE_ID=$(xcrun simctl list devicetypes -j | python3 -c "import json,sys; d=[x for x in json.load(sys.stdin)['devicetypes'] if x['name'].startswith('iPhone')]; print(next((x['identifier'] for x in d if x['name'] == 'iPhone 16 Pro'), d[0]['identifier']))")
           DEVICE_UDID=$(xcrun simctl create "Tasaheel CI iPhone" "$DEVICE_TYPE_ID" "$RUNTIME_ID")
           export DEVICE_UDID
+          trap 'xcrun simctl shutdown "$DEVICE_UDID" >/dev/null 2>&1 || true; xcrun simctl delete "$DEVICE_UDID" >/dev/null 2>&1 || true' EXIT
           xcrun simctl boot "$DEVICE_UDID"
           python3 -c "import os,subprocess; subprocess.run(['xcrun','simctl','bootstatus',os.environ['DEVICE_UDID'],'-b'], check=True, timeout=180)"
 
