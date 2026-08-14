@@ -7,9 +7,10 @@ import { invoicesApi } from '../api/invoices.api';
 import type { Request, Quote, Invoice } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle, Car, User, Phone, PhoneCall } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle, Car, User, Phone, PhoneCall, Download } from 'lucide-react';
 import { SERVICE_CATEGORIES } from '../constants/serviceCategories';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
+import { exportInspectionPdf, exportInvoicePdf } from '../utils/brandedDocuments';
 
 const statusSteps = [
   'pending', 'quoted', 'accepted', 'inspection_report', 'customer_approved', 'in_progress', 'awaiting_payment', 'completed',
@@ -329,6 +330,7 @@ export function RequestDetailPage() {
               {t('pages.requestDetail.viewFullReport')}
             </button>
           </div>
+          <button onClick={() => exportInspectionPdf(report, request)} className="btn-secondary w-full flex items-center justify-center gap-2"><Download size={16} /> تنزيل تقرير الفحص PDF</button>
           <div className="flex items-center gap-2 text-sm">
             <span className="text-surface-400">{t('pages.requestDetail.overallCondition')}:</span>
             <span className={`font-medium ${
@@ -383,6 +385,7 @@ export function RequestDetailPage() {
               <span className="text-accent-400">{invoice.grandTotal.toLocaleString()} {t('constants.currency')}</span>
             </div>
           </div>
+          <button onClick={() => exportInvoicePdf(invoice, request)} className="btn-secondary w-full flex items-center justify-center gap-2"><Download size={16} /> تنزيل الفاتورة PDF</button>
 
           {invoice.status === 'pending_approval' && (
             <div className="flex gap-3 pt-2">

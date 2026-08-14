@@ -87,15 +87,22 @@ public class InvoiceService {
                 item.setTotal(calculated.doubleValue());
                 itemsTotal = itemsTotal.add(calculated);
             }
-            safeTotalAmount = itemsTotal.setScale(2, RoundingMode.HALF_UP).doubleValue();
+            // Unit prices entered by the workshop are VAT-inclusive.  The customer
+            // therefore pays exactly the sum of the invoice lines; VAT is extracted
+            // from that amount instead of being added on top of it.
+            safeGrandTotal = itemsTotal.setScale(2, RoundingMode.HALF_UP).doubleValue();
             if (partsTotal == null && laborTotal == null) {
-                safeParts = safeTotalAmount;
+                safeParts = safeGrandTotal;
                 safeLabor = 0.0;
-            } else if (Math.abs((safeParts + safeLabor) - safeTotalAmount) > 0.01) {
+            } else if (Math.abs((safeParts + safeLabor) - safeGrandTotal) > 0.01) {
                 throw new BadRequestException("Parts and labor totals must match invoice items total");
             }
-            safeTax = calculateTax(safeTotalAmount, finalTaxPercent);
-            safeGrandTotal = money(safeTotalAmount + safeTax);
+            boolean hasLabor = safeLabor > 0;
+            safeTotalAmount = extractPreTaxAmount(safeGrandTotal, finalTaxPercent);
+            safeTax = money(safeGrandTotal - safeTotalAmount);
+            // Keep category totals aligned with the pre-tax subtotal stored on the invoice.
+            safeParts = extractPreTaxAmount(safeParts, finalTaxPercent);
+            safeLabor = hasLabor ? money(safeTotalAmount - safeParts) : 0.0;
         } else {
             safeGrandTotal = money(approvedReport.getGrandTotal());
             safeTax = money(approvedReport.getTax());
@@ -185,6 +192,15 @@ public class InvoiceService {
         Invoice invoice = invoiceRepository.findByRequestId(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice for request", requestId));
         return toInvoiceDTO(invoice);
+    }
+
+    private double extractPreTaxAmount(double taxInclusiveAmount, double taxPercent) {
+        if (taxPercent <= 0) {
+            return money(taxInclusiveAmount);
+        }
+        return BigDecimal.valueOf(taxInclusiveAmount)
+                .divide(BigDecimal.ONE.add(BigDecimal.valueOf(taxPercent).movePointLeft(2)), 2, RoundingMode.HALF_UP)
+                .doubleValue();
     }
 
     public InvoiceDTO getInvoiceForUser(Long requestId, Long userId, String role) {

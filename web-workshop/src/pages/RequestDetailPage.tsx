@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import {
   ArrowLeft, ArrowRight, Building2, CalendarClock, Car, Check, CheckCircle2,
   ChevronDown, ClipboardCheck, ClipboardList, Clock3, ExternalLink, FileCheck2,
-  FileSignature, Image, MapPin, MessageCircle, MoreHorizontal, Pencil, Phone,
+  FileSignature, Image, MapPin, MessageCircle, MoreHorizontal, Pencil, Phone, Download,
   PhoneCall, Receipt, Send, Trash2, UserRoundCog, Wrench, XCircle,
 } from 'lucide-react';
 import { getRequestDetail } from '../api/requests.api';
@@ -22,6 +22,7 @@ import InvoiceForm from '../components/InvoiceForm';
 import StatusUpdateModal from '../components/StatusUpdateModal';
 import Avatar from '../components/Avatar';
 import Skeleton from '../components/Skeleton';
+import { exportInspectionDocument, exportInvoiceDocument } from '../utils/brandedDocuments';
 
 type WorkDocument = 'quote' | 'inspection' | 'invoice';
 
@@ -285,7 +286,10 @@ export default function RequestDetailPage() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3"><div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><p className="text-xs text-surface-400">البنود</p><p className="mt-1 font-black">{(report.parts?.length || 0) + (report.labor?.length || 0)}</p></div><div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-800/60"><p className="text-xs text-surface-400">الإجمالي</p><p className="mt-1 font-black">{formatCurrency(report.grandTotal)}</p></div></div>
                   {report.notes && <p className="text-sm leading-6 text-surface-500">{report.notes}</p>}
-                  <button onClick={() => setShowInspectionForm(true)} className="btn-secondary w-full justify-center"><Pencil size={15} /> عرض وتعديل التقرير</button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setShowInspectionForm(true)} className="btn-secondary justify-center"><Pencil size={15} /> عرض وتعديل</button>
+                    <button onClick={() => exportInspectionDocument(report, { requestId: request.id, workshopName: latestQuote?.workshopName || invoice?.workshopName, customerName, vehicle: carName })} className="btn-secondary justify-center"><Download size={15} /> PDF</button>
+                  </div>
                 </div>
               ) : (
                 <button onClick={() => setShowInspectionForm(true)} disabled={!['accepted', 'inspection_report', 'customer_approved', 'in_progress'].includes(request.status)} className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"><ClipboardCheck size={16} /> إنشاء تقرير الفحص</button>
@@ -305,6 +309,7 @@ export default function RequestDetailPage() {
                     {(invoice.status === 'pending_approval' || invoice.status === 'rejected') && <button onClick={() => setShowInvoiceForm(true)} className="btn-primary justify-center"><Pencil size={15} /> تعديل</button>}
                     {(invoice.status === 'pending_approval' || invoice.status === 'rejected') && <button onClick={async () => { if (window.confirm('هل تريد حذف الفاتورة؟')) { try { await deleteInvoice(request.id); toast.success('تم حذف الفاتورة'); refreshRequest(); } catch { toast.error('فشل حذف الفاتورة'); } } }} className="btn-secondary justify-center text-danger-500"><Trash2 size={15} /> حذف</button>}
                   </div>
+                  <button onClick={() => exportInvoiceDocument(invoice, { requestId: request.id, workshopName: invoice.workshopName || latestQuote?.workshopName, customerName, vehicle: carName })} className="btn-secondary w-full justify-center"><Download size={15} /> تنزيل الفاتورة PDF</button>
                 </div>
               ) : (
                 <button onClick={() => setShowInvoiceForm(true)} disabled={!['awaiting_payment', 'completed'].includes(request.status)} title={!['awaiting_payment', 'completed'].includes(request.status) ? 'يجب إكمال العمل واعتماد تقرير الفحص أولاً' : undefined} className="btn-primary w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"><Receipt size={16} /> إنشاء الفاتورة</button>
