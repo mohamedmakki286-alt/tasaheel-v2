@@ -54,6 +54,18 @@ public class EmailService {
                 button(url, "إعداد كلمة المرور") + "<p style=\"color:#64748b\">الرابط صالح لمدة 24 ساعة ويستخدم مرة واحدة.</p>"));
     }
 
+    public void sendWorkshopApproved(String email, String workshopName) {
+        sendHtml(email, "تم اعتماد ورشتك في تساهيل", template("تم اعتماد الورشة",
+                "مرحباً " + escape(workshopName) + "، اعتمدت إدارة تساهيل ورشتك وأصبحت مؤهلة للظهور للعملاء واستقبال الطلبات.",
+                button(workshopUrl + "/login", "الدخول إلى لوحة الورشة")));
+    }
+
+    public void sendWorkshopRejected(String email, String workshopName, String reason) {
+        sendHtml(email, "تحديث طلب اعتماد ورشتك في تساهيل", template("تعذر اعتماد الورشة",
+                "مرحباً " + escape(workshopName) + "، لم تتم الموافقة على اعتماد الورشة حالياً.",
+                "<p style=\"color:#475569\"><strong>السبب:</strong> " + escape(reason) + "</p>"));
+    }
+
     public void sendWelcome(String email, String name) {
         sendHtml(email, "مرحباً بك في تساهيل", template("أهلاً " + escape(name),
                 "اكتمل تفعيل حسابك ويمكنك الآن الاستفادة من خدمات منصة تساهيل.", ""));

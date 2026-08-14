@@ -11,7 +11,6 @@ import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.exception.UnauthorizedException;
 import com.tasaheel.integration.EmailService;
-import com.tasaheel.integration.MediaService;
 import com.tasaheel.repository.CustomerRepository;
 import com.tasaheel.repository.DriverRepository;
 import com.tasaheel.repository.RefreshTokenRepository;
@@ -25,7 +24,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -44,7 +42,6 @@ public class AuthService {
     private final TechnicianRepository technicianRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final MediaService mediaService;
     private final EmailService emailService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final AdminUserRepository adminUserRepository;
@@ -111,7 +108,11 @@ public class AuthService {
         Customer customer = customerRepository.findByEmail(normalizedEmail).orElse(null);
         if (customer != null) { customer.setEmailVerifiedAt(LocalDateTime.now()); customer.setIsActive(true); customerRepository.save(customer); }
         Workshop workshop = workshopRepository.findByEmail(normalizedEmail).orElse(null);
-        if (workshop != null) { workshop.setEmailVerifiedAt(LocalDateTime.now()); workshop.setIsActive(true); workshopRepository.save(workshop); }
+        if (workshop != null) {
+            // Email verification must never activate or approve a workshop. Only an admin can do that.
+            workshop.setEmailVerifiedAt(LocalDateTime.now());
+            workshopRepository.save(workshop);
+        }
         Technician technician = technicianRepository.findByEmail(normalizedEmail).orElse(null);
         if (technician != null) { technician.setIsActive(true); technicianRepository.save(technician); }
     }
@@ -163,7 +164,9 @@ public class AuthService {
     public Map<String, Object> createWorkshopInvitation(Long workshopId) {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", workshopId));
+        if (Boolean.TRUE.equals(workshop.getIsDeleted())) throw new BadRequestException("Workshop account has been deleted");
         if (workshop.getEmail() == null || workshop.getEmail().isBlank()) throw new BadRequestException("Workshop login email is required");
+        if (!emailService.isConfigured()) throw new BadRequestException("Email delivery is not configured");
         byte[] bytes = new byte[32]; RAND.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         resetTokens.entrySet().removeIf(e -> workshop.getEmail().equals(e.getValue().email()));
@@ -205,41 +208,6 @@ public class AuthService {
                 customer.getPhone(), customer.getEmail(), customer.getIsActive(), null, false);
     }
 
-    @Transactional
-    public AuthResponse registerWorkshop(WorkshopDTO dto, MultipartFile commercialRegFile, MultipartFile municipalityFile) {
-        if (dto.getEmail() != null && workshopRepository.existsByEmail(dto.getEmail()))
-            throw new BadRequestException("Email already registered");
-
-        String commercialRegUrl = commercialRegFile != null ? mediaService.storeFile(commercialRegFile, "commercial") : null;
-        String municipalityUrl = municipalityFile != null ? mediaService.storeFile(municipalityFile, "municipality") : null;
-
-        Workshop workshop = Workshop.builder()
-                .name(dto.getName()).ownerName(dto.getOwnerName())
-                .phone(dto.getPhone() != null ? dto.getPhone() : "00" + System.currentTimeMillis())
-                .email(dto.getEmail()).password(passwordEncoder.encode(dto.getPassword()))
-                .address(dto.getAddress()).city(dto.getCity())
-                .services(dto.getServices()).workshopType(dto.getWorkshopType() != null ? dto.getWorkshopType() : "stationary")
-                .commercialRegistration(commercialRegUrl).municipalityLicense(municipalityUrl)
-                .isActive(false).isApproved(false).emailVerifiedAt(null).build();
-        workshop = workshopRepository.save(workshop);
-        sendEmailVerification(dto.getEmail());
-        AuthResponse resp = AuthResponse.builder()
-                .token(null).role("workshop").userId(workshop.getId()).name(workshop.getName())
-                .phone(workshop.getPhone()).email(workshop.getEmail()).isActive(workshop.getIsActive())
-                .emailVerified(false).isApproved(workshop.getIsApproved())
-                .ownerName(workshop.getOwnerName()).address(workshop.getAddress()).city(workshop.getCity())
-                .workshopType(workshop.getWorkshopType()).services(workshop.getServices())
-                .commercialRegistration(workshop.getCommercialRegistration())
-                .municipalityLicense(workshop.getMunicipalityLicense())
-                .rejectionReason(workshop.getRejectionReason()).rating(workshop.getRating())
-                .tiktokUrl(workshop.getTiktokUrl()).snapchatUrl(workshop.getSnapchatUrl())
-                .facebookUrl(workshop.getFacebookUrl()).latitude(workshop.getLatitude())
-                .longitude(workshop.getLongitude()).createdAt(workshop.getCreatedAt())
-                .updatedAt(workshop.getUpdatedAt())
-                .build();
-        return resp;
-    }
-
     public AuthResponse login(String email, String password) {
         if ("admin@salaba.com".equals(email) && "123456".equals(password)) {
             String token = jwtService.generateToken(0L, "admin");
@@ -269,7 +237,12 @@ public class AuthService {
             if (Boolean.TRUE.equals(workshop.getIsDeleted())) throw new UnauthorizedException("Account has been deleted");
             if (!passwordEncoder.matches(password, workshop.getPassword()))
                 throw new UnauthorizedException("Invalid email or password");
-            if (!workshop.getIsActive()) throw new UnauthorizedException("Account is not activated. Check your email.");
+            if (!Boolean.TRUE.equals(workshop.getPasswordSetupCompleted()) || workshop.getEmailVerifiedAt() == null)
+                throw new UnauthorizedException("Complete the invitation sent to your email before signing in");
+            if (!Boolean.TRUE.equals(workshop.getIsApproved()))
+                throw new UnauthorizedException("Workshop is pending admin approval");
+            if (!Boolean.TRUE.equals(workshop.getIsActive()))
+                throw new UnauthorizedException("Workshop account is deactivated");
             String token = jwtService.generateToken(workshop.getId(), "workshop");
             AuthResponse resp = AuthResponse.builder()
                     .token(token).role("workshop").userId(workshop.getId()).name(workshop.getName())

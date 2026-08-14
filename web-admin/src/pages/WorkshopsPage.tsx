@@ -43,7 +43,7 @@ export default function WorkshopsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [workshopTypeFilter, setWorkshopTypeFilter] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const emptyForm = { name: '', ownerName: '', phone: '', whatsapp: '', email: '', password: '', city: '', address: '', workshopType: 'stationary', beneficiaryName: '', bankName: '', iban: '', taxNumber: '', commissionPercentage: '10', adminNotes: '', contractSignedAt: '', contractExpiresAt: '', isApproved: false, isActive: false, sendInvitation: true };
+  const emptyForm = { name: '', ownerName: '', phone: '', whatsapp: '', email: '', city: '', address: '', workshopType: 'stationary', beneficiaryName: '', bankName: '', iban: '', taxNumber: '', commissionPercentage: '10', adminNotes: '', contractSignedAt: '', contractExpiresAt: '' };
   const [createForm, setCreateForm] = useState(emptyForm);
   const [contractFile, setContractFile] = useState<File | null>(null);
 
@@ -96,26 +96,25 @@ export default function WorkshopsPage() {
       const fd = new FormData();
       fd.append('workshop', JSON.stringify({
         name: form.name, ownerName: form.ownerName, phone: form.phone,
-        email: form.email, password: form.password, city: form.city,
+        email: form.email, city: form.city,
         address: form.address, workshopType: form.workshopType, whatsapp: form.whatsapp,
         beneficiaryName: form.beneficiaryName, bankName: form.bankName, iban: form.iban,
         taxNumber: form.taxNumber, commissionPercentage: Number(form.commissionPercentage || 0),
         adminNotes: form.adminNotes, contractSignedAt: form.contractSignedAt || null,
-        contractExpiresAt: form.contractExpiresAt || null, isApproved: form.isApproved, isActive: form.isActive,
+        contractExpiresAt: form.contractExpiresAt || null,
       }));
       if (contractFile) fd.append('contract', contractFile);
       return createWorkshop(fd);
     },
     onSuccess: async (created) => {
-      if (createForm.sendInvitation && !createForm.password && created?.id) {
+      if (created?.id) {
         try {
           const invite = await sendWorkshopInvitation(created.id);
           await navigator.clipboard?.writeText(invite.invitationUrl);
-          toast.success('تم إنشاء الورشة ونسخ رابط إعداد كلمة المرور');
-        } catch { toast.error('تم إنشاء الورشة، لكن تعذر إرسال الدعوة'); }
+          toast.success('تم إنشاء الورشة وإرسال دعوة إعداد كلمة المرور');
+        } catch { toast.error('تم إنشاء الورشة، لكن تعذر إرسال الدعوة. يمكنك إعادة إرسالها من تفاصيل الورشة.'); }
       }
       queryClient.invalidateQueries({ queryKey: ['workshops'] });
-      if (!createForm.sendInvitation || createForm.password) toast.success(t('toast.success.workshopAdded'));
       setShowCreateModal(false);
       setCreateForm(emptyForm); setContractFile(null);
     },
@@ -301,10 +300,6 @@ export default function WorkshopsPage() {
             <input type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} className="input-field w-full" dir="ltr" placeholder={t('pages.workshops.addModal.emailPlaceholder')} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.password')}</label>
-            <input type="password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} className="input-field w-full" placeholder={t('pages.workshops.addModal.passwordPlaceholder')} />
-          </div>
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.city')}</label>
             <input type="text" value={createForm.city} onChange={(e) => setCreateForm({ ...createForm, city: e.target.value })} className="input-field w-full" placeholder={t('pages.workshops.addModal.cityPlaceholder')} />
           </div>
@@ -334,21 +329,8 @@ export default function WorkshopsPage() {
           <div><label className="block text-sm font-medium text-gray-700 mb-1">تاريخ توقيع العقد</label><input type="date" value={createForm.contractSignedAt} onChange={(e) => setCreateForm({ ...createForm, contractSignedAt: e.target.value })} className="input-field w-full" /></div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">انتهاء العقد (اختياري)</label><input type="date" value={createForm.contractExpiresAt} onChange={(e) => setCreateForm({ ...createForm, contractExpiresAt: e.target.value })} className="input-field w-full" /></div>
           <div className="sm:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">ملاحظات الإدارة</label><textarea value={createForm.adminNotes} onChange={(e) => setCreateForm({ ...createForm, adminNotes: e.target.value })} className="input-field w-full" rows={2} /></div>
-          <div className="sm:col-span-2 border-t pt-4 space-y-3">
-            <label className="flex items-center gap-3"><input type="checkbox" checked={createForm.sendInvitation} onChange={(e) => setCreateForm({ ...createForm, sendInvitation: e.target.checked })} /><span className="text-sm font-medium">إرسال رابط إعداد كلمة المرور ونسخه (إذا تركت كلمة المرور فارغة)</span></label>
-            <label className="flex items-center gap-3"><input type="checkbox" checked={createForm.isActive} onChange={(e) => setCreateForm({ ...createForm, isActive: e.target.checked })} /><span className="text-sm font-medium">تفعيل دخول الورشة الآن</span></label>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={createForm.isApproved}
-                onChange={(e) => setCreateForm({ ...createForm, isApproved: e.target.checked })}
-                className="w-4 h-4 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500"
-              />
-              <span className="text-sm font-medium text-gray-700">{t('pages.workshops.addModal.autoApprove', 'تفعيل الورشة فوراً (بدون انتظار الموافقة)')}</span>
-            </label>
-            <p className="text-xs text-gray-400 mt-1 mr-7">{t('pages.workshops.addModal.autoApproveHint', 'إذا لم يتم التفعيل، ستظهر الورشة كـ "قيد المراجعة" وتنتظر موافقتكم')}</p>
+          <div className="sm:col-span-2 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+            سيتم إنشاء الورشة بحالة «قيد المراجعة» وإرسال رابط إعداد كلمة المرور إلى بريدها تلقائياً. الاعتماد والتفعيل يتمان لاحقاً من الإدارة بعد مراجعة البيانات.
           </div>
         </div>
       </Modal>

@@ -1,9 +1,9 @@
 package com.tasaheel.service;
 
 import com.tasaheel.entity.Customer;
+import com.tasaheel.entity.Workshop;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.integration.EmailService;
-import com.tasaheel.integration.MediaService;
 import com.tasaheel.repository.*;
 import com.tasaheel.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,15 +22,17 @@ import static org.mockito.Mockito.*;
 class AuthServiceEmailSecurityTest {
     private EmailService emailService;
     private CustomerRepository customers;
+    private WorkshopRepository workshops;
     private AuthService service;
 
     @BeforeEach
     void setUp() {
         customers = mock(CustomerRepository.class);
+        workshops = mock(WorkshopRepository.class);
         emailService = mock(EmailService.class);
-        service = new AuthService(customers, mock(WorkshopRepository.class), mock(DriverRepository.class),
+        service = new AuthService(customers, workshops, mock(DriverRepository.class),
                 mock(TechnicianRepository.class), mock(JwtService.class), new BCryptPasswordEncoder(),
-                mock(MediaService.class), emailService, mock(RefreshTokenRepository.class), mock(AdminUserRepository.class));
+                emailService, mock(RefreshTokenRepository.class), mock(AdminUserRepository.class));
         ReflectionTestUtils.setField(service, "workshopAppUrl", "https://workshop.example");
         ReflectionTestUtils.setField(service, "adminAppUrl", "https://admin.example");
     }
@@ -65,5 +67,24 @@ class AuthServiceEmailSecurityTest {
         verify(customers).save(customer);
         assertThatThrownBy(() -> service.verifyEmail("user@example.com", code.getValue()))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("Invalid or expired");
+    }
+
+    @Test
+    void workshopEmailVerificationNeverActivatesOrApprovesWorkshop() {
+        when(emailService.isConfigured()).thenReturn(true);
+        ArgumentCaptor<String> code = ArgumentCaptor.forClass(String.class);
+        service.sendEmailVerification("workshop@example.com");
+        verify(emailService).sendOtp(eq("workshop@example.com"), code.capture());
+
+        Workshop workshop = Workshop.builder()
+                .id(11L).email("workshop@example.com").isActive(false).isApproved(false).build();
+        when(workshops.findByEmail("workshop@example.com")).thenReturn(Optional.of(workshop));
+
+        service.verifyEmail("workshop@example.com", code.getValue());
+
+        assertThat(workshop.getEmailVerifiedAt()).isNotNull();
+        assertThat(workshop.getIsActive()).isFalse();
+        assertThat(workshop.getIsApproved()).isFalse();
+        verify(workshops).save(workshop);
     }
 }
