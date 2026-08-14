@@ -47,6 +47,7 @@ public class AdminService {
     private final RequestStatusHistoryRepository statusHistoryRepository;
     private final EventPublisher eventPublisher;
     private final EmailService emailService;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public Map<String, Object> getStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -432,8 +433,12 @@ public class AdminService {
             case "workshop" -> {
                 Workshop workshop = workshopRepository.findByIdAndIsDeletedFalse(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("Workshop", userId));
+                if (isActive && !Boolean.TRUE.equals(workshop.getIsApproved())) {
+                    throw new BadRequestException("Workshop must be approved before it can be activated");
+                }
                 workshop.setIsActive(isActive);
                 workshopRepository.save(workshop);
+                if (!isActive) refreshTokenRepository.revokeAllByUserIdAndRole(userId, "workshop");
             }
             case "driver" -> {
                 Driver driver = driverRepository.findByIdAndIsDeletedFalse(userId)

@@ -459,6 +459,15 @@ public class AuthService {
             if (!Boolean.TRUE.equals(technician.getIsActive())) {
                 throw new UnauthorizedException("Account is deactivated");
             }
+        } else if ("workshop".equalsIgnoreCase(rt.getUserRole())) {
+            Workshop workshop = workshopRepository.findByIdAndIsDeletedFalse(rt.getUserId())
+                    .orElseThrow(() -> new UnauthorizedException("Workshop account no longer exists"));
+            if (!Boolean.TRUE.equals(workshop.getIsActive())
+                    || !Boolean.TRUE.equals(workshop.getIsApproved())
+                    || !Boolean.TRUE.equals(workshop.getPasswordSetupCompleted())
+                    || workshop.getEmailVerifiedAt() == null) {
+                throw new UnauthorizedException("Workshop account is not allowed to sign in");
+            }
         }
 
         rt.setRevoked(true);
