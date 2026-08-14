@@ -86,7 +86,7 @@ export function WorkshopDetailPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto pb-28">
+    <div className="space-y-4 max-w-3xl mx-auto pb-40">
       {/* Lightbox */}
       {lightboxImage && (
         <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4" onClick={() => setLightboxImage(null)}>
@@ -481,9 +481,9 @@ export function WorkshopDetailPage() {
       </motion.div>
 
       {/* Floating Request Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white dark:from-surface-900 via-white/95 dark:via-surface-900/95 to-transparent z-50">
-        <div className="max-w-3xl mx-auto flex gap-2">
-          <button onClick={handleRequestService} className="btn-primary flex-1 flex items-center justify-center gap-2 py-4 text-base font-bold">
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 bg-gradient-to-t from-white via-white/95 to-transparent px-4 pb-3 pt-5 dark:from-surface-900 dark:via-surface-900/95">
+        <div className="mx-auto flex max-w-2xl gap-2">
+          <button onClick={handleRequestService} className="btn-primary flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold shadow-lg shadow-brand/20 sm:text-base">
             <Sparkles size={20} />
             {t('pages.workshopDetail.requestService', { name: workshop.name })}
           </button>
