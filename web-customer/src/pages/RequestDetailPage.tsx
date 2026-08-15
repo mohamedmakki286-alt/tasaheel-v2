@@ -7,10 +7,19 @@ import { invoicesApi } from '../api/invoices.api';
 import type { Request, Quote, Invoice } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle, Car, User, Phone, PhoneCall } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, CheckCircle, XCircle, CreditCard, Star, Receipt, MessageCircle, Car, User, Phone, PhoneCall, Download } from 'lucide-react';
 import { SERVICE_CATEGORIES } from '../constants/serviceCategories';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
-import { useCallStore } from '@shared/call/callStore';
+
+const downloadInspectionPdf = async (report: any, request: any) => {
+  const { exportInspectionPdf } = await import('../utils/brandedDocuments');
+  return exportInspectionPdf(report, request);
+};
+
+const downloadInvoicePdf = async (invoice: any, request: any) => {
+  const { exportInvoicePdf } = await import('../utils/brandedDocuments');
+  return exportInvoicePdf(invoice, request);
+};
 
 const statusSteps = [
   'pending', 'quoted', 'accepted', 'inspection_report', 'customer_approved', 'in_progress', 'awaiting_payment', 'completed',
@@ -256,14 +265,8 @@ export function RequestDetailPage() {
           </div>
           {request.technicianPhone && (
             <div className="flex gap-2">
-              <button
-                onClick={() => request.technicianId && useCallStore.getState().requestCall(Number(request.technicianId), request.technicianName || '', Number(request.id))}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent-500 text-white hover:bg-accent-600 transition-colors text-sm font-semibold"
-              >
-                <PhoneCall size={16} /> مكالمة صوتية
-              </button>
-              <a href={`tel:${request.technicianPhone}`} className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-surface-600 text-surface-300 hover:border-accent-400 hover:text-accent-400 transition-colors text-sm">
-                <Phone size={16} />
+              <a href={`tel:${request.technicianPhone.replace(/[^\d+]/g, '')}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent-500 text-white hover:bg-accent-600 transition-colors text-sm font-semibold">
+                <PhoneCall size={16} /> اتصال بالفني
               </a>
             </div>
           )}
@@ -336,6 +339,7 @@ export function RequestDetailPage() {
               {t('pages.requestDetail.viewFullReport')}
             </button>
           </div>
+          <button onClick={() => void downloadInspectionPdf(report, request)} className="btn-secondary w-full flex items-center justify-center gap-2"><Download size={16} /> تنزيل تقرير الفحص PDF</button>
           <div className="flex items-center gap-2 text-sm">
             <span className="text-surface-400">{t('pages.requestDetail.overallCondition')}:</span>
             <span className={`font-medium ${
@@ -390,6 +394,7 @@ export function RequestDetailPage() {
               <span className="text-accent-400">{invoice.grandTotal.toLocaleString()} {t('constants.currency')}</span>
             </div>
           </div>
+          <button onClick={() => void downloadInvoicePdf(invoice, request)} className="btn-secondary w-full flex items-center justify-center gap-2"><Download size={16} /> تنزيل الفاتورة PDF</button>
 
           {invoice.status === 'pending_approval' && (
             <div className="flex gap-3 pt-2">

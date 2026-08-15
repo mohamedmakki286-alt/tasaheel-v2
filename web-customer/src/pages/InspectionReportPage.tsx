@@ -7,13 +7,15 @@ import { invoicesApi } from '../api/invoices.api';
 import type { InspectionReport } from '../types';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ChecklistView } from '../components/ChecklistView';
-import { ArrowLeft, CheckCircle, XCircle, FileText } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, FileText, Download } from 'lucide-react';
+import { exportInspectionPdf } from '../utils/brandedDocuments';
 
 export function InspectionReportPage() {
   const { t } = useTranslation();
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
   const [report, setReport] = useState<InspectionReport | null>(null);
+  const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -22,6 +24,7 @@ export function InspectionReportPage() {
     setLoading(true);
     requestsApi.getById(requestId).then((res: any) => {
       const req = res.data || res;
+      setRequest(req);
       if (req.inspectionReport) {
         setReport(req.inspectionReport);
       }
@@ -70,6 +73,7 @@ export function InspectionReportPage() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h2 className="text-xl font-bold">{t('pages.inspectionReport.title')}</h2>
+        <button onClick={() => exportInspectionPdf({ ...report, parts: report.parts?.map((p: any) => ({ ...p, name: (p as any).name || p.partName })), labor: (report as any).labor || report.laborItems }, request || { id: requestId })} className="btn-secondary mr-auto flex items-center gap-2"><Download size={16}/> PDF</button>
       </div>
 
       {/* Header */}

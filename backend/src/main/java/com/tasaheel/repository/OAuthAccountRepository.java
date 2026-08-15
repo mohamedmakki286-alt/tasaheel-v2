@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface OAuthAccountRepository extends JpaRepository<OAuthAccount, Long> {
     Optional<OAuthAccount> findByProviderAndProviderId(String provider, String providerId);
     Optional<OAuthAccount> findByProviderAndEmail(String provider, String email);
+    boolean existsByUserTypeAndUserId(String userType, Long userId);
+    void deleteByUserTypeAndUserId(String userType, Long userId);
 }

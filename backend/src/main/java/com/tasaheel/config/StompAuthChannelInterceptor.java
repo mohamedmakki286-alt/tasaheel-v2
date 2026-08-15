@@ -2,6 +2,7 @@ package com.tasaheel.config;
 
 import com.tasaheel.security.JwtService;
 import com.tasaheel.security.UserDetailsImpl;
+import com.tasaheel.repository.WorkshopRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -13,6 +14,7 @@ import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.Map;
@@ -23,6 +25,7 @@ import java.util.Map;
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
     private final JwtService jwtService;
+    private final WorkshopRepository workshopRepository;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -64,6 +67,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
             Long userId = jwtService.extractUserId(token);
             String role = jwtService.extractRole(token);
+            ensureWorkshopAllowed(userId, role);
 
             List<SimpleGrantedAuthority> authorities = List.of(
                     new SimpleGrantedAuthority("ROLE_" + role.toUpperCase())
@@ -85,6 +89,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             log.debug("STOMP CONNECT authenticated: userId={}, role={}", userId, role);
         } catch (Exception e) {
             log.warn("STOMP CONNECT JWT processing failed: {}", e.getMessage());
+            throw new AccessDeniedException("WebSocket authentication rejected", e);
         }
     }
 
@@ -110,6 +115,8 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
         if (userObj instanceof UsernamePasswordAuthenticationToken auth
                 && auth.getPrincipal() instanceof UserDetailsImpl principal) {
+
+            ensureWorkshopAllowed(principal.getUserId(), principal.getRole());
 
             String destination = accessor.getDestination();
             if (destination == null) return;
@@ -149,7 +156,21 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         if (userObj == null) {
             log.warn("STOMP SEND without authentication — rejecting");
             accessor.setLeaveMutable(true);
+        } else if (userObj instanceof UsernamePasswordAuthenticationToken auth
+                && auth.getPrincipal() instanceof UserDetailsImpl principal) {
+            ensureWorkshopAllowed(principal.getUserId(), principal.getRole());
         }
+    }
+
+    private void ensureWorkshopAllowed(Long userId, String role) {
+        if (!"workshop".equalsIgnoreCase(role)) return;
+        boolean allowed = workshopRepository.findByIdAndIsDeletedFalse(userId)
+                .map(workshop -> Boolean.TRUE.equals(workshop.getIsActive())
+                        && Boolean.TRUE.equals(workshop.getIsApproved())
+                        && Boolean.TRUE.equals(workshop.getPasswordSetupCompleted())
+                        && workshop.getEmailVerifiedAt() != null)
+                .orElse(false);
+        if (!allowed) throw new AccessDeniedException("Workshop account is inactive");
     }
 
     private void handleDisconnect(StompHeaderAccessor accessor) {

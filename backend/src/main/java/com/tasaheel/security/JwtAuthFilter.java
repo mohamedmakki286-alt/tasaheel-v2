@@ -1,6 +1,8 @@
 package com.tasaheel.security;
 
 import com.tasaheel.repository.TechnicianRepository;
+import com.tasaheel.repository.WorkshopRepository;
+import com.tasaheel.repository.CustomerRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +24,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final TechnicianRepository technicianRepository;
+    private final WorkshopRepository workshopRepository;
+    private final CustomerRepository customerRepository;
 
     @Override
     protected void doFilterInternal(
@@ -41,10 +45,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             final Long userId = jwtService.extractUserId(jwt);
             final String role = jwtService.extractRole(jwt);
 
-            boolean accountAllowed = userId != null && (!"technician".equalsIgnoreCase(role)
-                    || technicianRepository.findById(userId)
-                            .map(technician -> Boolean.TRUE.equals(technician.getIsActive()))
-                            .orElse(false));
+            boolean accountAllowed = userId != null && switch (role.toLowerCase()) {
+                case "technician" -> technicianRepository.findById(userId)
+                        .map(technician -> Boolean.TRUE.equals(technician.getIsActive()))
+                        .orElse(false);
+                case "workshop" -> workshopRepository.findByIdAndIsDeletedFalse(userId)
+                        .map(workshop -> Boolean.TRUE.equals(workshop.getIsActive())
+                                && Boolean.TRUE.equals(workshop.getIsApproved())
+                                && Boolean.TRUE.equals(workshop.getPasswordSetupCompleted())
+                                && workshop.getEmailVerifiedAt() != null)
+                        .orElse(false);
+                case "customer" -> customerRepository.findByIdAndIsDeletedFalse(userId)
+                        .map(customer -> Boolean.TRUE.equals(customer.getIsActive()))
+                        .orElse(false);
+                default -> true;
+            };
 
             if (userId != null && accountAllowed && jwtService.isTokenValid(jwt)
                     && SecurityContextHolder.getContext().getAuthentication() == null) {

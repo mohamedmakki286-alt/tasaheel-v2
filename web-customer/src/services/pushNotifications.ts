@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { PushNotifications, type Token } from '@capacitor/push-notifications';
+import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import client from '../api/client';
 import { playNotificationSound } from './notificationSound';
 
@@ -38,7 +38,7 @@ async function configureNotificationChannel(): Promise<void> {
   };
 
   await Promise.all([
-    PushNotifications.createChannel(channel),
+    FirebaseMessaging.createChannel(channel),
     LocalNotifications.createChannel(channel),
   ]);
 }
@@ -62,18 +62,15 @@ async function installListeners(): Promise<void> {
   if (listenersReady) return;
   listenersReady = true;
 
-  await PushNotifications.addListener('registration', (token: Token) => {
-    client.put('/customers/profile', { fcmToken: token.value }).catch((error) => {
+  await FirebaseMessaging.addListener('tokenReceived', (event) => {
+    client.put('/customers/profile', { fcmToken: event.token }).catch((error) => {
       console.error('Failed to save customer notification token:', error);
     });
   });
 
-  await PushNotifications.addListener('registrationError', (error) => {
-    console.error('Customer push registration failed:', error);
-  });
-
-  await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-    const data = notification.data || {};
+  await FirebaseMessaging.addListener('notificationReceived', (event) => {
+    const notification = event.notification;
+    const data = (notification.data || {}) as Record<string, any>;
     const eventType = String(data.eventType || data.type || 'STATUS_UPDATED');
     const requestId = data.requestId ? String(data.requestId) : undefined;
     if (!shouldDeliverNativeAlert(eventType, requestId)) return;
@@ -88,8 +85,8 @@ async function installListeners(): Promise<void> {
     }).catch(() => {});
   });
 
-  await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-    openNotification(notificationData(action.notification.data));
+  await FirebaseMessaging.addListener('notificationActionPerformed', (action) => {
+    openNotification(notificationData(action.notification.data as Record<string, any> | undefined));
   });
 
   await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
@@ -105,16 +102,17 @@ export async function registerCustomerPushNotifications(): Promise<boolean> {
     try {
       await installListeners();
 
-      let pushPermission = await PushNotifications.checkPermissions();
+      let pushPermission = await FirebaseMessaging.checkPermissions();
       if (pushPermission.receive !== 'granted') {
-        pushPermission = await PushNotifications.requestPermissions();
+        pushPermission = await FirebaseMessaging.requestPermissions();
       }
       if (pushPermission.receive !== 'granted') return false;
 
       // Push and local notifications share POST_NOTIFICATIONS on Android.
       // Requesting it through both plugins at the same time can close the Activity.
       await configureNotificationChannel();
-      await PushNotifications.register();
+      const token = await FirebaseMessaging.getToken();
+      await client.put('/customers/profile', { fcmToken: token.token });
       return true;
     } catch (error) {
       console.warn('Customer notification setup failed:', error);
@@ -182,6 +180,6 @@ export function setupNotificationListeners(
 
 export async function unregisterCustomerPushNotifications(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-  await PushNotifications.unregister().catch(() => {});
+  await FirebaseMessaging.deleteToken().catch(() => {});
   registrationPromise = null;
 }

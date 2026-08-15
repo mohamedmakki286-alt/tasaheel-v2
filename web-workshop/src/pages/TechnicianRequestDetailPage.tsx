@@ -10,8 +10,8 @@ import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import InspectionReportForm from '../components/InspectionReportForm';
 import { getRoom, getMessages, sendMessage, markAsRead, uploadChatMedia } from '../api/chat.api';
-import { useCallStore } from '@shared/call/callStore';
 import { useRequestWebSocket } from '../hooks/useRequestWebSocket';
+import { googleMapsDirectionsUrl, openExternalUrl } from '../utils/externalNavigation';
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'قيد الانتظار', color: 'text-gray-700', bg: 'bg-gray-100' },
@@ -409,7 +409,6 @@ export default function TechnicianRequestDetailPage() {
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.role);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const requestCall = useCallStore((s) => s.requestCall);
   const [showReport, setShowReport] = useState(false);
   const chatSectionRef = useRef<HTMLDivElement>(null);
 
@@ -550,9 +549,9 @@ export default function TechnicianRequestDetailPage() {
                   <span className="hidden sm:inline">محادثة</span>
                 </button>
                 {request.customerPhone && (
-                  <button onClick={() => requestCall(request.customerId, request.customerName, request.id)} className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors dark:bg-green-500/10 dark:text-green-400" aria-label="الاتصال بالعميل">
+                  <a href={`tel:${request.customerPhone.replace(/[^\d+]/g, '')}`} className="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors dark:bg-green-500/10 dark:text-green-400" aria-label="الاتصال بالعميل">
                     <Phone size={18} />
-                  </button>
+                  </a>
                 )}
               </div>
             </div>
@@ -588,9 +587,9 @@ export default function TechnicianRequestDetailPage() {
                   <p className="text-sm text-gray-600">{request.locationAddress}</p>
                   {request.city && <p className="text-xs text-gray-400 mt-0.5">{request.city}</p>}
                   {request.locationLat && request.locationLng && (
-                    <a href={`https://www.google.com/maps?q=${request.locationLat},${request.locationLng}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#E31B23] hover:underline">
+                    <button type="button" onClick={() => void openExternalUrl(googleMapsDirectionsUrl(request.locationLat!, request.locationLng!))} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#E31B23] hover:underline">
                       <MapPin size={12} /> فتح في خرائط قوقل
-                    </a>
+                    </button>
                   )}
                 </div>
               </div>

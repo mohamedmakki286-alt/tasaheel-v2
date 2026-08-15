@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Edit2, Trash2, Wrench,
-  X, Check, AlertCircle,
+  X, Check, AlertCircle, Download,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -17,6 +17,7 @@ import { formatDate } from '../utils/formatters';
 import { getServiceIcon, SERVICE_ICON_NAMES } from '../utils/serviceIcons';
 import type { ServiceType } from '../types';
 import clsx from 'clsx';
+import { exportDataToPDF } from '../utils/exportPdf';
 
 const bgColors = [
   'from-amber-500 to-orange-500',
@@ -124,6 +125,7 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end"><button onClick={() => exportDataToPDF((services || []).map((service:any) => ({ '#': service.id, الخدمة: service.name, 'الاسم الإنجليزي': service.nameEn, التصنيف: service.category, الوصف: service.description, الحالة: service.isActive === false ? 'موقوفة' : 'نشطة' })), 'دليل-الخدمات', 'دليل خدمات تساهيل')} className="btn-secondary flex items-center gap-2"><Download size={16}/> PDF</button></div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t('pages.services.title')}</h1>

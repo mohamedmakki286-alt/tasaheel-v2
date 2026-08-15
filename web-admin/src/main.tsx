@@ -13,7 +13,7 @@ Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || '',
   environment: import.meta.env.MODE,
   integrations: [Sentry.browserTracingIntegration()],
-  tracesSampleRate: 0.2,
+  tracesSampleRate: 0.05,
 });
 
 function getErrorMessage(error: unknown) {
@@ -34,6 +34,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 60_000,
+      gcTime: 10 * 60_000,
       retry: 1,
       throwOnError: (error: any) =>
         !error?.response || Number(error.response.status) >= 500,

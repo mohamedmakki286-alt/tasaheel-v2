@@ -34,8 +34,9 @@ export default function InvoiceForm({
 
   const tPct = Number(taxPercent) || 0;
   const itemsTotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
-  const taxAmount = (itemsTotal * tPct) / 100;
-  const grandTotal = itemsTotal + taxAmount;
+  const subtotalBeforeTax = tPct > 0 ? itemsTotal / (1 + tPct / 100) : itemsTotal;
+  const taxAmount = itemsTotal - subtotalBeforeTax;
+  const grandTotal = itemsTotal;
   const partsTotal = items.filter(i => i.category !== 'labor').reduce((s, i) => s + i.quantity * i.unitPrice, 0);
   const laborTotal = items.filter(i => i.category === 'labor').reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
@@ -71,7 +72,7 @@ export default function InvoiceForm({
         taxPercent: tPct,
         partsTotal,
         laborTotal,
-        totalAmount: itemsTotal,
+        totalAmount: subtotalBeforeTax,
         taxAmount,
         grandTotal,
       }),
@@ -172,7 +173,7 @@ export default function InvoiceForm({
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="text-xs text-surface-500">{t('components.invoiceForm.unitPrice')}</label>
+                    <label className="text-xs text-surface-500">سعر الوحدة (شامل الضريبة)</label>
                     <NumberInput
                       value={toNumStr(item.unitPrice)}
                       onValueChange={(v) => updateItem(index, 'unitPrice', v)}
@@ -207,8 +208,8 @@ export default function InvoiceForm({
 
           <div className="p-4 rounded-2xl bg-gradient-to-br from-surface-50 to-surface-100 border border-surface-200 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-surface-500">{t('components.invoiceForm.itemsTotal')}</span>
-              <span className="font-semibold text-surface-800">{formatCurrency(itemsTotal)}</span>
+              <span className="text-surface-500">الإجمالي قبل الضريبة</span>
+              <span className="font-semibold text-surface-800">{formatCurrency(subtotalBeforeTax)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-surface-500">{t('components.invoiceForm.taxValue')}</span>
@@ -218,6 +219,7 @@ export default function InvoiceForm({
               <span className="text-surface-900">{t('components.invoiceForm.finalTotal')}</span>
               <span className="text-emerald-600 text-xl">{formatCurrency(grandTotal)}</span>
             </div>
+            <p className="pt-1 text-xs text-surface-500">جميع أسعار البنود شاملة ضريبة القيمة المضافة.</p>
           </div>
 
           <div className="flex gap-3 pt-2">

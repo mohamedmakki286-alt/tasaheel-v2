@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Download } from 'lucide-react';
 import { paymentsApi } from '../api/payments.api';
+import { exportPaymentReceiptPdf } from '../utils/brandedDocuments';
 
 type CallbackState = 'checking' | 'paid' | 'failed';
 
@@ -9,6 +10,7 @@ export function PaymentCallbackPage() {
   const [params] = useSearchParams();
   const [state, setState] = useState<CallbackState>('checking');
   const [message, setMessage] = useState('جارٍ التحقق من عملية الدفع...');
+  const [verifiedPayment, setVerifiedPayment] = useState<any>(null);
   const stored = sessionStorage.getItem('tasaheel_pending_payment');
   const pending = stored ? JSON.parse(stored) : null;
   const requestId = params.get('requestId') || pending?.requestId;
@@ -24,6 +26,7 @@ export function PaymentCallbackPage() {
       try {
         const response: any = await paymentsApi.verify(String(pending.localPaymentId));
         const payment = response.data || response;
+        setVerifiedPayment(payment);
         if (cancelled) return;
         if (payment.status === 'completed') {
           sessionStorage.removeItem('tasaheel_pending_payment');
@@ -57,6 +60,7 @@ export function PaymentCallbackPage() {
         <Link to={requestId ? `/orders/${requestId}` : '/orders'} className="btn-primary inline-flex w-full justify-center py-3">
           عرض الطلب
         </Link>
+        {state === 'paid' && verifiedPayment && <button onClick={() => exportPaymentReceiptPdf(verifiedPayment, requestId || '—')} className="btn-secondary inline-flex w-full items-center justify-center gap-2 py-3"><Download size={17}/> تنزيل إيصال الدفع PDF</button>}
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
 import LoginPage from './pages/LoginPage';
 import AdminLayout from './layouts/AdminLayout';
@@ -8,7 +7,6 @@ import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
 import AppErrorBoundary from './components/AppErrorBoundary';
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CustomersPage = lazy(() => import('./pages/CustomersPage'));
 const CustomerDetailPage = lazy(() => import('./pages/CustomerDetailPage'));
@@ -33,6 +31,16 @@ const TestDataResetPage = lazy(() => import('./pages/TestDataResetPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
 const SetPasswordPage = lazy(() => import('./pages/SetPasswordPage'));
 
+function preloadCommonRoutes() {
+  void Promise.allSettled([
+    import('./pages/DashboardPage'),
+    import('./pages/CustomersPage'),
+    import('./pages/WorkshopsPage'),
+    import('./pages/RequestsPage'),
+    import('./pages/SupportPage'),
+  ]);
+}
+
 function PageLoader() {
   return (
     <div className="min-h-[45vh] grid place-items-center" role="status" aria-label="جاري تحميل الصفحة">
@@ -45,6 +53,10 @@ function AuthInit({ children }: { children: React.ReactNode }) {
   const isLoading = useAuthStore((s) => s.isLoading);
   const setLoading = useAuthStore((s) => s.setLoading);
   useEffect(() => { setLoading(false); }, [setLoading]);
+  useEffect(() => {
+    const preloadTimer = window.setTimeout(preloadCommonRoutes, 1000);
+    return () => window.clearTimeout(preloadTimer);
+  }, []);
   if (isLoading) return null;
   return <>{children}</>;
 }
@@ -56,7 +68,6 @@ function AppRoutes() {
     return null;
   }
   return (
-    <GoogleOAuthProvider clientId={googleClientId || ''}>
     <AuthInit>
     <AppErrorBoundary resetKey={location.pathname}>
     <Suspense fallback={<PageLoader />}>
@@ -92,7 +103,6 @@ function AppRoutes() {
     </Suspense>
     </AppErrorBoundary>
     </AuthInit>
-    </GoogleOAuthProvider>
   );
 }
 

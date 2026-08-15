@@ -116,6 +116,12 @@
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+html, body, #root { min-height: 100%; }
+body { min-height: 100dvh; overscroll-behavior-y: none; }
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
+.safe-area-pt { padding-top: env(safe-area-inset-top); }
+.safe-area-px { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
 /* Brand splash - keep existing */
 .brand-splash { position:fixed; inset:0; z-index:9999; display:grid; place-items:center; overflow:hidden; color:#fff; background:radial-gradient(circle at 25% 20%,#ef4444 0,transparent 28%),linear-gradient(145deg,#18181b 0%,#09090b 58%,#3b0709 100%); }
 .brand-splash__content { position:relative; z-index:2; width:min(88vw,390px); text-align:center; }

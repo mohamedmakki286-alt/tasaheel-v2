@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Wallet, CheckCircle, XCircle, Building2, ExternalLink,
-  Percent, FileText, Search, AlertCircle, ChevronLeft, Plus
+  Percent, FileText, Search, AlertCircle, ChevronLeft, Plus, Download
 } from 'lucide-react';
 import {
   getPendingSettlements, getPendingInvoicesForWorkshop,
@@ -18,6 +18,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { CardSkeleton } from '../components/Skeleton';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
+import { exportDataToPDF } from '../utils/exportPdf';
 
 export default function SettlementsPage() {
   const { t } = useTranslation();
@@ -128,6 +129,7 @@ export default function SettlementsPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end"><button onClick={() => { const rows = activeTab === 'pending' ? pendingWorkshops.map((w:any) => ({ الورشة: w.workshopName, الفواتير: w.invoiceCount, المستحق: formatCurrency(w.totalGross || w.totalPending || 0) })) : (settlementsData?.data || []).map((s:any) => ({ 'رقم التسوية': s.settlementNumber, الورشة: s.workshopName, الفواتير: s.invoiceCount, الإجمالي: formatCurrency(s.totalGross), العمولة: formatCurrency(s.totalCommission), الصافي: formatCurrency(s.totalNet), الحالة: s.status })); exportDataToPDF(rows, activeTab === 'pending' ? 'المستحقات-المعلقة' : 'سجل-التسويات', activeTab === 'pending' ? 'مستحقات الورش المعلقة' : 'سجل تسويات الورش'); }} className="btn-secondary flex items-center gap-2"><Download size={16}/> PDF</button></div>
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t('pages.settlements.title')}</h1>
         <p className="text-sm text-gray-500 mt-1">{t('pages.settlements.subtitle')}</p>

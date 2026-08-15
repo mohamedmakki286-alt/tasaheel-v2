@@ -35,11 +35,11 @@ public class EmailService {
                         + "<p style=\"color:#64748b\">الرمز صالح لمدة 10 دقائق ولا يمكن استخدامه أكثر من مرة.</p>"));
     }
 
-    public void sendPasswordReset(String email, String token) {
-        String url = customerUrl + "/reset-password?token=" + encodeToken(token);
-        sendHtml(email, "استعادة كلمة المرور - تساهيل", template("استعادة كلمة المرور",
-                "وصلنا طلب لتعيين كلمة مرور جديدة لحسابك.", button(url, "تعيين كلمة مرور جديدة")
-                        + "<p style=\"color:#64748b\">الرابط صالح لمدة ساعة واحدة. تجاهل الرسالة إذا لم تطلب ذلك.</p>"));
+    public void sendPasswordReset(String email, String code) {
+        sendHtml(email, "رمز استعادة كلمة المرور - تساهيل", template("استعادة كلمة المرور",
+                "استخدم الرمز التالي داخل تطبيق تساهيل لتعيين كلمة مرور جديدة.",
+                "<div style=\"font-size:32px;font-weight:800;letter-spacing:8px;color:#d90408;margin:24px 0\">" + escape(code) + "</div>"
+                        + "<p style=\"color:#64748b\">الرمز صالح لمدة 10 دقائق ويستخدم مرة واحدة. تجاهل الرسالة إذا لم تطلب ذلك.</p>"));
     }
 
     public void sendPasswordChanged(String email) {
@@ -52,6 +52,18 @@ public class EmailService {
         sendHtml(email, "إعداد حساب ورشتك في تساهيل", template("مرحباً بك في تساهيل",
                 "تم إنشاء حساب " + escape(workshopName) + " بواسطة إدارة المنصة.",
                 button(url, "إعداد كلمة المرور") + "<p style=\"color:#64748b\">الرابط صالح لمدة 24 ساعة ويستخدم مرة واحدة.</p>"));
+    }
+
+    public void sendWorkshopApproved(String email, String workshopName) {
+        sendHtml(email, "تم اعتماد ورشتك في تساهيل", template("تم اعتماد الورشة",
+                "مرحباً " + escape(workshopName) + "، اعتمدت إدارة تساهيل ورشتك وأصبحت مؤهلة للظهور للعملاء واستقبال الطلبات.",
+                button(workshopUrl + "/login", "الدخول إلى لوحة الورشة")));
+    }
+
+    public void sendWorkshopRejected(String email, String workshopName, String reason) {
+        sendHtml(email, "تحديث طلب اعتماد ورشتك في تساهيل", template("تعذر اعتماد الورشة",
+                "مرحباً " + escape(workshopName) + "، لم تتم الموافقة على اعتماد الورشة حالياً.",
+                "<p style=\"color:#475569\"><strong>السبب:</strong> " + escape(reason) + "</p>"));
     }
 
     public void sendWelcome(String email, String name) {

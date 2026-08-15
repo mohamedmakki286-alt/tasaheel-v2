@@ -10,6 +10,8 @@ export const authApi = {
   getProfile: () => client.get('/customers/profile'),
   updateProfile: (data: { name?: string; email?: string; phone?: string; city?: string; avatar?: string }) =>
     client.put('/customers/profile', data),
+  deleteAccount: (currentPassword?: string) =>
+    client.delete('/customers/account', { data: { currentPassword, confirmation: 'DELETE' } }),
   uploadAvatar: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

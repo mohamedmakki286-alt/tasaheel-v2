@@ -17,6 +17,7 @@ public class ChatRoomDTO {
     private String customerName;
     private Long workshopId;
     private String workshopName;
+    private String workshopPhone;
     private Long driverId;
     private String driverName;
     private Long technicianId;

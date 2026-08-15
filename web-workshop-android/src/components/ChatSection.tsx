@@ -84,6 +84,8 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
   const { data: room } = useQuery({
     queryKey: ['chat-room', requestId],
     queryFn: () => getRoom(requestId),
+    staleTime: 5 * 60_000,
+    gcTime: 15 * 60_000,
   });
 
   const { data: messages = [] } = useQuery({
@@ -91,6 +93,8 @@ export default function ChatSection({ requestId }: ChatSectionProps) {
     queryFn: () => getMessages(room!.id),
     enabled: !!room?.id,
     refetchInterval: 5000,
+    staleTime: 5000,
+    gcTime: 15 * 60_000,
   });
 
   const readMutation = useMutation({

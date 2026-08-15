@@ -9,7 +9,6 @@ import { useGuestGuard } from '../hooks/useGuestGuard';
 import LoginBottomSheet from '../components/LoginBottomSheet';
 import BottomNav from '../components/BottomNav';
 import SmartAssistantButton from '../components/SmartAssistantButton';
-import UnifiedCallHost from '@shared/call/UnifiedCallHost';
 import {
   registerCustomerPushNotifications,
   setupNotificationListeners,
@@ -181,7 +180,7 @@ export default function PublicLayout() {
         </div>
       </header>
 
-      <main className="pb-20">
+      <main className="pb-36">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <Outlet />
         </div>
@@ -191,14 +190,6 @@ export default function PublicLayout() {
       <LoginBottomSheet isOpen={showLoginSheet} onClose={closeSheet} message={pendingMessage} />
       <SmartAssistantButton />
 
-      {isAuthenticated && useAuthStore.getState().customer && useAuthStore.getState().token && (
-        <UnifiedCallHost
-          userId={useAuthStore.getState().customer!.id}
-          userName={useAuthStore.getState().customer!.name}
-          userRole="customer"
-          token={useAuthStore.getState().token!}
-        />
-      )}
     </div>
   );
 }

@@ -87,7 +87,7 @@ export default function AIAssistant() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 lg:bg-black/20 lg:backdrop-blur-none" onClick={() => setIsOpen(false)} />
       )}
 
-      <div className="fixed bottom-24 left-4 z-50 lg:bottom-24 lg:left-6">
+      <div className="fixed bottom-[88px] left-3 z-50 lg:bottom-24 lg:left-6">
         {isOpen && (
           <div
             className="w-[calc(100vw-32px)] sm:w-96 ai-panel h-[520px] bg-surface-900 rounded-2xl shadow-2xl border border-surface-700/50 flex flex-col overflow-hidden ai-slide-up mb-3"
@@ -191,7 +191,7 @@ export default function AIAssistant() {
 
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-14 h-14 lg:w-16 lg:h-16 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 bg-gradient-to-br from-accent-500 to-accent-600 ${!isOpen ? 'ai-pulse' : ''}`}
+          className={`h-12 w-12 rounded-[16px] shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 bg-gradient-to-br from-accent-500 to-accent-600 lg:h-14 lg:w-14 ${!isOpen ? 'ai-pulse' : ''}`}
         >
           {isOpen ? (
             <X size={22} className="text-black lg:size-24" />

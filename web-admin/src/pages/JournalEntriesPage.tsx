@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ScrollText, Search, FileText, ChevronLeft, ExternalLink
+  ScrollText, Search, FileText, ChevronLeft, ExternalLink, Download
 } from 'lucide-react';
 import { getJournalEntries, getJournalEntry } from '../api/financial.api';
 import { formatCurrency } from '../utils/formatters';
 import Modal from '../components/Modal';
 import { CardSkeleton } from '../components/Skeleton';
 import clsx from 'clsx';
+import { exportDataToPDF, exportFinancialDocument } from '../utils/exportPdf';
 
 export default function JournalEntriesPage() {
   const { t } = useTranslation();
@@ -36,9 +37,10 @@ export default function JournalEntriesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-start justify-between gap-3"><div>
         <h1 className="text-2xl font-bold text-gray-900">{t('pages.journalEntries.title')}</h1>
         <p className="text-sm text-gray-500 mt-1">{t('pages.journalEntries.subtitle')}</p>
+        </div><button onClick={() => exportDataToPDF((data?.data || []).map((entry:any) => ({ 'رقم القيد': entry.entryNumber, التاريخ: entry.entryDate, البيان: entry.description, المرجع: referenceLabels[entry.referenceType] || entry.referenceType, الحالة: entry.status })), 'القيود-اليومية', 'دفتر القيود اليومية')} className="btn-secondary flex items-center gap-2"><Download size={16}/> PDF</button>
       </div>
 
       <div className="card overflow-hidden">
@@ -130,6 +132,7 @@ export default function JournalEntriesPage() {
         title={t('pages.journalEntries.detail.title', { entryNumber: entryDetail?.entryNumber || '' })}
         size="xl"
       >
+        {entryDetail && <div className="mb-3 flex justify-end"><button onClick={() => exportFinancialDocument(`سند قيد ${entryDetail.entryNumber}`, `سند-قيد-${entryDetail.entryNumber}`, { التاريخ: entryDetail.entryDate, الحالة: entryDetail.status, المرجع: entryDetail.referenceType || '—' }, [{ title: entryDetail.description, rows: (entryDetail.lines || []).map((line:any) => ({ الحساب: `${line.accountCode} - ${line.accountName}`, البيان: line.description, مدين: formatCurrency(line.debit || 0), دائن: formatCurrency(line.credit || 0) })) }])} className="btn-secondary flex items-center gap-2"><Download size={15}/> تنزيل سند القيد</button></div>}
         {loadingDetail ? (
           <CardSkeleton count={5} />
         ) : entryDetail ? (

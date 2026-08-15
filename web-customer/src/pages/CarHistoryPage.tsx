@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { BellRing, CalendarDays, CarFront, CheckCircle2, Droplets, FileText, Gauge } from 'lucide-react';
+import { BellRing, CalendarDays, CarFront, CheckCircle2, Droplets, FileText, Gauge, Download } from 'lucide-react';
 import client from '../api/client';
 import { carsApi } from '../api/cars.api';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import NumberInput from '../components/NumberInput';
 import type { Car } from '../types';
 import { CarBrandLogo } from '../components/CarBrandLogo';
+import { exportCustomerTablePdf } from '../utils/brandedDocuments';
 
 interface CarHistoryItem {
   requestId: number;
@@ -85,7 +86,7 @@ export default function CarHistoryPage() {
     <div className="mx-auto w-full max-w-[620px] space-y-5 pb-24 pt-2" dir="rtl">
       <div className="flex items-center justify-between">
         <h1 className="text-[25px] font-black tracking-tight text-surface-900 dark:text-white">ملف السيارة</h1>
-        <button onClick={() => navigate('/vehicles', { state: { editId: car.id } })} className="text-sm font-black text-accent-500">تعديل</button>
+        <div className="flex gap-2"><button onClick={() => exportCustomerTablePdf(`سجل صيانة ${car.make} ${car.model}`, `سجل-صيانة-${car.id}`, ['رقم الطلب','الخدمة','الورشة','التاريخ','الحالة','التكلفة'], (history || []).map((item:any) => [item.requestId, item.serviceTypeName || 'صيانة', item.workshopName || '—', new Date(item.createdAt).toLocaleDateString('ar-SA-u-ca-gregory'), item.status, item.grandTotal ? `${item.grandTotal} ر.س` : '—']), `المركبة: ${car.make} ${car.model} ${car.year} • اللوحة: ${car.plateNumber || '—'} • الممشى: ${(car.mileage || 0).toLocaleString('ar-SA')} كم`)} className="text-sm font-black text-accent-500 flex items-center gap-1"><Download size={15}/> PDF</button><button onClick={() => navigate('/vehicles', { state: { editId: car.id } })} className="text-sm font-black text-accent-500">تعديل</button></div>
       </div>
 
       <section className="rounded-[25px] border border-surface-200 bg-white p-4 shadow-[0_4px_14px_rgba(15,23,42,0.035)] dark:border-surface-700 dark:bg-surface-900">

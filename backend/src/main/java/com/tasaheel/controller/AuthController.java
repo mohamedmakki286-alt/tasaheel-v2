@@ -1,6 +1,5 @@
 package com.tasaheel.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tasaheel.dto.*;
 import com.tasaheel.entity.RefreshToken;
 import com.tasaheel.security.JwtService;
@@ -10,13 +9,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import java.util.Locale;
 
 @RestController
@@ -26,7 +23,6 @@ import java.util.Locale;
 public class AuthController {
 
     private final AuthService authService;
-    private final ObjectMapper objectMapper;
     private final JwtService jwtService;
     private final MessageSource msg;
 
@@ -39,25 +35,6 @@ public class AuthController {
             response.setRefreshToken(rt.getToken());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(msg.getMessage("auth.register.customer.success", null, locale), response));
-    }
-
-    @PostMapping(value = "/register/workshop", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<AuthResponse>> registerWorkshop(
-            @RequestParam("workshop") String workshopJson,
-            @RequestParam(value = "commercialRegistration", required = false) MultipartFile commercialRegFile,
-            @RequestParam(value = "municipalityLicense", required = false) MultipartFile municipalityFile) {
-        Locale locale = LocaleContextHolder.getLocale();
-        try {
-            WorkshopDTO dto = objectMapper.readValue(workshopJson, WorkshopDTO.class);
-            AuthResponse response = authService.registerWorkshop(dto, commercialRegFile, municipalityFile);
-            if (response.getUserId() != null) {
-                RefreshToken rt = jwtService.generateRefreshToken(response.getUserId(), response.getRole());
-                response.setRefreshToken(rt.getToken());
-            }
-            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(msg.getMessage("auth.register.workshop.success", null, locale), response));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(msg.getMessage("auth.register.invalid", new Object[]{e.getMessage()}, locale)));
-        }
     }
 
     @PostMapping("/login")

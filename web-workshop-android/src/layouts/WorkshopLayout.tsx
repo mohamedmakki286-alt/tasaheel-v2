@@ -33,7 +33,6 @@ import { useWorkshopWebSocket } from '../hooks/useWorkshopWebSocket';
 import { useBackButton } from '../hooks/useBackButton';
 import Avatar from '../components/Avatar';
 import AIAssistant from '../components/AIAssistant';
-import UnifiedCallHost from '@shared/call/UnifiedCallHost';
 import apiClient from '../api/client';
 import { timeAgo } from '../utils/formatters';
 import { useQuery } from '@tanstack/react-query';
@@ -353,14 +352,6 @@ export default function WorkshopLayout() {
 
       {location.pathname === '/dashboard' && <AIAssistant />}
 
-      {workshop && useAuthStore.getState().token && (
-        <UnifiedCallHost
-          userId={workshop.id}
-          userName={workshop.name}
-          userRole="workshop"
-          token={useAuthStore.getState().token || ''}
-        />
-      )}
     </div>
   );
 }

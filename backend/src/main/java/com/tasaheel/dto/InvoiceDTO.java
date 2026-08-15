@@ -19,6 +19,11 @@ public class InvoiceDTO {
     private Long workshopId;
     private String workshopName;
     private String invoiceNumber;
+    private String supplierLegalName;
+    private String supplierAddress;
+    private String supplierTaxNumber;
+    private String supplierCommercialRegistration;
+    private String zatcaQrPayload;
     private Double partsTotal;
     private Double laborTotal;
     private Double totalAmount;

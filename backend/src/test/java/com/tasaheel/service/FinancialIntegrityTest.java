@@ -21,6 +21,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -122,9 +123,12 @@ class FinancialIntegrityTest {
         InvoiceDTO result = invoiceService.createOrUpdateInvoice(
                 30L, 20L, null, null, 1.0, 999.0, 15.0, 2.0, List.of(item));
 
-        assertEquals(100.0, result.getTotalAmount());
-        assertEquals(15.0, result.getTax());
-        assertEquals(115.0, result.getGrandTotal());
+        assertEquals(86.96, result.getTotalAmount());
+        assertEquals(13.04, result.getTax());
+        assertEquals(100.0, result.getGrandTotal());
         assertEquals(100.0, result.getItems().get(0).getTotal());
+        assertNotNull(result.getZatcaQrPayload());
+        byte[] qr = Base64.getDecoder().decode(result.getZatcaQrPayload());
+        assertEquals(1, qr[0]);
     }
 }

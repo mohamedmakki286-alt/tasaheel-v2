@@ -2,7 +2,6 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from './stores/authStore';
 import { initTheme } from './stores/themeStore';
 import { useBackButton } from './hooks/useBackButton';
@@ -31,23 +30,52 @@ const InvoicesHistoryPage = lazy(() => import('./pages/InvoicesHistoryPage'));
 const CarHistoryPage = lazy(() => import('./pages/CarHistoryPage'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
+const AccountDeletionPage = lazy(() => import('./pages/AccountDeletionPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const PublicSupportPage = lazy(() => import('./pages/PublicSupportPage'));
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import GuestRoute from './components/guards/GuestRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingScreen from './components/guards/LoadingScreen';
-const queryClient = new QueryClient();
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 10 * 60_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
+function preloadCommonRoutes() {
+  void Promise.allSettled([
+    import('./pages/HomePage'),
+    import('./pages/BrowseServicesPage'),
+    import('./pages/CarsPage'),
+    import('./pages/MyRequestsPage'),
+    import('./pages/ChatsPage'),
+    import('./pages/SettingsPage'),
+  ]);
+}
 
 function AuthInit({ children }: { children: React.ReactNode }) {
-  const [showOpening, setShowOpening] = useState(true);
+  const [showOpening, setShowOpening] = useState(() => sessionStorage.getItem('tasaheel-customer-opening-seen') !== '1');
   const isLoading = useAuthStore((s) => s.isLoading);
   const setLoading = useAuthStore((s) => s.setLoading);
   useEffect(() => {
     setLoading(false);
   }, [setLoading]);
   useEffect(() => {
-    const openingTimer = window.setTimeout(() => setShowOpening(false), 3000);
+    if (!showOpening) return;
+    sessionStorage.setItem('tasaheel-customer-opening-seen', '1');
+    const openingTimer = window.setTimeout(() => setShowOpening(false), 850);
     return () => window.clearTimeout(openingTimer);
+  }, [showOpening]);
+  useEffect(() => {
+    const preloadTimer = window.setTimeout(preloadCommonRoutes, 1000);
+    return () => window.clearTimeout(preloadTimer);
   }, []);
   if (showOpening || isLoading) return <LoadingScreen />;
   return <>{children}</>;
@@ -63,7 +91,6 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <GoogleOAuthProvider clientId={googleClientId || ''}>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <BackButtonHandler />
@@ -84,6 +111,10 @@ export default function App() {
             {/* Auth-only routes */}
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
             <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+            <Route path="/account-deletion" element={<AccountDeletionPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/support" element={<PublicSupportPage />} />
 
             {/* Protected routes - auth screen if not logged in */}
             <Route path="/vehicles" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
@@ -128,7 +159,7 @@ export default function App() {
             <Route path="/account" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
               <Route index element={<SettingsPage />} />
             </Route>
-            <Route path="/support" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
+            <Route path="/account/support" element={<ProtectedRoute requiredRole="customer"><CustomerLayout /></ProtectedRoute>}>
               <Route index element={<SupportPage />} />
             </Route>
 
@@ -141,7 +172,6 @@ export default function App() {
         </AuthInit>
       </BrowserRouter>
     </QueryClientProvider>
-    </GoogleOAuthProvider>
     </ErrorBoundary>
   );
 }

@@ -7,9 +7,11 @@ import com.tasaheel.event.EventType;
 import com.tasaheel.exception.BadRequestException;
 import com.tasaheel.exception.ResourceNotFoundException;
 import com.tasaheel.integration.MediaService;
+import com.tasaheel.integration.EmailService;
 import com.tasaheel.repository.*;
 import com.tasaheel.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.PageImpl;
@@ -28,6 +30,7 @@ import jakarta.persistence.criteria.Predicate;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AdminService {
 
     private final CustomerRepository customerRepository;
@@ -43,6 +46,8 @@ public class AdminService {
     private final TechnicianService technicianService;
     private final RequestStatusHistoryRepository statusHistoryRepository;
     private final EventPublisher eventPublisher;
+    private final EmailService emailService;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public Map<String, Object> getStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -270,6 +275,13 @@ public class AdminService {
 
     @Transactional
     public WorkshopDTO createWorkshop(WorkshopDTO dto, MultipartFile commercialRegFile, MultipartFile municipalityFile, MultipartFile contractFile) {
+        if (dto.getName() == null || dto.getName().isBlank()) throw new BadRequestException("Workshop name is required");
+        if (dto.getOwnerName() == null || dto.getOwnerName().isBlank()) throw new BadRequestException("Owner name is required");
+        if (dto.getPhone() == null || !dto.getPhone().matches("^05\\d{8}$")) throw new BadRequestException("A valid Saudi phone number is required");
+        if (dto.getEmail() == null || !dto.getEmail().trim().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) throw new BadRequestException("A valid email is required");
+        if (dto.getCity() == null || dto.getCity().isBlank()) throw new BadRequestException("City is required");
+        if (dto.getAddress() == null || dto.getAddress().isBlank()) throw new BadRequestException("Address is required");
+        dto.setEmail(dto.getEmail().trim().toLowerCase(Locale.ROOT));
         if (workshopRepository.existsByPhone(dto.getPhone())) {
             throw new BadRequestException("Phone number already registered");
         }
@@ -294,8 +306,7 @@ public class AdminService {
                 .ownerName(dto.getOwnerName())
                 .phone(dto.getPhone())
                 .email(dto.getEmail())
-                .password(passwordEncoder.encode(dto.getPassword() != null && !dto.getPassword().isBlank()
-                        ? dto.getPassword() : java.util.UUID.randomUUID().toString()))
+                .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
                 .address(dto.getAddress())
                 .city(dto.getCity())
                 .latitude(dto.getLatitude())
@@ -307,9 +318,10 @@ public class AdminService {
                 .taxNumber(dto.getTaxNumber()).commissionPercentage(dto.getCommissionPercentage())
                 .adminNotes(dto.getAdminNotes()).contractUrl(contractUrl)
                 .contractSignedAt(dto.getContractSignedAt()).contractExpiresAt(dto.getContractExpiresAt())
-                .passwordSetupCompleted(dto.getPassword() != null && !dto.getPassword().isBlank())
-                .isActive(Boolean.TRUE.equals(dto.getIsActive()))
-                .isApproved(Boolean.TRUE.equals(dto.getIsApproved()))
+                .passwordSetupCompleted(false)
+                .emailVerifiedAt(null)
+                .isActive(false)
+                .isApproved(false)
                 .build();
 
         workshop = workshopRepository.save(workshop);
@@ -349,8 +361,14 @@ public class AdminService {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", workshopId));
         workshop.setIsApproved(true);
+        workshop.setIsActive(true);
         workshop.setRejectionReason(null);
         workshopRepository.save(workshop);
+        try {
+            emailService.sendWorkshopApproved(workshop.getEmail(), workshop.getName());
+        } catch (RuntimeException ex) {
+            log.warn("Workshop {} approved but approval email could not be delivered: {}", workshopId, ex.getClass().getSimpleName());
+        }
     }
 
     @Transactional
@@ -358,8 +376,14 @@ public class AdminService {
         Workshop workshop = workshopRepository.findById(workshopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workshop", workshopId));
         workshop.setIsApproved(false);
+        workshop.setIsActive(false);
         workshop.setRejectionReason(reason);
         workshopRepository.save(workshop);
+        try {
+            emailService.sendWorkshopRejected(workshop.getEmail(), workshop.getName(), reason);
+        } catch (RuntimeException ex) {
+            log.warn("Workshop {} rejected but rejection email could not be delivered: {}", workshopId, ex.getClass().getSimpleName());
+        }
     }
 
     @Transactional
@@ -409,8 +433,12 @@ public class AdminService {
             case "workshop" -> {
                 Workshop workshop = workshopRepository.findByIdAndIsDeletedFalse(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("Workshop", userId));
+                if (isActive && !Boolean.TRUE.equals(workshop.getIsApproved())) {
+                    throw new BadRequestException("Workshop must be approved before it can be activated");
+                }
                 workshop.setIsActive(isActive);
                 workshopRepository.save(workshop);
+                if (!isActive) refreshTokenRepository.revokeAllByUserIdAndRole(userId, "workshop");
             }
             case "driver" -> {
                 Driver driver = driverRepository.findByIdAndIsDeletedFalse(userId)

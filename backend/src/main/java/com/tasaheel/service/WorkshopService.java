@@ -35,7 +35,17 @@ public class WorkshopService {
     private final EventPublisher eventPublisher;
 
     public List<WorkshopDTO> getPublicWorkshops(String city, String type, String search) {
-        Stream<Workshop> stream = workshopRepository.findByIsApprovedAndIsActive(true, true).stream();
+        List<Workshop> approvedWorkshops = workshopRepository.findByIsApprovedAndIsActive(true, true);
+        List<Long> workshopIds = approvedWorkshops.stream().map(Workshop::getId).toList();
+        Map<Long, List<WorkshopGalleryDTO>> galleryByWorkshop = workshopIds.isEmpty()
+                ? Collections.emptyMap()
+                : galleryRepository
+                    .findByWorkshopIdInAndIsDeletedFalseOrderByWorkshopIdAscDisplayOrderAsc(workshopIds)
+                    .stream()
+                    .collect(Collectors.groupingBy(
+                            gallery -> gallery.getWorkshop().getId(),
+                            Collectors.mapping(this::toGalleryDTO, Collectors.toList())));
+        Stream<Workshop> stream = approvedWorkshops.stream();
         if (city != null && !city.isBlank()) {
             stream = stream.filter(w -> w.getCity() != null && w.getCity().contains(city));
         }
@@ -49,7 +59,11 @@ public class WorkshopService {
                 (w.getServices() != null && w.getServices().toLowerCase().contains(s))
             );
         }
-        return stream.map(this::toPublicWorkshopDTO).collect(Collectors.toList());
+        return stream
+                .map(workshop -> toPublicWorkshopDTO(
+                        workshop,
+                        galleryByWorkshop.getOrDefault(workshop.getId(), Collections.emptyList())))
+                .collect(Collectors.toList());
     }
 
     public WorkshopDTO getPublicWorkshopById(Long id) {
@@ -67,6 +81,10 @@ public class WorkshopService {
     private WorkshopDTO toPublicWorkshopDTO(Workshop w) {
         List<WorkshopGalleryDTO> gallery = galleryRepository.findByWorkshopIdAndIsDeletedFalseOrderByDisplayOrderAsc(w.getId())
                 .stream().map(this::toGalleryDTO).collect(Collectors.toList());
+        return toPublicWorkshopDTO(w, gallery);
+    }
+
+    private WorkshopDTO toPublicWorkshopDTO(Workshop w, List<WorkshopGalleryDTO> gallery) {
         return WorkshopDTO.builder()
                 .id(w.getId())
                 .name(w.getName())

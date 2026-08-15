@@ -45,6 +45,16 @@ public interface WorkshopServiceListingRepository extends JpaRepository<Workshop
     @Query("SELECT COUNT(DISTINCT s.workshop.id) FROM WorkshopServiceListing s WHERE s.category.id = :categoryId AND s.isDeleted = false AND s.isVisible = true")
     long countWorkshopsByCategoryId(@Param("categoryId") Long categoryId);
 
+    @Query("""
+            SELECT s.category.id, COUNT(DISTINCT s.workshop.id)
+            FROM WorkshopServiceListing s
+            WHERE s.category.id IN :categoryIds
+              AND s.isDeleted = false
+              AND s.isVisible = true
+            GROUP BY s.category.id
+            """)
+    List<Object[]> countWorkshopsByCategoryIds(@Param("categoryIds") List<Long> categoryIds);
+
     @Query("SELECT COUNT(s) FROM WorkshopServiceListing s WHERE s.serviceTemplate.id = :templateId AND s.isDeleted = false AND s.isVisible = true AND s.isAvailable = true")
     long countByServiceTemplateIdAndAvailable(@Param("templateId") Long templateId);
 

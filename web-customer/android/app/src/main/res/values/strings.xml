@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">تساهيل</string>
     <string name="title_activity_main">تساهيل</string>
-    <string name="package_name">com.salaba.customer</string>
-    <string name="custom_url_scheme">com.salaba.customer</string>
+    <string name="package_name">com.tasaheel.customer</string>
+    <string name="custom_url_scheme">com.tasaheel.customer</string>
 </resources>

@@ -1,20 +1,27 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.salaba.customer',
+  appId: 'com.tasaheel.customer',
   appName: 'تساهيل',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    allowNavigation: ['*'],
   },
   plugins: {
     LocalNotifications: {
-      smallIcon: 'ic_stat_icon_config_sample',
+      smallIcon: 'ic_stat_tasaheel',
       iconColor: '#D90408',
     },
-    Haptics: {},
     App: {},
+  },
+  experimental: {
+    ios: {
+      spm: {
+        packageOptions: {
+          '@capacitor-firebase/messaging': { symlink: true },
+        },
+      },
+    },
   },
 };
 

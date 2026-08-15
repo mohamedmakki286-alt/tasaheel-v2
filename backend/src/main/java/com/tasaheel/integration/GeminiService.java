@@ -22,7 +22,7 @@ public class GeminiService {
 
     @Value("${application.ai.gemini.api-key:}")
     private String apiKey;
-    @Value("${application.ai.gemini.model:gemini-1.5-flash}")
+    @Value("${application.ai.gemini.model:gemini-3.6-flash}")
     private String model;
     @Value("${application.ai.gemini.base-url:https://generativelanguage.googleapis.com/v1beta}")
     private String baseUrl;
@@ -88,8 +88,8 @@ public class GeminiService {
         body.set("contents", contents);
 
         ObjectNode config = objectMapper.createObjectNode();
-        config.put("maxOutputTokens", 700);
-        config.put("temperature", 0.25);
+        config.put("maxOutputTokens", 1_000);
+        config.set("thinkingConfig", objectMapper.createObjectNode().put("thinkingLevel", "minimal"));
         body.set("generationConfig", config);
 
         HttpHeaders headers = new HttpHeaders();
@@ -98,11 +98,26 @@ public class GeminiService {
                 url, HttpMethod.POST,
                 new HttpEntity<>(objectMapper.writeValueAsString(body), headers),
                 String.class);
-        JsonNode candidates = objectMapper.readTree(response.getBody()).path("candidates");
+        return extractResponseText(response.getBody());
+    }
+
+    private String extractResponseText(String responseBody) throws Exception {
+        JsonNode candidates = objectMapper.readTree(responseBody).path("candidates");
         if (!candidates.isArray() || candidates.isEmpty()) throw new IllegalStateException("No Gemini candidates");
-        String text = candidates.get(0).path("content").path("parts").path(0).path("text").asText("");
+        JsonNode parts = candidates.get(0).path("content").path("parts");
+        if (!parts.isArray()) throw new IllegalStateException("No Gemini content parts");
+        StringBuilder answer = new StringBuilder();
+        for (JsonNode part : parts) {
+            if (part.path("thought").asBoolean(false)) continue;
+            String value = part.path("text").asText("").trim();
+            if (!value.isBlank()) {
+                if (!answer.isEmpty()) answer.append("\n");
+                answer.append(value);
+            }
+        }
+        String text = answer.toString().trim();
         if (text.isBlank()) throw new IllegalStateException("Empty Gemini response");
-        return text.trim();
+        return text;
     }
 
     private String safetyResponse(String message) {
@@ -135,7 +150,40 @@ public class GeminiService {
         if (containsAny(msg, "سعر", "تكلفة", "كم يكلف", "price", "cost")) {
             return "السعر يعتمد على السيارة والعطل وقطع الغيار. السعر الملزم يظهر في عرض الورشة داخل تساهيل. اذكر نوع السيارة والسنة والخدمة المطلوبة لنطاق استرشادي.";
         }
-        return "اذكر نوع السيارة، سنة الصنع، العداد، الأعراض ومتى بدأت. وللسؤال عن طلباتك أو فواتيرك سجّل الدخول إلى حسابك.";
+        if (containsAny(msg, "تغيير الزيت", "زيت المكينة", "زيت المحرك", "موعد الزيت")) {
+            return "موعد تغيير زيت المحرك يعتمد على نوع الزيت وتوصية الشركة وظروف الاستخدام. راجع دليل السيارة وملصق آخر تغيير؛ وغالباً تقصر المدة مع الزحام والحرارة. إذا ظهرت لمبة ضغط الزيت الحمراء أوقف المحرك فوراً، أما لمبة موعد الصيانة فتحتاج حجز خدمة قريباً.";
+        }
+        if (containsAny(msg, "بطارية", "ما تشتغل", "ما تدق سلف", "تشغيل السيارة", "اشتراك")) {
+            return "إذا كانت السيارة لا تدق سلف أو الأنوار ضعيفة فالبطارية أو أقطابها احتمال أول. لا تكرر التشغيل طويلاً؛ افحص إحكام الأقطاب واطلب فحص البطارية والدينمو. إذا كان السلف يدور والمحرك لا يعمل فقد يكون السبب وقوداً أو إشعالاً ويحتاج فحصاً.";
+        }
+        if (containsAny(msg, "لمبة المكينة", "فحص المحرك", "check engine")) {
+            return "لمبة فحص المحرك لها أسباب متعددة ولا يمكن تحديدها دون قراءة رمز العطل. إذا كانت ثابتة والسيارة طبيعية احجز فحص كمبيوتر قريباً، وإذا كانت تومض أو معها رجفة قوية أو فقدان عزم فتوقف عن القيادة واطلب المساعدة.";
+        }
+        if (containsAny(msg, "مكيف", "التكييف", "ما يبرد", "هواء حار")) {
+            return "ضعف تبريد المكيف قد ينتج من نقص الفريون بسبب تسريب، فلتر مقصورة مسدود، كمبروسر أو مروحة. شغّل المكيف وتحقق هل الهواء ضعيف أم قوي لكنه حار، وهل المشكلة أثناء الوقوف فقط؛ ثم احجز فحص تكييف بدل تعبئة الفريون دون كشف تسريب.";
+        }
+        if (containsAny(msg, "صوت", "طقطقة", "صرير", "رجفة", "اهتزاز", "رجة")) {
+            return "مكان ووقت الصوت أو الرجفة مهمان للتشخيص: هل يظهران عند التشغيل، التسارع، الفرملة، المطبات أم عند سرعة محددة؟ تجنب القيادة إذا كان الصوت قوياً أو معه ضعف فرامل/توجيه، وسجّل مقطعاً واضحاً وأرفقه بطلب الفحص إن أمكن.";
+        }
+        if (containsAny(msg, "صيانة دورية", "متى أصين", "جدول الصيانة", "الصيانة القادمة")) {
+            return "جدول الصيانة الصحيح يعتمد على موديل السيارة وسنتها والعداد ودليل الشركة. يشمل عادة الزيت والفلاتر والسوائل والفرامل والإطارات، لكن الفترات تختلف. اذكر نوع السيارة والسنة والعداد لأعطيك قائمة فحص مناسبة دون افتراض موعد غير دقيق.";
+        }
+        if (containsAny(msg, "كيف اطلب", "كيف أطلب", "طلب خدمة", "احجز", "حجز صيانة")) {
+            return "من الرئيسية اختر الخدمة، ثم السيارة والموقع، اشرح العطل وأرفق الصور إن وجدت، وبعد إرسال الطلب ستصلك عروض الورش. راجع السعر والتفاصيل ثم اقبل العرض المناسب لبدء الطلب وفتح المحادثة مع الورشة.";
+        }
+        if (containsAny(msg, "عرض سعر", "العروض", "قبول العرض", "رفض العرض")) {
+            return "عرض السعر يوضح الورشة والخدمة والتكلفة والمدة. قارن التفاصيل قبل القبول؛ قبول العرض يثبت الورشة للطلب ويفتح التواصل، أما الرفض فلا يبدأ العمل. السعر النهائي يجب أن يظهر في العرض أو الفاتورة المعتمدة داخل تساهيل.";
+        }
+        if (containsAny(msg, "فاتورة", "دفع", "سداد", "مدفوع")) {
+            return context + "\n\nيمكنك مراجعة الفاتورة وحالتها من قسم الفواتير داخل حسابك. لا تسدد مبلغاً لا يطابق الفاتورة المعتمدة، وإذا لم تظهر الفاتورة تواصل مع خدمة العملاء من الدعم والمساعدة.";
+        }
+        if (containsAny(msg, "ورشة", "ورش", "مفتوح", "مغلقة", "الموقع", "الخريطة")) {
+            return "تظهر الورش المتاحة حسب الخدمة والمدينة والموقع المسجل، وتُرتب الأقرب فالأبعد عند السماح بالموقع. حالة مفتوح الآن تعتمد على ساعات عمل الورشة. حدّث موقعك واختر الخدمة أولاً، وإن لم تظهر ورش جرّب توسيع نطاق البحث أو التواصل مع الدعم.";
+        }
+        if (containsAny(msg, "شكرا", "شكراً", "مشكور", "يعطيك العافية")) {
+            return "العفو، تحت أمرك. إذا وصفت المشكلة أو ذكرت نوع السيارة والسنة والعداد أساعدك بخطوة أوضح.";
+        }
+        return "فهمت سؤالك، لكن خدمة الإجابة الذكية غير متاحة مؤقتاً. أعد صياغة السؤال مع ذكر الخدمة أو العَرَض الذي تريد معرفته، ويمكنك استخدام «الدعم والمساعدة» إذا كان السؤال متعلقاً بحسابك أو بطلب قائم.";
     }
 
     private String normalize(String value) {

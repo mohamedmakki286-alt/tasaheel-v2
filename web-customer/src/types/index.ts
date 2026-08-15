@@ -361,6 +361,7 @@ export interface ChatRoom {
   customerName: string;
   workshopId?: string;
   workshopName?: string;
+  workshopPhone?: string;
   driverId?: string;
   driverName?: string;
   lastMessage?: ChatMessage;

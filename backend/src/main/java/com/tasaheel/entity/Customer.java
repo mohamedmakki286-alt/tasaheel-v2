@@ -14,6 +14,12 @@ import java.time.LocalDateTime;
 @Builder
 public class Customer {
 
+    @PrePersist
+    @PreUpdate
+    private void normalizeTextFields() {
+        if (city != null) city = city.trim();
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
