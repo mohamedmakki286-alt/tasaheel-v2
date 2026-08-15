@@ -42,6 +42,7 @@ export default function RequestCard({
             <Avatar name={request.customer?.name} size="md" />
             <div>
               <p className="font-semibold text-surface-800">{request.customer?.name || t('components.requestCard.customer')}</p>
+              <p className="mt-0.5 font-mono text-[11px] font-semibold text-surface-500" dir="ltr">{request.requestNumber || `#${request.id}`}</p>
               <p className="text-xs text-surface-400 flex items-center gap-1 mt-0.5">
                 <Calendar size={12} />
                 {timeAgo(request.createdAt)}

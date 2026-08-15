@@ -145,7 +145,7 @@ export default function DashboardPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate font-bold text-surface-900 dark:text-white">{customerName(request)}</p>
-                    <span className="text-xs font-semibold text-surface-400">#{request.id}</span>
+                    <span className="font-mono text-xs font-semibold text-surface-400" dir="ltr">{request.requestNumber || `#${request.id}`}</span>
                   </div>
                   <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-surface-500"><Wrench size={12} /> {serviceName(request)} <span>•</span> <Car size={12} /> {carName(request)}</p>
                 </div>

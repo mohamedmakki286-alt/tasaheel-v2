@@ -48,7 +48,7 @@ export default function RequestsPage() {
   };
 
   const columns: Column<MaintenanceRequest>[] = [
-    { key: 'id', label: '#', sortable: true, width: '60px' },
+    { key: 'requestNumber', label: t('pages.requests.detail.requestNumber'), render: (r) => <span className="font-mono text-xs" dir="ltr">{r.requestNumber || `#${r.id}`}</span> },
     {
       key: 'customerName', label: t('pages.requests.table.customer'),
       render: (r) => (
@@ -87,7 +87,7 @@ export default function RequestsPage() {
           <Button variant="secondary" size="sm" icon={<Download className="w-4 h-4" />} onClick={() => {
             const items = data?.data || [];
             if (!items.length) { toast.error(t('toast.error.noExportData')); return; }
-            exportDataToPDF(items.map((r: MaintenanceRequest) => ({ '#': r.id, [t('pages.requests.table.customer')]: r.customerName, [t('pages.requests.table.car')]: `${r.carMake} ${r.carModel}`, [t('pages.requests.table.service')]: r.serviceType, [t('pages.requests.table.status')]: r.status, [t('pages.requests.table.createdAt')]: formatDate(r.createdAt) })), t('pages.requests.title'), t('pages.requests.title'));
+            exportDataToPDF(items.map((r: MaintenanceRequest) => ({ '#': r.requestNumber || r.id, [t('pages.requests.table.customer')]: r.customerName, [t('pages.requests.table.car')]: `${r.carMake} ${r.carModel}`, [t('pages.requests.table.service')]: r.serviceType, [t('pages.requests.table.status')]: r.status, [t('pages.requests.table.createdAt')]: formatDate(r.createdAt) })), t('pages.requests.title'), t('pages.requests.title'));
             toast.success(t('toast.success.exportSuccess'));
           }}>{t('common.export')}</Button>
       </div>

@@ -14,17 +14,18 @@ export function PaymentCallbackPage() {
   const stored = sessionStorage.getItem('tasaheel_pending_payment');
   const pending = stored ? JSON.parse(stored) : null;
   const requestId = params.get('requestId') || pending?.requestId;
+  const localPaymentId = params.get('paymentId') || pending?.localPaymentId;
 
   useEffect(() => {
     let cancelled = false;
     const verify = async () => {
-      if (!pending?.localPaymentId) {
+      if (!localPaymentId) {
         setState('failed');
         setMessage('تعذر العثور على مرجع عملية الدفع.');
         return;
       }
       try {
-        const response: any = await paymentsApi.verify(String(pending.localPaymentId));
+        const response: any = await paymentsApi.verify(String(localPaymentId));
         const payment = response.data || response;
         setVerifiedPayment(payment);
         if (cancelled) return;
@@ -48,7 +49,7 @@ export function PaymentCallbackPage() {
     };
     verify();
     return () => { cancelled = true; };
-  }, []);
+  }, [localPaymentId]);
 
   const Icon = state === 'checking' ? Loader2 : state === 'paid' ? CheckCircle2 : XCircle;
   return (

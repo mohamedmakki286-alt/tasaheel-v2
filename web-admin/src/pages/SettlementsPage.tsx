@@ -14,7 +14,6 @@ import { formatCurrency } from '../utils/formatters';
 import Modal from '../components/Modal';
 import Button from '../components/Button';
 import NumberInput from '../components/NumberInput';
-import ConfirmDialog from '../components/ConfirmDialog';
 import { CardSkeleton } from '../components/Skeleton';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
@@ -30,6 +29,7 @@ export default function SettlementsPage() {
   const [invoiceCommissions, setInvoiceCommissions] = useState<Record<number, number>>({});
   const [settlementNote, setSettlementNote] = useState('');
   const [completeId, setCompleteId] = useState<number | null>(null);
+  const [transferReference, setTransferReference] = useState('');
 
   const { data: pendingData, isLoading: loadingPending } = useQuery({
     queryKey: ['pending-settlements'],
@@ -68,6 +68,7 @@ export default function SettlementsPage() {
       queryClient.invalidateQueries({ queryKey: ['pending-settlements'] });
       toast.success(t('toast.success.settlementConfirmed'));
       setCompleteId(null);
+      setTransferReference('');
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || t('toast.error.settlementConfirmFailed')),
   });
@@ -254,7 +255,7 @@ export default function SettlementsPage() {
                         {s.status === 'PENDING' && (
                           <>
                             <button
-                              onClick={() => setCompleteId(s.id)}
+                              onClick={() => { setCompleteId(s.id); setTransferReference(''); }}
                               className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
                               title={t('pages.settlements.confirmSettlement')}
                             >
@@ -393,14 +394,32 @@ export default function SettlementsPage() {
         )}
       </Modal>
 
-      <ConfirmDialog
+      <Modal
         isOpen={completeId !== null}
-        onClose={() => setCompleteId(null)}
-        onConfirm={() => completeId && completeMutation.mutate(completeId)}
+        onClose={() => { setCompleteId(null); setTransferReference(''); }}
         title={t('pages.settlements.confirmDialog.title')}
-        message={t('pages.settlements.confirmDialog.message')}
-        isLoading={completeMutation.isPending}
-      />
+        footer={
+          <Button
+            onClick={() => completeId && completeMutation.mutate({ id: completeId, transferReference })}
+            disabled={!transferReference.trim() || completeMutation.isPending}
+          >
+            {t('pages.settlements.confirmSettlement')}
+          </Button>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-500">{t('pages.settlements.confirmDialog.message')}</p>
+          <label className="block text-sm font-semibold text-gray-700">مرجع التحويل البنكي الحقيقي</label>
+          <input
+            value={transferReference}
+            onChange={(e) => setTransferReference(e.target.value)}
+            className="input-field"
+            maxLength={120}
+            placeholder="مثال: TRX-2026-000123"
+          />
+          <p className="text-xs text-amber-600">لن تُسجل التسوية كمدفوعة بدون مرجع التحويل.</p>
+        </div>
+      </Modal>
     </div>
   );
 }

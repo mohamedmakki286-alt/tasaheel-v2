@@ -10,6 +10,7 @@ import NumberInput from '../components/NumberInput';
 import type { Car } from '../types';
 import { CarBrandLogo } from '../components/CarBrandLogo';
 import { exportCustomerTablePdf } from '../utils/brandedDocuments';
+import { toArabicPlateDigits } from '../utils/saudiPlate';
 
 interface CarHistoryItem {
   requestId: number;
@@ -28,9 +29,9 @@ function MiniPlate({ plate = '' }: { plate?: string }) {
   const numbers = parts.filter((part) => /\d/.test(part)).join(' ');
   return (
     <div className="grid h-[66px] w-[126px] shrink-0 grid-cols-2 grid-rows-2 overflow-hidden rounded-lg border border-surface-300 bg-white text-center text-[11px] font-black text-surface-800 shadow-sm" dir="ltr">
-      <span className="flex items-center justify-center border-b border-r border-surface-300">{numbers || '١ ٢ ٣ ٤'}</span>
+      <span className="flex items-center justify-center border-b border-r border-surface-300" dir="ltr" style={{ unicodeBidi: 'isolate' }}>{numbers ? toArabicPlateDigits(numbers.replace(/\s/g, '')) : '١ ٢ ٣ ٤'}</span>
       <span className="flex items-center justify-center border-b border-surface-300" dir="rtl">{letters || 'أ ب ج'}</span>
-      <span className="flex items-center justify-center border-r border-surface-300">{numbers || '1 2 3 4'}</span>
+      <span className="flex items-center justify-center border-r border-surface-300" dir="ltr" style={{ unicodeBidi: 'isolate' }}>{numbers || '1 2 3 4'}</span>
       <span className="flex items-center justify-center">{letters.toUpperCase() || 'A B J'}</span>
     </div>
   );

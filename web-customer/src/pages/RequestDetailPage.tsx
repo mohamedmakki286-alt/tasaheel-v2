@@ -26,7 +26,8 @@ const statusSteps = [
 ];
 
 export function RequestDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tr = (arabic: string, english: string) => i18n.language.startsWith('en') ? english : arabic;
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [request, setRequest] = useState<Request | null>(null);
@@ -65,10 +66,10 @@ export function RequestDetailPage() {
     setActionLoading(true);
     try {
       await requestsApi.rejectQuote(id, quoteId);
-      toast.success('تم رفض عرض السعر');
+      toast.success(tr('تم رفض عرض السعر', 'Quote rejected'));
       load();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'فشل رفض عرض السعر');
+      toast.error(err.response?.data?.message || tr('فشل رفض عرض السعر', 'Failed to reject quote'));
     } finally { setActionLoading(false); }
   };
 
@@ -168,7 +169,7 @@ export function RequestDetailPage() {
     id: `assigned-${request.id}`,
     requestId: request.id,
     workshopId: String(assignedWorkshop.workshopId || invoice?.workshopId || ''),
-    workshopName: assignedWorkshop.workshopName || invoice?.workshopName || 'الورشة المختارة',
+    workshopName: assignedWorkshop.workshopName || invoice?.workshopName || tr('الورشة المختارة', 'Selected workshop'),
     price: invoice?.grandTotal || 0,
     status: 'accepted',
     createdAt: request.createdAt,
@@ -198,6 +199,7 @@ export function RequestDetailPage() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h2 className="text-xl font-bold">{allServiceNames.length > 0 ? allServiceNames[0] : (request.serviceTypeName || t('constants.maintenanceRequest'))}</h2>
+        <span className="mr-auto font-mono text-xs font-semibold text-surface-400" dir="ltr">{request.requestNumber || `#${request.id}`}</span>
       </div>
 
       {/* Timeline */}
@@ -206,7 +208,7 @@ export function RequestDetailPage() {
           {statusSteps.map((s, i) => {
             const labels: Record<string, string> = {
               pending: t('constants.status.pending'), quoted: t('constants.status.quoted'), accepted: t('constants.status.accepted'),
-              in_progress: t('constants.status.inProgress'), inspection_report: t('constants.status.inspection'), customer_approved: t('constants.status.customerApproved'), awaiting_payment: 'بانتظار دفع الفاتورة', completed: t('constants.status.completed'), cancelled: t('constants.status.cancelled'),
+              in_progress: t('constants.status.inProgress'), inspection_report: t('constants.status.inspection'), customer_approved: t('constants.status.customerApproved'), awaiting_payment: tr('بانتظار دفع الفاتورة', 'Awaiting invoice payment'), completed: t('constants.status.completed'), cancelled: t('constants.status.cancelled'),
             };
             const isActive = i <= currentStep;
             return (
@@ -256,7 +258,7 @@ export function RequestDetailPage() {
               <User size={20} className="text-accent-400" />
             </div>
             <div className="flex-1">
-              <p className="text-xs text-surface-400">الفني المسؤول عن الصيانة</p>
+              <p className="text-xs text-surface-400">{tr('الفني المسؤول عن الصيانة', 'Assigned technician')}</p>
               <p className="font-semibold text-sm">{request.technicianName}</p>
               {request.technicianSpecialty && (
                 <p className="text-xs text-surface-400">{request.technicianSpecialty}</p>
@@ -266,7 +268,7 @@ export function RequestDetailPage() {
           {request.technicianPhone && (
             <div className="flex gap-2">
               <a href={`tel:${request.technicianPhone.replace(/[^\d+]/g, '')}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent-500 text-white hover:bg-accent-600 transition-colors text-sm font-semibold">
-                <PhoneCall size={16} /> اتصال بالفني
+                <PhoneCall size={16} /> {tr('اتصال بالفني', 'Call technician')}
               </a>
             </div>
           )}
@@ -276,7 +278,7 @@ export function RequestDetailPage() {
       {/* Quotes */}
       {visibleQuotes.length > 0 && (
         <div id="quotes-section" className="space-y-2">
-          <h3 className="font-semibold">{selectedWorkshopQuote ? 'الورشة المختارة' : t('pages.requestDetail.quotes')}</h3>
+          <h3 className="font-semibold">{selectedWorkshopQuote ? tr('الورشة المختارة', 'Selected workshop') : t('pages.requestDetail.quotes')}</h3>
           {visibleQuotes.map((quote: Quote) => (
             <div key={quote.id} className="card flex items-center justify-between">
               <div>
@@ -339,7 +341,7 @@ export function RequestDetailPage() {
               {t('pages.requestDetail.viewFullReport')}
             </button>
           </div>
-          <button onClick={() => void downloadInspectionPdf(report, request)} className="btn-secondary w-full flex items-center justify-center gap-2"><Download size={16} /> تنزيل تقرير الفحص PDF</button>
+          <button onClick={() => void downloadInspectionPdf(report, request)} className="btn-secondary w-full flex items-center justify-center gap-2"><Download size={16} /> {tr('تنزيل تقرير الفحص PDF', 'Download inspection report PDF')}</button>
           <div className="flex items-center gap-2 text-sm">
             <span className="text-surface-400">{t('pages.requestDetail.overallCondition')}:</span>
             <span className={`font-medium ${
@@ -394,7 +396,7 @@ export function RequestDetailPage() {
               <span className="text-accent-400">{invoice.grandTotal.toLocaleString()} {t('constants.currency')}</span>
             </div>
           </div>
-          <button onClick={() => void downloadInvoicePdf(invoice, request)} className="btn-secondary w-full flex items-center justify-center gap-2"><Download size={16} /> تنزيل الفاتورة PDF</button>
+          <button onClick={() => void downloadInvoicePdf(invoice, request)} className="btn-secondary w-full flex items-center justify-center gap-2"><Download size={16} /> {tr('تنزيل الفاتورة PDF', 'Download invoice PDF')}</button>
 
           {invoice.status === 'pending_approval' && (
             <div className="flex gap-3 pt-2">
@@ -412,7 +414,7 @@ export function RequestDetailPage() {
       {/* Workshop contact */}
       {selectedWorkshopQuote?.workshopId && (
         <button onClick={() => navigate(`/orders/${request.id}/chat?workshopId=${selectedWorkshopQuote.workshopId}&workshopName=${encodeURIComponent(selectedWorkshopQuote.workshopName)}`)} className="card flex w-full items-center justify-between border border-accent-200 text-right transition hover:border-accent-400 hover:bg-accent-50/40 dark:border-accent-500/20 dark:hover:bg-accent-500/10">
-          <span><span className="block font-black text-surface-900 dark:text-white">تواصل مع الورشة</span><span className="mt-1 block text-xs text-surface-500">{selectedWorkshopQuote.workshopName}</span></span>
+          <span><span className="block font-black text-surface-900 dark:text-white">{tr('تواصل مع الورشة', 'Contact workshop')}</span><span className="mt-1 block text-xs text-surface-500">{selectedWorkshopQuote.workshopName}</span></span>
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-500 text-white"><MessageCircle size={21} /></span>
         </button>
       )}

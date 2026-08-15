@@ -56,10 +56,10 @@ function SaudiPlatePreview({ value, onChange }: { value: string; onChange: (valu
           <div className="grid grid-cols-2 divide-x-[4px] divide-black">
             <div className="flex items-center justify-center px-3">
               <input
-                value={parsed.numbers.join('')}
+                value={arabicNumbers.replace(/\s/g, '')}
                 onChange={(e) => updatePlate(parsed.letters, parsePlate(e.target.value).numbers)}
                 inputMode="numeric"
-                style={{ direction: 'ltr', unicodeBidi: 'bidi-override' }}
+                style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
                 aria-label="أرقام اللوحة"
                 placeholder="١ ٢ ٣ ٤"
                 dir="ltr"

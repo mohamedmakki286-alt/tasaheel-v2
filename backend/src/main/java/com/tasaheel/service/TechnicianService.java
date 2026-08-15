@@ -454,6 +454,7 @@ public class TechnicianService {
         com.tasaheel.entity.ServiceType primary = sts.isEmpty() ? null : sts.get(0);
         MaintenanceRequestDTO dto = MaintenanceRequestDTO.builder()
                 .id(r.getId())
+                .requestNumber(r.getRequestNumber())
                 .customerId(r.getCustomer().getId())
                 .customerName(r.getCustomer().getName())
                 .customerPhone(r.getCustomer().getPhone())

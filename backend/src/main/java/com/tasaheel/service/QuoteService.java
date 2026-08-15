@@ -31,6 +31,7 @@ public class QuoteService {
     private final WorkshopRepository workshopRepository;
     private final ServiceTypeRepository serviceTypeRepository;
     private final EventPublisher eventPublisher;
+    private final BusinessNumberService businessNumberService;
 
     public QuoteDTO submitQuote(Long requestId, Long workshopId, QuoteDTO dto) {
         MaintenanceRequest request = requestRepository.findById(requestId)
@@ -56,6 +57,7 @@ public class QuoteService {
         }
 
         Quote quote = Quote.builder()
+                .quoteNumber(businessNumberService.next("QUOTE"))
                 .request(request)
                 .workshop(workshop)
                 .serviceType(serviceType)
@@ -131,6 +133,7 @@ public class QuoteService {
     private QuoteDTO toQuoteDTO(Quote quote) {
         return QuoteDTO.builder()
                 .id(quote.getId())
+                .quoteNumber(quote.getQuoteNumber())
                 .requestId(quote.getRequest().getId())
                 .workshopId(quote.getWorkshop().getId())
                 .workshopName(quote.getWorkshop().getName())

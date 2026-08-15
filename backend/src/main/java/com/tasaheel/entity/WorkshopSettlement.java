@@ -47,6 +47,15 @@ public class WorkshopSettlement {
     @Column(name = "settled_at")
     private LocalDateTime settledAt;
 
+    @Column(name = "transfer_reference", length = 120)
+    private String transferReference;
+
+    @Column(name = "transfer_method", length = 40)
+    private String transferMethod;
+
+    @Column(name = "transferred_at")
+    private LocalDateTime transferredAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "journal_entry_id")
     private JournalEntry journalEntry;

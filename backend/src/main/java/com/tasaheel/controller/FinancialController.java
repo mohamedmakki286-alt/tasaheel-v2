@@ -80,9 +80,14 @@ public class FinancialController {
     }
 
     @PutMapping("/settlements/{id}/complete")
-    public ResponseEntity<ApiResponse<WorkshopSettlementDTO>> completeSettlement(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<WorkshopSettlementDTO>> completeSettlement(
+            @PathVariable Long id, @RequestBody Map<String, Object> body) {
         Locale locale = LocaleContextHolder.getLocale();
-        WorkshopSettlementDTO dto = settlementService.completeSettlement(id);
+        String transferReference = body.get("transferReference") != null
+                ? body.get("transferReference").toString() : null;
+        String transferMethod = body.get("transferMethod") != null
+                ? body.get("transferMethod").toString() : "bank_transfer";
+        WorkshopSettlementDTO dto = settlementService.completeSettlement(id, transferReference, transferMethod);
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("financial.settlement.confirmed", null, locale), dto));
     }
 

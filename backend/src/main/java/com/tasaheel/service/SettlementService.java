@@ -98,9 +98,15 @@ public class SettlementService {
                     ? invoiceCommissions.get(inv.getId())
                     : null;
             if (percentage == null) percentage = defaultPercentage;
+            if (!Double.isFinite(percentage) || percentage < 0 || percentage > 100) {
+                throw new BadRequestException("Commission percentage must be between 0 and 100");
+            }
 
             double grandTotal = inv.getGrandTotal() != null ? inv.getGrandTotal() : 0.0;
-            double commissionAmount = grandTotal * percentage / 100;
+            double commissionAmount = java.math.BigDecimal.valueOf(grandTotal)
+                    .multiply(java.math.BigDecimal.valueOf(percentage))
+                    .divide(java.math.BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP)
+                    .doubleValue();
             inv.setCommissionPercentage(percentage);
             inv.setCommissionAmount(commissionAmount);
             inv.setNetAmount(grandTotal - commissionAmount);
@@ -135,7 +141,8 @@ public class SettlementService {
     }
 
     @Transactional
-    public WorkshopSettlementDTO completeSettlement(Long settlementId) {
+    public WorkshopSettlementDTO completeSettlement(Long settlementId, String transferReference,
+                                                     String transferMethod) {
         WorkshopSettlement settlement = settlementRepository.findById(settlementId)
                 .orElseThrow(() -> new ResourceNotFoundException("Settlement", settlementId));
 
@@ -150,9 +157,19 @@ public class SettlementService {
                             ? invoice.getCommissionPercentage()
                             : getDefaultCommissionPercentage());
         }
+        if (transferReference == null || transferReference.isBlank()) {
+            throw new BadRequestException("A real bank transfer reference is required");
+        }
+        if (transferReference.length() > 120) {
+            throw new BadRequestException("Invalid transfer reference");
+        }
         JournalEntryDTO entry = accountingService.postSettlement(settlement);
         settlement.setStatus("SETTLED");
         settlement.setSettledAt(LocalDateTime.now());
+        settlement.setTransferredAt(LocalDateTime.now());
+        settlement.setTransferReference(transferReference.trim());
+        settlement.setTransferMethod(transferMethod == null || transferMethod.isBlank()
+                ? "bank_transfer" : transferMethod.trim());
         settlement.setJournalEntry(journalEntryRepository.findById(entry.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("JournalEntry", entry.getId())));
         settlement = settlementRepository.save(settlement);
@@ -434,6 +451,9 @@ public class SettlementService {
                 .status(settlement.getStatus())
                 .notes(settlement.getNotes())
                 .settledAt(settlement.getSettledAt())
+                .transferReference(settlement.getTransferReference())
+                .transferMethod(settlement.getTransferMethod())
+                .transferredAt(settlement.getTransferredAt())
                 .journalEntryId(settlement.getJournalEntry() != null ? settlement.getJournalEntry().getId() : null)
                 .createdAt(settlement.getCreatedAt())
                 .build();

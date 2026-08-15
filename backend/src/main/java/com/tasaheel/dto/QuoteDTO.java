@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class QuoteDTO {
     private Long id;
+    private String quoteNumber;
     private Long requestId;
     private Long workshopId;
     private String workshopName;

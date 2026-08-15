@@ -20,6 +20,9 @@ public class MaintenanceRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "request_number", unique = true, nullable = false, length = 30)
+    private String requestNumber;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;

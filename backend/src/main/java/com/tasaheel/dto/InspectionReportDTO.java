@@ -14,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class InspectionReportDTO {
     private Long id;
+    private String reportNumber;
     private Long requestId;
     private Long workshopId;
     private String workshopName;

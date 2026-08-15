@@ -73,6 +73,7 @@ export interface Driver {
 
 export interface MaintenanceRequest {
   id: number;
+  requestNumber?: string;
   customerId: number;
   customerName: string;
   customerPhone: string;
@@ -111,6 +112,7 @@ export type RequestStatus =
 
 export interface Quote {
   id: number;
+  quoteNumber?: string;
   requestId: number;
   workshopId: number;
   workshopName: string;
@@ -148,6 +150,7 @@ export interface InspectionLabor {
 
 export interface InspectionReport {
   id: number;
+  reportNumber?: string;
   requestId: number;
   workshopId: number;
   workshopName: string;
@@ -333,6 +336,9 @@ export interface WorkshopSettlement {
   status: string;
   notes?: string;
   settledAt?: string;
+  transferReference?: string;
+  transferMethod?: string;
+  transferredAt?: string;
   journalEntryId?: number;
   createdAt: string;
   invoices?: InvoiceDTO[];

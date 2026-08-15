@@ -81,6 +81,7 @@ export interface ServiceTypeInfo {
 
 export interface ServiceRequest {
   id: string;
+  requestNumber?: string;
   customer: Customer;
   /** Present in some API request summaries; full requests expose customer.name. */
   customerName?: string;
@@ -116,6 +117,7 @@ export interface RequestMedia {
 
 export interface Quote {
   id: string;
+  quoteNumber?: string;
   requestId: string;
   workshopId: string;
   workshopName?: string;
@@ -132,6 +134,7 @@ export interface Quote {
 
 export interface InspectionReport {
   id: string;
+  reportNumber?: string;
   requestId: string;
   workshopId: string;
   notes: string;

@@ -59,6 +59,15 @@ public class Payment {
     @Column(name = "provider_event_id", length = 120)
     private String providerEventId;
 
+    @Column(name = "refund_reference", length = 120)
+    private String refundReference;
+
+    @Column(name = "refund_requested_at")
+    private LocalDateTime refundRequestedAt;
+
+    @Column(name = "refunded_at")
+    private LocalDateTime refundedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

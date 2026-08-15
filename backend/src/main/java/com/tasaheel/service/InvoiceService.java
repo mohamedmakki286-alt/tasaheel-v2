@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.io.ByteArrayOutputStream;
@@ -39,6 +38,7 @@ public class InvoiceService {
     private final QuoteRepository quoteRepository;
     private final EventPublisher eventPublisher;
     private final AccountingService accountingService;
+    private final BusinessNumberService businessNumberService;
 
     @Transactional
     public InvoiceDTO createOrUpdateInvoice(Long requestId, Long workshopId, Double partsTotal, Double laborTotal, Double totalAmount, Double tax, Double taxPercent, Double grandTotal, List<InvoiceItemDTO> items) {
@@ -156,7 +156,7 @@ public class InvoiceService {
             return toInvoiceDTO(existing);
         }
 
-        String invoiceNumber = generateInvoiceNumber();
+        String invoiceNumber = businessNumberService.next("INVOICE");
 
         Invoice invoice = Invoice.builder()
                 .request(request)
@@ -380,12 +380,6 @@ public class InvoiceService {
                 .unitPrice(item.getUnitPrice())
                 .total(item.getTotal())
                 .build();
-    }
-
-    private String generateInvoiceNumber() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        String suffix = UUID.randomUUID().toString().substring(0, 6).toUpperCase(Locale.ROOT);
-        return "INV-" + timestamp + "-" + suffix;
     }
 
     public Page<InvoiceDTO> getWorkshopInvoices(Long workshopId, int page, int size) {

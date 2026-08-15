@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,9 @@ class FinancialIntegrityTest {
     @Mock TamaraService tamaraService;
     @Mock RequestCompletionService requestCompletionService;
     @Mock AccountingService accountingService;
+    @Mock BusinessNumberService businessNumberService;
+    @Mock EscrowService escrowService;
+    @Mock PlatformTransactionManager transactionManager;
 
     @Mock WorkshopRepository workshopRepository;
     @Mock InspectionReportRepository inspectionReportRepository;
@@ -55,6 +59,7 @@ class FinancialIntegrityTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(businessNumberService.next("INVOICE")).thenReturn("INV-2026-000001");
         ReflectionTestUtils.setField(paymentService, "callbackBaseUrl", "https://customer.example");
         ReflectionTestUtils.setField(paymentService, "publicApiUrl", "https://api.example");
         customer = Customer.builder().id(10L).name("Customer").build();
@@ -89,7 +94,7 @@ class FinancialIntegrityTest {
         assertEquals(115.0, result.getTotal());
         verify(moyasarService).createHostedInvoice(eq(115.0), eq("SAR"), anyString(),
                 eq("https://api.example/api/payments/webhook"),
-                eq("https://customer.example/payment/callback?requestId=30"),
+                eq("https://customer.example/payment/callback?requestId=30&paymentId=50"),
                 eq("https://customer.example/orders/30"), anyString());
     }
 
@@ -130,5 +135,54 @@ class FinancialIntegrityTest {
         assertNotNull(result.getZatcaQrPayload());
         byte[] qr = Base64.getDecoder().decode(result.getZatcaQrPayload());
         assertEquals(1, qr[0]);
+    }
+
+    @Test
+    void refundIsRejectedWhenWorkshopPayoutWasScheduled() {
+        Payment payment = Payment.builder().id(50L).request(request).customer(customer)
+                .amount(115.0).currency("SAR").method("moyasar").status("completed").build();
+        invoice.setSettlement(WorkshopSettlement.builder().id(90L).status("PENDING").build());
+        when(paymentRepository.findById(50L)).thenReturn(Optional.of(payment));
+        when(invoiceRepository.findByRequestId(30L)).thenReturn(Optional.of(invoice));
+
+        assertThrows(BadRequestException.class,
+                () -> ReflectionTestUtils.invokeMethod(paymentService, "prepareRefund", 50L));
+        verifyNoInteractions(moyasarService);
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void verifiedInvoiceUsesPaidAttemptAndCreatesHold() {
+        Payment payment = Payment.builder().id(50L).request(request).customer(customer)
+                .amount(115.0).total(115.0).fee(0.0).currency("SAR")
+                .method("moyasar").status("initiated").providerInvoiceId("inv-1").build();
+        when(paymentRepository.findById(50L)).thenReturn(Optional.of(payment));
+        when(invoiceRepository.findByRequestId(30L)).thenReturn(Optional.of(invoice));
+        when(moyasarService.getInvoice("inv-1")).thenReturn(Map.of(
+                "id", "inv-1", "status", "paid", "amount", 11500, "currency", "SAR",
+                "payments", List.of(
+                        Map.of("id", "failed-1", "status", "failed", "amount", 11500),
+                        Map.of("id", "paid-2", "status", "paid", "amount", 11500))));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+
+        PaymentDTO result = paymentService.verifyPayment(50L, 10L);
+
+        assertEquals("completed", result.getStatus());
+        assertEquals("paid-2", payment.getMoyasarPaymentId());
+        verify(escrowService).ensureHoldForCompletedPayment(payment);
+    }
+
+    @Test
+    void verifiedInvoiceRejectsWrongCurrency() {
+        Payment payment = Payment.builder().id(50L).request(request).customer(customer)
+                .amount(115.0).currency("SAR").method("moyasar")
+                .status("initiated").providerInvoiceId("inv-1").build();
+        when(paymentRepository.findById(50L)).thenReturn(Optional.of(payment));
+        when(moyasarService.getInvoice("inv-1")).thenReturn(Map.of(
+                "status", "paid", "amount", 11500, "currency", "USD", "payments", List.of()));
+
+        assertThrows(BadRequestException.class, () -> paymentService.verifyPayment(50L, 10L));
+        verify(paymentRepository, never()).save(any());
     }
 }

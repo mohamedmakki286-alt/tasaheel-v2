@@ -540,6 +540,7 @@ public class AdminService {
         ServiceType primary = sts.isEmpty() ? null : sts.get(0);
         return MaintenanceRequestDTO.builder()
                 .id(r.getId())
+                .requestNumber(r.getRequestNumber())
                 .customerId(r.getCustomer().getId())
                 .customerName(r.getCustomer().getName())
                 .customerPhone(r.getCustomer().getPhone())

@@ -17,6 +17,7 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MaintenanceRequestDTO {
     private Long id;
+    private String requestNumber;
     private Long customerId;
     private String customerName;
     private String customerPhone;

@@ -45,8 +45,11 @@ export async function getSettlement(id: number): Promise<WorkshopSettlement> {
   return data.data || data;
 }
 
-export async function completeSettlement(id: number): Promise<WorkshopSettlement> {
-  const { data } = await client.put(`/admin/financial/settlements/${id}/complete`);
+export async function completeSettlement(payload: { id: number; transferReference: string; transferMethod?: string }): Promise<WorkshopSettlement> {
+  const { data } = await client.put(`/admin/financial/settlements/${payload.id}/complete`, {
+    transferReference: payload.transferReference,
+    transferMethod: payload.transferMethod || 'bank_transfer',
+  });
   return data.data || data;
 }
 

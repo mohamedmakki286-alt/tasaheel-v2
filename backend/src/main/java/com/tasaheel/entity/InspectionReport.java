@@ -21,6 +21,9 @@ public class InspectionReport {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "report_number", unique = true, nullable = false, length = 30)
+    private String reportNumber;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id", nullable = false)
     private MaintenanceRequest request;

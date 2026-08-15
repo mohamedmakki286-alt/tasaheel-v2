@@ -31,6 +31,7 @@ public class WorkshopService {
     private final WorkshopGalleryRepository galleryRepository;
     private final RequestStatusHistoryRepository statusHistoryRepository;
     private final RequestDispatchService requestDispatchService;
+    private final BusinessNumberService businessNumberService;
     private final MaintenanceRequestService maintenanceRequestService;
     private final EventPublisher eventPublisher;
 
@@ -226,6 +227,7 @@ public class WorkshopService {
         }
 
         Quote quote = Quote.builder()
+                .quoteNumber(businessNumberService.next("QUOTE"))
                 .request(request)
                 .workshop(workshop)
                 .serviceType(serviceType)
@@ -495,6 +497,7 @@ public class WorkshopService {
         ServiceType primary = sts.isEmpty() ? null : sts.get(0);
         return MaintenanceRequestDTO.builder()
                 .id(r.getId())
+                .requestNumber(r.getRequestNumber())
                 .customerId(r.getCustomer().getId())
                 .customerName(r.getCustomer().getName())
                 .customerPhone(r.getCustomer().getPhone())
@@ -527,6 +530,7 @@ public class WorkshopService {
     private QuoteDTO toQuoteDTO(Quote q) {
         return QuoteDTO.builder()
                 .id(q.getId())
+                .quoteNumber(q.getQuoteNumber())
                 .requestId(q.getRequest().getId())
                 .workshopId(q.getWorkshop().getId())
                 .workshopName(q.getWorkshop().getName())

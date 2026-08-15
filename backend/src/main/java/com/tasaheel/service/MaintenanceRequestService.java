@@ -41,6 +41,7 @@ public class MaintenanceRequestService {
     private final RequestDispatchService requestDispatchService;
     private final ServiceItemRepository serviceItemRepository;
     private final MediaService mediaService;
+    private final BusinessNumberService businessNumberService;
 
     @Transactional
     public MaintenanceRequestDTO createRequest(Long customerId, MaintenanceRequestDTO dto, boolean isDraft) {
@@ -61,6 +62,7 @@ public class MaintenanceRequestService {
         String primaryServiceName = serviceTypes.isEmpty() ? "" : serviceTypes.get(0).getName();
 
         MaintenanceRequest request = MaintenanceRequest.builder()
+                .requestNumber(businessNumberService.next("REQUEST"))
                 .customer(customer)
                 .car(car)
                 .serviceTypes(serviceTypes)
@@ -429,6 +431,7 @@ public class MaintenanceRequestService {
 
         return MaintenanceRequestDTO.builder()
                 .id(r.getId())
+                .requestNumber(r.getRequestNumber())
                 .customerId(r.getCustomer().getId())
                 .customerName(r.getCustomer().getName())
                 .customerPhone(r.getCustomer().getPhone())
@@ -468,6 +471,7 @@ public class MaintenanceRequestService {
         List<QuoteDTO> quotes = quoteRepository.findByRequestIdOrderByCreatedAtAsc(r.getId()).stream()
                 .map(q -> QuoteDTO.builder()
                         .id(q.getId())
+                        .quoteNumber(q.getQuoteNumber())
                         .requestId(q.getRequest().getId())
                         .workshopId(q.getWorkshop().getId())
                         .workshopName(q.getWorkshop().getName())
@@ -522,6 +526,7 @@ public class MaintenanceRequestService {
 
             dto.setInspectionReport(InspectionReportDTO.builder()
                     .id(report.getId())
+                    .reportNumber(report.getReportNumber())
                     .requestId(report.getRequest().getId())
                     .workshopId(report.getWorkshop().getId())
                     .workshopName(report.getWorkshop().getName())

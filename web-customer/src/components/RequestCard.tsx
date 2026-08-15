@@ -17,6 +17,7 @@ export function RequestCard({ request, onClick }: { request: Request; onClick?: 
         </div>
         <StatusBadge status={request.status} />
       </div>
+      <p className="mb-2 font-mono text-xs font-semibold text-surface-400" dir="ltr">{request.requestNumber || `#${request.id}`}</p>
       {request.technicianName && (
         <div className="flex items-center gap-2 mb-1 mt-2 text-sm text-surface-400">
           <User className="h-4 w-4 text-accent-400" />

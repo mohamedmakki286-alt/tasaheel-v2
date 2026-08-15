@@ -23,6 +23,9 @@ public class WorkshopSettlementDTO {
     private String status;
     private String notes;
     private LocalDateTime settledAt;
+    private String transferReference;
+    private String transferMethod;
+    private LocalDateTime transferredAt;
     private Long journalEntryId;
     private LocalDateTime createdAt;
     private List<InvoiceDTO> invoices;

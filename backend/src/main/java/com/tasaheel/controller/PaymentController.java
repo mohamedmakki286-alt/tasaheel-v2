@@ -63,7 +63,13 @@ public class PaymentController {
     }
 
     @PostMapping("/webhook")
-    public ResponseEntity<ApiResponse<Void>> handleWebhook(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<ApiResponse<Void>> handleWebhook(
+            @RequestParam(required = false) String token,
+            @RequestBody Map<String, Object> payload) {
+        if (!paymentService.isValidWebhookToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Invalid webhook token"));
+        }
         Locale locale = LocaleContextHolder.getLocale();
         paymentService.handlePaymentWebhook(payload);
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("payment.webhook", null, locale), null));

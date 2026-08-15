@@ -36,9 +36,13 @@ function MiniPlate({ value }: { value?: string | null }) {
 
   return (
     <div className="grid h-[62px] w-full max-w-[220px] grid-cols-2 grid-rows-2 overflow-hidden rounded-[12px] border border-surface-200 bg-white text-center text-[11px] font-extrabold text-primary-500" dir="ltr">
-      <span className="flex items-center justify-center border-b border-r border-surface-200">{arabicNumbers}</span>
+      <span
+        className="flex items-center justify-center border-b border-r border-surface-200"
+        dir="ltr"
+        style={{ unicodeBidi: 'isolate' }}
+      >{arabicNumbers}</span>
       <span className="flex items-center justify-center border-b border-surface-200" dir="rtl">{arabicLetters || '—'}</span>
-      <span className="flex items-center justify-center border-r border-surface-200">{numbers ? numbers.split('').join(' ') : '—'}</span>
+      <span className="flex items-center justify-center border-r border-surface-200" dir="ltr" style={{ unicodeBidi: 'isolate' }}>{numbers ? numbers.split('').join(' ') : '—'}</span>
       <span className="flex items-center justify-center" dir="ltr">{englishLetters || '—'}</span>
     </div>
   );

@@ -45,7 +45,8 @@ const QUOTE_STATUS_MAP: Record<string, { label: string; variant: string }> = {
 };
 
 export default function RequestDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tr = (ar: string, en: string) => i18n.language.startsWith('en') ? en : ar;
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -118,7 +119,7 @@ export default function RequestDetailPage() {
       setChatMessage('');
       refetchMessages();
     },
-    onError: () => toast.error('فشل إرسال الرسالة'),
+    onError: () => toast.error(tr('فشل إرسال الرسالة', 'Failed to send message')),
   });
 
   const approveInspectionMutation = useMutation({
@@ -172,7 +173,7 @@ export default function RequestDetailPage() {
           <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl lg:text-3xl font-bold text-white">{t('pages.requests.detail.requestNumber')}{request.id}</h1>
+                <h1 className="text-2xl lg:text-3xl font-bold text-white" dir="ltr">{request.requestNumber || `#${request.id}`}</h1>
                 <StatusBadge status={request.status} />
               </div>
               <p className="text-white/60">{formatDateTime(request.createdAt)}</p>
@@ -294,7 +295,7 @@ export default function RequestDetailPage() {
                   return (
                     <div key={quote.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-gray-100 hover:border-amber-200 hover:bg-amber-50/30 transition-all duration-200">
                       <div className="flex items-center gap-4">
-                        <Avatar name={quote.workshopName || 'ورشة'} size="md" />
+                        <Avatar name={quote.workshopName || tr('ورشة', 'Workshop')} size="md" />
                         <div>
                           <p className="font-bold text-gray-900">{quote.workshopName}</p>
                           {quote.notes && <p className="text-sm text-gray-500 mt-0.5">{quote.notes}</p>}
@@ -306,7 +307,7 @@ export default function RequestDetailPage() {
                       <div className="flex items-center gap-3 mt-3 sm:mt-0">
                         <p className="text-2xl font-bold text-gray-900">{formatCurrency(quote.price || quote.total || 0)}</p>
                         {quote.estimatedDays && (
-                          <p className="text-xs text-gray-500">{quote.estimatedDays} يوم</p>
+                          <p className="text-xs text-gray-500">{quote.estimatedDays} {tr('يوم', 'days')}</p>
                         )}
                       </div>
                     </div>
@@ -315,7 +316,7 @@ export default function RequestDetailPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <Quote className="w-12 h-12 text-gray-300" />
-                  <p className="text-gray-500 font-medium">لا توجد عروض أسعار لهذا الطلب</p>
+                  <p className="text-gray-500 font-medium">{tr('لا توجد عروض أسعار لهذا الطلب', 'No quotes for this request')}</p>
                 </div>
               )}
             </div>
@@ -327,7 +328,7 @@ export default function RequestDetailPage() {
                 <div className="flex justify-center py-12"><LoadingSpinner /></div>
               ) : inspectionReport ? (
                 <>
-                  <div className="flex justify-end"><button onClick={() => exportFinancialDocument(`تقرير فحص الطلب #${request.id}`, `تقرير-فحص-${request.id}`, { الورشة: request.workshopName || '—', العميل: request.customerName, المركبة: `${request.carMake} ${request.carModel}`, الحالة: inspectionReport.status }, [{ title: 'قطع الغيار', rows: (inspectionReport.parts || []).map((part:any) => ({ البيان: part.name, الكمية: part.quantity, 'سعر الوحدة': formatCurrency(part.unitPrice), الإجمالي: formatCurrency(part.total) })) }, { title: 'أعمال الصيانة', rows: (inspectionReport.labor || []).map((item:any) => ({ العمل: item.description, الساعات: item.hours, 'سعر الساعة': formatCurrency(item.hourlyRate), الإجمالي: formatCurrency(item.total) })) }])} className="btn-secondary flex items-center gap-2"><Download size={15}/> تقرير الفحص PDF</button></div>
+                  <div className="flex justify-end"><button onClick={() => exportFinancialDocument(`تقرير فحص ${inspectionReport.reportNumber || request.requestNumber || request.id}`, `تقرير-فحص-${inspectionReport.reportNumber || request.id}`, { 'رقم التقرير': inspectionReport.reportNumber || inspectionReport.id, 'رقم الطلب': request.requestNumber || request.id, الورشة: request.workshopName || '—', العميل: request.customerName, المركبة: `${request.carMake} ${request.carModel}`, الحالة: inspectionReport.status }, [{ title: 'قطع الغيار', rows: (inspectionReport.parts || []).map((part:any) => ({ البيان: part.name, الكمية: part.quantity, 'سعر الوحدة': formatCurrency(part.unitPrice), الإجمالي: formatCurrency(part.total) })) }, { title: 'أعمال الصيانة', rows: (inspectionReport.labor || []).map((item:any) => ({ العمل: item.description, الساعات: item.hours, 'سعر الساعة': formatCurrency(item.hourlyRate), الإجمالي: formatCurrency(item.total) })) }])} className="btn-secondary flex items-center gap-2"><Download size={15}/> تقرير الفحص PDF</button></div>
                   <div className={`flex items-center gap-3 p-4 rounded-2xl border ${
                     inspectionReport.status === 'approved' ? 'bg-emerald-50 border-emerald-100' :
                     inspectionReport.status === 'rejected' ? 'bg-red-50 border-red-100' :
@@ -464,7 +465,7 @@ export default function RequestDetailPage() {
                 <div className="flex justify-center py-12"><LoadingSpinner /></div>
               ) : invoice ? (
                 <>
-                  <div className="flex justify-end"><button onClick={() => exportFinancialDocument(`فاتورة ${invoice.invoiceNumber || invoice.id}`, `فاتورة-${invoice.invoiceNumber || invoice.id}`, { 'رقم الطلب': request.id, الورشة: request.workshopName || invoice.workshopName, العميل: request.customerName, الحالة: invoice.status }, [{ title: 'بنود الفاتورة', rows: (invoice.items || []).map((item:any) => ({ البيان: item.name, الكمية: item.quantity, 'سعر الوحدة شامل الضريبة': formatCurrency(item.unitPrice), الإجمالي: formatCurrency(item.total) })) }, { title: 'الإجماليات', rows: [{ البيان: 'قبل الضريبة', المبلغ: formatCurrency(invoice.totalAmount) }, { البيان: `ضريبة القيمة المضافة ${invoice.taxPercent || 15}%`, المبلغ: formatCurrency(invoice.tax || invoice.taxAmount || 0) }, { البيان: 'الإجمالي النهائي', المبلغ: formatCurrency(invoice.grandTotal) }] }])} className="btn-secondary flex items-center gap-2"><Download size={15}/> الفاتورة PDF</button></div>
+                  <div className="flex justify-end"><button onClick={() => exportFinancialDocument(`فاتورة ${invoice.invoiceNumber || invoice.id}`, `فاتورة-${invoice.invoiceNumber || invoice.id}`, { 'رقم الطلب': request.requestNumber || request.id, الورشة: request.workshopName || invoice.workshopName, العميل: request.customerName, الحالة: invoice.status }, [{ title: 'بنود الفاتورة', rows: (invoice.items || []).map((item:any) => ({ البيان: item.name, الكمية: item.quantity, 'سعر الوحدة شامل الضريبة': formatCurrency(item.unitPrice), الإجمالي: formatCurrency(item.total) })) }, { title: 'الإجماليات', rows: [{ البيان: 'قبل الضريبة', المبلغ: formatCurrency(invoice.totalAmount) }, { البيان: `ضريبة القيمة المضافة ${invoice.taxPercent || 15}%`, المبلغ: formatCurrency(invoice.tax || invoice.taxAmount || 0) }, { البيان: 'الإجمالي النهائي', المبلغ: formatCurrency(invoice.grandTotal) }] }])} className="btn-secondary flex items-center gap-2"><Download size={15}/> الفاتورة PDF</button></div>
                   <div className="text-center pb-6 border-b border-gray-100">
                     <div className="inline-flex items-center justify-center w-16 h-16 gradient-accent rounded-2xl shadow-lg mb-4">
                       <Wrench className="w-8 h-8 text-white" />
@@ -538,14 +539,14 @@ export default function RequestDetailPage() {
                       invoice.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                       'bg-amber-100 text-amber-700'
                     }`}>
-                      {invoice.status === 'paid' ? 'مدفوع' : invoice.status === 'cancelled' ? 'ملغي' : 'بانتظار الدفع'}
+                      {invoice.status === 'paid' ? tr('مدفوع', 'Paid') : invoice.status === 'cancelled' ? tr('ملغي', 'Cancelled') : tr('بانتظار الدفع', 'Awaiting payment')}
                     </span>
                   </div>
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <CreditCard className="w-12 h-12 text-gray-300" />
-                  <p className="text-gray-500 font-medium">لا توجد فاتورة لهذا الطلب</p>
+                  <p className="text-gray-500 font-medium">{tr('لا توجد فاتورة لهذا الطلب', 'No invoice for this request')}</p>
                 </div>
               )}
             </div>
@@ -556,7 +557,7 @@ export default function RequestDetailPage() {
               {!chatRoom ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <MessageCircle className="w-12 h-12 text-gray-300" />
-                  <p className="text-gray-500 font-medium">لا توجد محادثة لهذا الطلب</p>
+                  <p className="text-gray-500 font-medium">{tr('لا توجد محادثة لهذا الطلب', 'No chat for this request')}</p>
                 </div>
               ) : (
                 <>

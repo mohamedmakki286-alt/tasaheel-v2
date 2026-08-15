@@ -31,6 +31,7 @@ public class InspectionReportService {
     private final WorkshopRepository workshopRepository;
     private final QuoteRepository quoteRepository;
     private final EventPublisher eventPublisher;
+    private final BusinessNumberService businessNumberService;
 
     @Transactional
     public InspectionReportDTO createReport(Long requestId, Long workshopId,
@@ -70,6 +71,7 @@ public class InspectionReportService {
         double grandTotal = subtotal + tax;
 
         InspectionReport report = InspectionReport.builder()
+                .reportNumber(businessNumberService.next("REPORT"))
                 .request(request)
                 .workshop(workshop)
                 .notes(notes)
@@ -325,6 +327,7 @@ public class InspectionReportService {
 
         return InspectionReportDTO.builder()
                 .id(report.getId())
+                .reportNumber(report.getReportNumber())
                 .requestId(report.getRequest().getId())
                 .workshopId(report.getWorkshop().getId())
                 .workshopName(report.getWorkshop().getName())

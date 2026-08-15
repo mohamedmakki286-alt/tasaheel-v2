@@ -104,6 +104,7 @@ application:
   moyasar:
     secret-key: ${MOYASAR_SECRET_KEY:}
     base-url: https://api.moyasar.com/v1
+    webhook-secret: ${MOYASAR_WEBHOOK_SECRET:}
   google:
     maps:
       api-key: ${GOOGLE_MAPS_API_KEY:}

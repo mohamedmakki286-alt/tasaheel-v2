@@ -11,16 +11,6 @@ export async function refundPayment(id: number): Promise<Payment> {
   return data;
 }
 
-export async function releasePayment(id: number, workshopId: number): Promise<any> {
-  const { data } = await client.post(`/admin/payments/${id}/release`, { workshopId });
-  return data.data || data;
-}
-
-export async function adminRefundPayment(id: number): Promise<any> {
-  const { data } = await client.post(`/admin/payments/${id}/refund`);
-  return data.data || data;
-}
-
 export async function getPaymentHolds(): Promise<any[]> {
   const { data } = await client.get('/admin/payments/holds');
   return data.data || data;

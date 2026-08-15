@@ -277,26 +277,6 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(msg.getMessage("admin.status.overridden", new Object[]{newStatus}, locale), null));
     }
 
-    @PostMapping("/payments/{id}/release")
-    public ResponseEntity<ApiResponse<PaymentHold>> releasePayment(
-            @AuthenticationPrincipal UserDetailsImpl user,
-            @PathVariable Long id,
-            @RequestBody Map<String, Long> body) {
-        Locale locale = LocaleContextHolder.getLocale();
-        Long workshopId = body.get("workshopId");
-        PaymentHold hold = escrowService.releasePayment(id, workshopId, user.getUserId());
-        return ResponseEntity.ok(ApiResponse.success(msg.getMessage("admin.payment.released", null, locale), hold));
-    }
-
-    @PostMapping("/payments/{id}/refund")
-    public ResponseEntity<ApiResponse<PaymentHold>> refundPayment(
-            @AuthenticationPrincipal UserDetailsImpl user,
-            @PathVariable Long id) {
-        Locale locale = LocaleContextHolder.getLocale();
-        PaymentHold hold = escrowService.refundPayment(id, user.getUserId());
-        return ResponseEntity.ok(ApiResponse.success(msg.getMessage("admin.payment.refunded", null, locale), hold));
-    }
-
     @GetMapping("/payments/holds")
     public ResponseEntity<ApiResponse<java.util.List<PaymentHold>>> getAllHolds() {
         return ResponseEntity.ok(ApiResponse.success(escrowService.getAllHolds()));

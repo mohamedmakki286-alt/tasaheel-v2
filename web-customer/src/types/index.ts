@@ -116,6 +116,7 @@ export interface RequestStatus {
 
 export interface Request {
   id: string;
+  requestNumber?: string;
   customerId: string;
   customerName: string;
   customerPhone?: string;
@@ -206,6 +207,7 @@ export interface RequestStatusHistory {
 
 export interface Quote {
   id: string;
+  quoteNumber?: string;
   requestId: string;
   workshopId: string;
   workshopName: string;
@@ -221,6 +223,7 @@ export interface Quote {
 
 export interface InspectionReport {
   id: string;
+  reportNumber?: string;
   requestId: string;
   workshopId: string;
   workshopName: string;

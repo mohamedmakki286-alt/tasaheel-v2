@@ -14,8 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,8 +22,6 @@ public class EscrowService {
     private final PaymentHoldRepository paymentHoldRepository;
     private final MaintenanceRequestRepository requestRepository;
     private final CustomerRepository customerRepository;
-    private final WorkshopRepository workshopRepository;
-    private final ServiceItemRepository serviceItemRepository;
     private final QuoteRepository quoteRepository;
     private final PaymentRepository paymentRepository;
     private final EventPublisher eventPublisher;
@@ -66,50 +62,33 @@ public class EscrowService {
         return hold;
     }
 
+    /** Creates the hold as part of verified payment completion; safe to call repeatedly. */
     @Transactional
-    public PaymentHold releasePayment(Long requestId, Long workshopId, Long adminId) {
-        Locale locale = LocaleContextHolder.getLocale();
-        PaymentHold hold = paymentHoldRepository.findByRequestId(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("PaymentHold", "requestId", requestId.toString()));
-
-        if (!"HELD".equals(hold.getStatus())) {
-            throw new BadRequestException(msg.getMessage("escrow.not.held", null, locale));
-        }
-
-        Workshop workshop = workshopRepository.findById(workshopId)
-                .orElseThrow(() -> new ResourceNotFoundException("Workshop", workshopId));
-        if (hold.getWorkshop() == null || !hold.getWorkshop().getId().equals(workshopId)) {
-            throw new BadRequestException("Payment hold does not belong to this workshop");
-        }
-
-        hold.setStatus("RELEASED");
-        hold.setReleasedAt(LocalDateTime.now());
-        hold.setWorkshop(workshop);
-        paymentHoldRepository.save(hold);
-
-        eventPublisher.publish(this, EventType.PAYMENT_RELEASED, requestId, "admin", adminId,
-                java.util.Map.of("workshopId", workshopId, "amount", hold.getAmount()));
-
-        return hold;
+    public PaymentHold ensureHoldForCompletedPayment(Payment payment) {
+        Long requestId = payment.getRequest().getId();
+        PaymentHold existing = paymentHoldRepository.findByRequestId(requestId).orElse(null);
+        if (existing != null) return existing;
+        Quote acceptedQuote = quoteRepository.findByRequestIdAndStatus(requestId, "accepted")
+                .orElseThrow(() -> new BadRequestException("No accepted workshop quote found"));
+        return paymentHoldRepository.save(PaymentHold.builder()
+                .request(payment.getRequest())
+                .customer(payment.getCustomer())
+                .workshop(acceptedQuote.getWorkshop())
+                .amount(payment.getAmount())
+                .status("HELD")
+                .build());
     }
 
     @Transactional
-    public PaymentHold refundPayment(Long requestId, Long adminId) {
-        Locale locale = LocaleContextHolder.getLocale();
-        PaymentHold hold = paymentHoldRepository.findByRequestId(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("PaymentHold", "requestId", requestId.toString()));
-
-        if (!"HELD".equals(hold.getStatus())) {
-            throw new BadRequestException(msg.getMessage("escrow.not.held", null, locale));
-        }
-
-        hold.setStatus("REFUNDED");
-        hold.setRefundedAt(LocalDateTime.now());
-        paymentHoldRepository.save(hold);
-
-        eventPublisher.publish(this, EventType.PAYMENT_REFUNDED, requestId, "admin", adminId);
-
-        return hold;
+    public void markRefunded(Long requestId) {
+        paymentHoldRepository.findByRequestId(requestId).ifPresent(hold -> {
+            if ("RELEASED".equals(hold.getStatus())) {
+                throw new BadRequestException("Released workshop funds cannot be refunded");
+            }
+            hold.setStatus("REFUNDED");
+            hold.setRefundedAt(LocalDateTime.now());
+            paymentHoldRepository.save(hold);
+        });
     }
 
     public PaymentHold getHoldByRequest(Long requestId) {

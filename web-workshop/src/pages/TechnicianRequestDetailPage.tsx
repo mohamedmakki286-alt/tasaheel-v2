@@ -36,6 +36,7 @@ const emojiGroups = [
 
 interface TechRequest {
   id: number;
+  requestNumber?: string;
   customerId: number;
   customerName: string;
   customerPhone: string;
@@ -514,7 +515,7 @@ export default function TechnicianRequestDetailPage() {
               <ArrowRight size={20} className="text-gray-500" />
             </button>
             <div>
-              <h1 className="font-bold text-[#111827] text-sm">تفاصيل الطلب #{request.id}</h1>
+              <h1 className="font-mono font-bold text-[#111827] text-sm" dir="ltr">{request.requestNumber || `#${request.id}`}</h1>
               <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-medium mt-0.5 ${statusInfo.bg} ${statusInfo.color}`}>
                 {statusInfo.label}
               </span>
