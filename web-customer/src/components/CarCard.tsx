@@ -32,17 +32,15 @@ function parseStoredPlate(value?: string | null) {
 
 function MiniPlate({ value }: { value?: string | null }) {
   const { numbers, englishLetters, arabicLetters } = parseStoredPlate(value);
-  const arabicNumbers = numbers ? toArabicPlateDigits(numbers) : '—';
+  const plateDigits = numbers ? [...numbers] : [];
 
   return (
     <div className="grid h-[62px] w-full max-w-[220px] grid-cols-2 grid-rows-2 overflow-hidden rounded-[12px] border border-surface-200 bg-white text-center text-[11px] font-extrabold text-primary-500" dir="ltr">
-      <span
-        className="flex items-center justify-center border-b border-r border-surface-200"
-        dir="ltr"
-        style={{ unicodeBidi: 'isolate' }}
-      >{arabicNumbers}</span>
+      <span className="flex items-center justify-center gap-1 border-b border-r border-surface-200" dir="ltr">
+        {plateDigits.length ? plateDigits.map((digit, index) => <bdi key={`${digit}-${index}`} dir="ltr">{toArabicPlateDigits(digit)}</bdi>) : '—'}
+      </span>
       <span className="flex items-center justify-center border-b border-surface-200" dir="rtl">{arabicLetters || '—'}</span>
-      <span className="flex items-center justify-center border-r border-surface-200" dir="ltr" style={{ unicodeBidi: 'isolate' }}>{numbers ? numbers.split('').join(' ') : '—'}</span>
+      <span className="flex items-center justify-center gap-1 border-r border-surface-200" dir="ltr">{plateDigits.length ? plateDigits.map((digit, index) => <bdi key={`${digit}-${index}`} dir="ltr">{digit}</bdi>) : '—'}</span>
       <span className="flex items-center justify-center" dir="ltr">{englishLetters || '—'}</span>
     </div>
   );

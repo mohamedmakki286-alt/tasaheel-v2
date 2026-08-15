@@ -27,11 +27,12 @@ function MiniPlate({ plate = '' }: { plate?: string }) {
   const parts = plate.trim().split(/\s+/);
   const letters = parts.filter((part) => /[A-Za-z\u0600-\u06ff]/.test(part)).join(' ');
   const numbers = parts.filter((part) => /\d/.test(part)).join(' ');
+  const plateDigits = numbers.replace(/\s/g, '').split('').filter(Boolean);
   return (
     <div className="grid h-[66px] w-[126px] shrink-0 grid-cols-2 grid-rows-2 overflow-hidden rounded-lg border border-surface-300 bg-white text-center text-[11px] font-black text-surface-800 shadow-sm" dir="ltr">
-      <span className="flex items-center justify-center border-b border-r border-surface-300" dir="ltr" style={{ unicodeBidi: 'isolate' }}>{numbers ? toArabicPlateDigits(numbers.replace(/\s/g, '')) : '١ ٢ ٣ ٤'}</span>
+      <span className="flex items-center justify-center gap-1 border-b border-r border-surface-300" dir="ltr">{plateDigits.length ? plateDigits.map((digit, index) => <bdi key={`${digit}-${index}`} dir="ltr">{toArabicPlateDigits(digit)}</bdi>) : '١ ٢ ٣ ٤'}</span>
       <span className="flex items-center justify-center border-b border-surface-300" dir="rtl">{letters || 'أ ب ج'}</span>
-      <span className="flex items-center justify-center border-r border-surface-300" dir="ltr" style={{ unicodeBidi: 'isolate' }}>{numbers || '1 2 3 4'}</span>
+      <span className="flex items-center justify-center gap-1 border-r border-surface-300" dir="ltr">{plateDigits.length ? plateDigits.map((digit, index) => <bdi key={`${digit}-${index}`} dir="ltr">{digit}</bdi>) : '1 2 3 4'}</span>
       <span className="flex items-center justify-center">{letters.toUpperCase() || 'A B J'}</span>
     </div>
   );
