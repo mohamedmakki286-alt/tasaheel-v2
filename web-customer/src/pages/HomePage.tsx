@@ -13,14 +13,14 @@ import {
 } from '../components/ServiceIcons';
 
 const QUICK_SERVICES = [
-  { icon: OilChangeIcon, label: 'تغيير زيت', category: 'periodic', templateNameEn: 'Oil Change' },
-  { icon: BatteryIcon, label: 'تغيير بطارية', category: 'electrical', templateNameEn: 'Battery Replacement' },
-  { icon: TireIcon, label: 'تغيير إطار', category: 'emergency', templateNameEn: 'Tire Change' },
-  { icon: InspectionIcon, label: 'فحص شامل', category: 'periodic', templateNameEn: 'Periodic Inspection' },
-  { icon: ElectricIcon, label: 'كهرباء', category: 'electrical' },
-  { icon: ACIcon, label: 'مكيف', category: 'ac' },
-  { icon: WashIcon, label: 'تلميع', category: 'bodywork', templateNameEn: 'Car Polishing' },
-  { icon: TowIcon, label: 'سطحة', category: 'emergency', templateNameEn: 'Tow Truck' },
+  { icon: OilChangeIcon, label: 'تغيير زيت', labelEn: 'Oil Change', category: 'periodic', templateNameEn: 'Oil Change' },
+  { icon: BatteryIcon, label: 'تغيير بطارية', labelEn: 'Battery', category: 'electrical', templateNameEn: 'Battery Replacement' },
+  { icon: TireIcon, label: 'تغيير إطار', labelEn: 'Tire Change', category: 'emergency', templateNameEn: 'Tire Change' },
+  { icon: InspectionIcon, label: 'فحص شامل', labelEn: 'Inspection', category: 'periodic', templateNameEn: 'Periodic Inspection' },
+  { icon: ElectricIcon, label: 'كهرباء', labelEn: 'Electrical', category: 'electrical' },
+  { icon: ACIcon, label: 'مكيف', labelEn: 'A/C', category: 'ac' },
+  { icon: WashIcon, label: 'تلميع', labelEn: 'Polishing', category: 'bodywork', templateNameEn: 'Car Polishing' },
+  { icon: TowIcon, label: 'سطحة', labelEn: 'Tow Truck', category: 'emergency', templateNameEn: 'Tow Truck' },
 ];
 
 const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const } }) };
@@ -35,7 +35,8 @@ function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 export function HomePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tr = (ar: string, en: string) => i18n.language.startsWith('en') ? en : ar;
   const navigate = useNavigate();
   const customer = useAuthStore((s) => s.customer);
   const { showLoginSheet, closeSheet, requireAuth, pendingMessage } = useGuestGuard();
@@ -64,9 +65,9 @@ export function HomePage() {
     .slice(0, 8), [nearbyWorkshops, position]);
 
   const h = new Date().getHours();
-  const greetingTime = h < 12 ? 'صباح الخير' : h < 18 ? 'مساء الخير' : 'مساء الخير';
+  const greetingTime = h < 12 ? tr('صباح الخير', 'Good morning') : tr('مساء الخير', 'Good evening');
   const customerName = customer?.name?.split(' ')[0] || '';
-  const greeting = customerName ? `${greetingTime} يا ${customerName}` : greetingTime;
+  const greeting = customerName ? (i18n.language.startsWith('en') ? `${greetingTime}, ${customerName}` : `${greetingTime} يا ${customerName}`) : greetingTime;
 
   const openQuickService = (service: typeof QUICK_SERVICES[number]) => {
     if (service.templateNameEn) {
@@ -87,7 +88,7 @@ export function HomePage() {
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div>
           <h2 className="text-xl font-black text-primary-500 dark:text-white">{greeting}</h2>
-          <p className="text-surface-400 text-sm mt-0.5">كيف نقدر نخدم سياراتك اليوم؟</p>
+          <p className="text-surface-400 text-sm mt-0.5">{tr('كيف نقدر نخدم سياراتك اليوم؟', 'How can we help your car today?')}</p>
         </div>
       </motion.div>
 
@@ -95,7 +96,7 @@ export function HomePage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }}>
         <div className="relative">
           <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400" size={18} />
-          <input type="text" placeholder="ابحث عن خدمة أو ورشة..." className="input-field pr-10 text-sm" />
+          <input type="text" placeholder={tr('ابحث عن خدمة أو ورشة...', 'Search for a service or workshop...')} className="input-field pr-10 text-sm" />
         </div>
       </motion.div>
 
@@ -108,17 +109,17 @@ export function HomePage() {
       >
         <img
           src="/hero-car.jpg"
-          alt="صيانة سيارات"
+          alt={tr('صيانة سيارات', 'Car maintenance')}
           className="block w-full h-[200px] sm:h-[240px] object-cover object-center"
         />
         <div className="absolute inset-0 z-10 flex flex-col justify-end p-5 bg-gradient-to-t from-black/70 via-black/20 to-transparent">
-          <h1 className="text-2xl font-black leading-tight text-white">صيانة سياراتك <span className="text-brand">أسهل</span></h1>
-          <p className="text-white/70 text-sm mt-1">اختر الخدمة والورشة المناسبة لك</p>
+          <h1 className="text-2xl font-black leading-tight text-white">{tr('صيانة سياراتك', 'Car maintenance made')} <span className="text-brand">{tr('أسهل', 'easier')}</span></h1>
+          <p className="text-white/70 text-sm mt-1">{tr('اختر الخدمة والورشة المناسبة لك', 'Choose the right service and workshop')}</p>
           <button
             onClick={() => { if (requireAuth('سجّل دخولك لطلب خدمة')) navigate('/new-request'); }}
             className="mt-3 inline-flex items-center gap-2 rounded-[12px] bg-white text-primary-500 px-5 py-2.5 text-sm font-extrabold shadow-lg transition active:scale-95 w-fit"
           >
-            اطلب خدمة
+            {tr('اطلب خدمة', 'Request Service')}
           </button>
         </div>
       </motion.div>
@@ -126,9 +127,9 @@ export function HomePage() {
       {/* Quick Services - 20px spacing from banner */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-primary-500 dark:text-white">خدمات سريعة</h2>
+          <h2 className="font-bold text-primary-500 dark:text-white">{tr('خدمات سريعة', 'Quick Services')}</h2>
           <button onClick={() => navigate('/services')} className="text-brand text-sm font-medium flex items-center gap-1">
-            عرض الكل <ChevronLeft size={14} />
+            {tr('عرض الكل', 'View All')} <ChevronLeft size={14} />
           </button>
         </div>
         <div className="grid grid-cols-4 gap-2.5">
@@ -137,7 +138,7 @@ export function HomePage() {
               <div className="w-12 h-12 rounded-[12px] bg-surface-50 dark:bg-surface-700/50 flex items-center justify-center text-surface-600 dark:text-surface-300">
                 <s.icon size={26} />
               </div>
-              <span className="text-[11px] font-bold text-surface-700 dark:text-surface-300 text-center leading-tight">{s.label}</span>
+              <span className="text-[11px] font-bold text-surface-700 dark:text-surface-300 text-center leading-tight">{i18n.language.startsWith('en') ? s.labelEn : s.label}</span>
             </motion.button>
           ))}
         </div>
@@ -154,8 +155,8 @@ export function HomePage() {
         <div className="relative flex items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-white/20"><Gift size={25}/></div>
           <div className="flex-1">
-            <h2 className="font-black text-lg">العروض والباقات</h2>
-            <p className="text-xs text-white/80">وفر أكثر مع باقات الورش المتكاملة</p>
+            <h2 className="font-black text-lg">{tr('العروض والباقات', 'Offers and Packages')}</h2>
+            <p className="text-xs text-white/80">{tr('وفر أكثر مع باقات الورش المتكاملة', 'Save more with workshop packages')}</p>
           </div>
           <ChevronLeft size={20}/>
         </div>
@@ -164,9 +165,9 @@ export function HomePage() {
       {/* Nearby Workshops */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-primary-500 dark:text-white">ورش قريبة</h2>
+          <h2 className="font-bold text-primary-500 dark:text-white">{tr('ورش قريبة', 'Nearby Workshops')}</h2>
           <button onClick={() => navigate('/workshops')} className="text-brand text-sm font-medium flex items-center gap-1">
-            عرض الكل <ChevronLeft size={14} />
+            {tr('عرض الكل', 'View All')} <ChevronLeft size={14} />
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
@@ -193,7 +194,7 @@ export function HomePage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${w.workshopType === 'mobile' ? 'bg-success-50 text-success-500' : 'bg-blue-50 text-blue-500'}`}>
-                    {w.workshopType === 'mobile' ? 'متنقلة' : 'ثابتة'}
+                  {w.workshopType === 'mobile' ? tr('متنقلة', 'Mobile') : tr('ثابتة', 'Workshop')}
                   </span>
                   <span className="text-[10px] text-surface-400">{w.services?.split(',').slice(0, 2).join(' · ')}</span>
                 </div>
@@ -210,7 +211,7 @@ export function HomePage() {
           className="w-full py-4 rounded-[16px] font-bold bg-brand hover:bg-brand-600 text-white text-base transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-brand/15"
         >
           <Wrench size={20} />
-          اطلب صيانة الآن
+          {tr('اطلب صيانة الآن', 'Request Maintenance Now')}
         </button>
       </motion.div>
     </div>

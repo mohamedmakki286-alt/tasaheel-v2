@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 import BottomNav from '../components/BottomNav';
 import AIAssistant from '../components/AIAssistant';
+import { useTranslation } from 'react-i18next';
 
 const PAGE_TITLES: Record<string, string> = {
   '/account/support': 'الدعم والمساعدة',
@@ -15,19 +16,22 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 export function CustomerLayout() {
+  const { i18n } = useTranslation();
+  const tr = (ar: string, en: string) => i18n.language.startsWith('en') ? en : ar;
   const navigate = useNavigate();
   const location = useLocation();
 
   const subTitle = useMemo(() => {
     const path = location.pathname;
-    if (PAGE_TITLES[path]) return PAGE_TITLES[path];
-    if (path.startsWith('/orders/')) return 'تفاصيل الطلب';
-    if (path.startsWith('/vehicles/')) return 'سجل السيارة';
-    if (path.startsWith('/inspection-report/')) return 'تقرير الفحص';
-    if (path.startsWith('/payment/')) return 'الدفع';
-    if (path.startsWith('/rating/')) return 'التقييم';
+    const englishTitles: Record<string, string> = { '/account/support': 'Support', '/vehicles': 'My Cars', '/orders': 'My Requests', '/new-request': 'New Request', '/reports': 'Reports', '/invoices': 'Invoices', '/account': 'My Account' };
+    if (PAGE_TITLES[path]) return i18n.language.startsWith('en') ? englishTitles[path] : PAGE_TITLES[path];
+    if (path.startsWith('/orders/')) return tr('تفاصيل الطلب', 'Request Details');
+    if (path.startsWith('/vehicles/')) return tr('سجل السيارة', 'Car History');
+    if (path.startsWith('/inspection-report/')) return tr('تقرير الفحص', 'Inspection Report');
+    if (path.startsWith('/payment/')) return tr('الدفع', 'Payment');
+    if (path.startsWith('/rating/')) return tr('التقييم', 'Rating');
     return '';
-  }, [location.pathname]);
+  }, [location.pathname, i18n.language]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-surface-950">

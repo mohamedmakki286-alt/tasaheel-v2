@@ -11,7 +11,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getRooms } from '../api/chat.api';
 
 export function SettingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tr = (ar: string, en: string) => i18n.language.startsWith('en') ? en : ar;
   const navigate = useNavigate();
   const { customer, updateCustomer, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
@@ -39,24 +40,24 @@ export function SettingsPage() {
 
   const handleAvatar = async (file?: File) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) return toast.error('اختر صورة فقط');
-    if (file.size > 4 * 1024 * 1024) return toast.error('حجم الصورة يجب ألا يتجاوز 4 ميغابايت');
+    if (!file.type.startsWith('image/')) return toast.error(tr('اختر صورة فقط', 'Select an image file'));
+    if (file.size > 4 * 1024 * 1024) return toast.error(tr('حجم الصورة يجب ألا يتجاوز 4 ميغابايت', 'Image size must not exceed 4 MB'));
     try {
       const url = await authApi.uploadAvatar(file);
       const response: any = await authApi.updateProfile({ avatar: url });
       const savedCustomer = response.data || response;
       updateCustomer(savedCustomer);
       setAvatar(savedCustomer.avatar || url);
-      toast.success('تم رفع الصورة الشخصية وحفظها');
+      toast.success(tr('تم رفع الصورة الشخصية وحفظها', 'Profile photo uploaded and saved'));
     } catch (error: any) {
-      toast.error(error.friendlyMessage || 'تعذر رفع الصورة الشخصية');
+      toast.error(error.friendlyMessage || tr('تعذر رفع الصورة الشخصية', 'Unable to upload profile photo'));
     }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true);
-    try { const response: any = await authApi.updateProfile({ name: form.name, phone: form.phone, city: form.city }); updateCustomer(response.data || response); toast.success('تم حفظ المعلومات الشخصية'); }
-    catch (error: any) { toast.error(error.response?.data?.message || 'تعذر حفظ المعلومات'); }
+    try { const response: any = await authApi.updateProfile({ name: form.name, phone: form.phone, city: form.city }); updateCustomer(response.data || response); toast.success(tr('تم حفظ المعلومات الشخصية', 'Personal information saved')); }
+    catch (error: any) { toast.error(error.response?.data?.message || tr('تعذر حفظ المعلومات', 'Unable to save information')); }
     finally { setSaving(false); }
   };
 
@@ -114,28 +115,28 @@ export function SettingsPage() {
       <div className="relative flex items-center gap-4">
         <button onClick={() => fileInput.current?.click()} className="group relative shrink-0"><div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-white/40 bg-white/10 text-2xl font-black">{avatar ? <img src={avatar} className="h-full w-full object-cover" alt="الصورة الشخصية" /> : customer?.name?.charAt(0) || 'ع'}</div><span className="absolute -bottom-1 -left-1 flex h-8 w-8 items-center justify-center rounded-full bg-accent-500 text-white shadow-lg"><Camera size={15}/></span></button>
         <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={(event) => handleAvatar(event.target.files?.[0])}/>
-        <div className="min-w-0"><p className="text-xs text-white/60">حساب العميل</p><h1 className="truncate text-xl font-black">{customer?.name || 'عميل تساهيل'}</h1><p className="mt-1 truncate text-sm text-white/70">{customer?.email || 'أضف بريدك الإلكتروني'}</p></div>
+        <div className="min-w-0"><p className="text-xs text-white/60">{tr('حساب العميل', 'Customer Account')}</p><h1 className="truncate text-xl font-black">{customer?.name || tr('عميل تساهيل', 'Tasaheel Customer')}</h1><p className="mt-1 truncate text-sm text-white/70">{customer?.email || tr('أضف بريدك الإلكتروني', 'Add your email address')}</p></div>
       </div>
     </section>
 
     <section className="overflow-hidden rounded-3xl border border-surface-200 bg-white dark:border-surface-700 dark:bg-surface-900">
-      <button onClick={() => navigate('/account/support')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-500/10"><Headphones size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">الدعم والمساعدة</span><span className="block text-xs text-surface-500">تواصل مع خدمة عملاء تساهيل</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
-      <button onClick={() => navigate('/chats')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 dark:bg-accent-500/10"><MessageCircle size={20}/>{unreadMessages > 0 && <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-black text-white">{Math.min(unreadMessages, 99)}</span>}</span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">محادثاتي</span><span className="block text-xs text-surface-500">{unreadMessages > 0 ? `${unreadMessages} رسائل غير مقروءة` : 'محادثاتك مع الورش'}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
-      <button onClick={() => setPanel('email')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10"><Mail size={20}/></span><span className="min-w-0 flex-1"><span className="block font-black text-surface-900 dark:text-white">البريد الإلكتروني</span><span className="block truncate text-xs text-surface-500">{customer?.email || 'غير مضاف'}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
-      <button onClick={() => setPanel('password')} className="flex w-full items-center gap-3 p-4 text-right transition hover:bg-surface-50 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><KeyRound size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">كلمة المرور</span><span className="block text-xs text-surface-500">تغيير آمن عبر رمز التحقق</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
+      <button onClick={() => navigate('/account/support')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-500/10"><Headphones size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">{tr('الدعم والمساعدة', 'Support and Help')}</span><span className="block text-xs text-surface-500">{tr('تواصل مع خدمة عملاء تساهيل', 'Contact Tasaheel customer service')}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
+      <button onClick={() => navigate('/chats')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-50 text-accent-600 dark:bg-accent-500/10"><MessageCircle size={20}/>{unreadMessages > 0 && <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-black text-white">{Math.min(unreadMessages, 99)}</span>}</span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">{tr('محادثاتي', 'My Chats')}</span><span className="block text-xs text-surface-500">{unreadMessages > 0 ? tr(`${unreadMessages} رسائل غير مقروءة`, `${unreadMessages} unread messages`) : tr('محادثاتك مع الورش', 'Your workshop conversations')}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
+      <button onClick={() => setPanel('email')} className="flex w-full items-center gap-3 border-b border-surface-100 p-4 text-right transition hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10"><Mail size={20}/></span><span className="min-w-0 flex-1"><span className="block font-black text-surface-900 dark:text-white">{t('common.email')}</span><span className="block truncate text-xs text-surface-500">{customer?.email || tr('غير مضاف', 'Not added')}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
+      <button onClick={() => setPanel('password')} className="flex w-full items-center gap-3 p-4 text-right transition hover:bg-surface-50 dark:hover:bg-surface-800"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10"><KeyRound size={20}/></span><span className="flex-1"><span className="block font-black text-surface-900 dark:text-white">{t('common.password')}</span><span className="block text-xs text-surface-500">{tr('تغيير آمن عبر رمز التحقق', 'Secure change using a verification code')}</span></span><ChevronLeft className="text-surface-400" size={19}/></button>
     </section>
 
     <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-surface-200 bg-white p-5 dark:border-surface-700 dark:bg-surface-900">
-      <div className="flex items-center gap-2"><UserRound size={19} className="text-accent-500"/><h2 className="font-black text-surface-900 dark:text-white">المعلومات الشخصية</h2></div>
-      <label className="block text-sm font-bold text-surface-600 dark:text-surface-300">الاسم<input value={form.name} onChange={(e) => setForm({...form, name:e.target.value})} className="input-field mt-2"/></label>
-      <label className="block text-sm font-bold text-surface-600 dark:text-surface-300">الجوال<input value={form.phone} onChange={(e) => setForm({...form, phone:e.target.value})} className="input-field mt-2" dir="ltr"/></label>
-      <label className="block text-sm font-bold text-surface-600 dark:text-surface-300">المدينة<div className="relative mt-2"><MapPin size={17} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400"/><input value={form.city} onChange={(e) => setForm({...form, city:e.target.value})} className="input-field pr-9"/></div></label>
-      <button disabled={saving} className="btn-primary flex h-12 w-full items-center justify-center gap-2">{saving ? 'جارٍ الحفظ…' : <><Save size={18}/>حفظ التعديلات</>}</button>
+      <div className="flex items-center gap-2"><UserRound size={19} className="text-accent-500"/><h2 className="font-black text-surface-900 dark:text-white">{tr('المعلومات الشخصية', 'Personal Information')}</h2></div>
+      <label className="block text-sm font-bold text-surface-600 dark:text-surface-300">{t('common.name')}<input value={form.name} onChange={(e) => setForm({...form, name:e.target.value})} className="input-field mt-2"/></label>
+      <label className="block text-sm font-bold text-surface-600 dark:text-surface-300">{t('common.phone')}<input value={form.phone} onChange={(e) => setForm({...form, phone:e.target.value})} className="input-field mt-2" dir="ltr"/></label>
+      <label className="block text-sm font-bold text-surface-600 dark:text-surface-300">{t('common.city')}<div className="relative mt-2"><MapPin size={17} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400"/><input value={form.city} onChange={(e) => setForm({...form, city:e.target.value})} className="input-field pr-9"/></div></label>
+      <button disabled={saving} className="btn-primary flex h-12 w-full items-center justify-center gap-2">{saving ? tr('جارٍ الحفظ…', 'Saving...') : <><Save size={18}/>{tr('حفظ التعديلات', 'Save Changes')}</>}</button>
     </form>
 
-    <section className="rounded-3xl border border-surface-200 bg-white p-4 dark:border-surface-700 dark:bg-surface-900"><button onClick={toggleTheme} className="flex w-full items-center justify-between"><span className="flex items-center gap-3 font-black text-surface-900 dark:text-white">{isDark ? <Moon className="text-accent-500"/> : <Sun className="text-amber-500"/>}الوضع الليلي</span><span className={`relative h-7 w-12 rounded-full ${isDark ? 'bg-accent-500' : 'bg-surface-300'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isDark ? 'right-1' : 'right-6'}`}/></span></button></section>
+    <section className="rounded-3xl border border-surface-200 bg-white p-4 dark:border-surface-700 dark:bg-surface-900"><button onClick={toggleTheme} className="flex w-full items-center justify-between"><span className="flex items-center gap-3 font-black text-surface-900 dark:text-white">{isDark ? <Moon className="text-accent-500"/> : <Sun className="text-amber-500"/>}{tr('الوضع الليلي', 'Dark Mode')}</span><span className={`relative h-7 w-12 rounded-full ${isDark ? 'bg-accent-500' : 'bg-surface-300'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isDark ? 'right-1' : 'right-6'}`}/></span></button></section>
     <section className="rounded-3xl border border-surface-200 bg-white p-4 dark:border-surface-700 dark:bg-surface-900"><div className="flex gap-3"><ShieldCheck className="mt-0.5 shrink-0 text-emerald-500" size={20}/><div><h2 className="font-black text-surface-900 dark:text-white">خصوصيتك مهمة</h2><p className="mt-1 text-xs leading-5 text-surface-500">لا تتم مشاركة موقعك إلا أثناء الطلب النشط، وتُستخدم بياناتك لتقديم الخدمة فقط.</p></div></div></section>
-    <button onClick={() => { logout(); navigate('/'); }} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 py-3.5 font-black text-red-600 transition hover:bg-red-100 dark:bg-red-500/10"><LogOut size={18}/>تسجيل الخروج</button>
+    <button onClick={() => { logout(); navigate('/'); }} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 py-3.5 font-black text-red-600 transition hover:bg-red-100 dark:bg-red-500/10"><LogOut size={18}/>{t('layout.sidebar.logout')}</button>
     <section className="rounded-3xl border border-red-200 bg-red-50/60 p-4 dark:border-red-500/20 dark:bg-red-500/5">
       <div className="flex items-start gap-3">
         <Trash2 className="mt-0.5 shrink-0 text-red-600" size={20}/>

@@ -13,6 +13,7 @@ import { useRequestStore } from '../stores/requestStore';
 import { MapPicker } from '../components/MapPicker';
 import { MediaUploader } from '../components/MediaUploader';
 import { ArrowLeft, Send, Star, MapPin, Wrench, Navigation, CheckCircle, Loader2, Car as CarIcon, Plus, Save, Clock, CheckCircle2, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const SAUDI_CITIES = [
   { value: 'الرياض', key: 'riyadh' },
@@ -83,14 +84,17 @@ function normalizeCity(value?: string | null): string {
 }
 
 export function NewRequestPage() {
+  const { t, i18n } = useTranslation();
+  const isEnglish = i18n.language.startsWith('en');
+  const tr = (ar: string, en: string) => isEnglish ? en : ar;
   const navigate = useNavigate();
   const location = useLocation();
   const store = useRequestStore();
 
   const EXECUTION_METHODS = [
-    { key: 'mobile', icon: '🔧', label: 'خدمة متنقلة', desc: 'الفني يجيك لموقعك' },
-    { key: 'workshop', icon: '🏪', label: 'ورشة', desc: 'روح لأقرب ورشة' },
-    { key: 'pickup_delivery', icon: '🚚', label: 'استلام وتسليم', desc: 'نستلم السيارة ونرجعلك' },
+    { key: 'mobile', icon: '🔧', label: tr('خدمة متنقلة', 'Mobile service'), desc: tr('الفني يجيك لموقعك', 'A technician comes to your location') },
+    { key: 'workshop', icon: '🏪', label: tr('ورشة', 'At workshop'), desc: tr('روح لأقرب ورشة', 'Take your car to the workshop') },
+    { key: 'pickup_delivery', icon: '🚚', label: tr('استلام وتسليم', 'Pickup and delivery'), desc: tr('نستلم السيارة ونرجعلك', 'We collect and return your car') },
   ];
   const presetServiceId = (location.state as any)?.serviceId || null;
   const presetWorkshopId = (location.state as any)?.workshopId || null;
@@ -155,7 +159,7 @@ export function NewRequestPage() {
     return requestCatalog.flatMap(cat =>
       cat.templates
         .filter(t => t.name.toLowerCase().includes(q) || (t.nameEn?.toLowerCase().includes(q)))
-        .map(t => ({ ...t, categoryName: cat.categoryName, categoryIcon: cat.categoryIcon }))
+        .map(t => ({ ...t, categoryName: cat.categoryName, categoryNameEn: cat.categoryNameEn, categoryIcon: cat.categoryIcon }))
     );
   }, [requestCatalog, serviceSearch]);
 
@@ -241,12 +245,12 @@ export function NewRequestPage() {
           if (result.city) setCity(result.city);
           if (result.district) setDistrict(result.district);
         } catch {
-          toast.error('تعذر تحديد الموقع');
+          toast.error(tr('تعذر تحديد الموقع', 'Unable to detect location'));
         }
         setLocating(false);
       },
       () => {
-        toast.error('يرجى تفعيل خدمات الموقع');
+        toast.error(tr('يرجى تفعيل خدمات الموقع', 'Please enable location services'));
         setLocating(false);
       }
     );
@@ -261,7 +265,7 @@ export function NewRequestPage() {
     for (const tid of selectedTemplateIds) {
       for (const cat of requestCatalog) {
         const tpl = cat.templates.find(t => t.id === tid);
-        if (tpl) { names.push(tpl.name); break; }
+        if (tpl) { names.push(isEnglish && tpl.nameEn ? tpl.nameEn : tpl.name); break; }
       }
     }
     if (customServiceName.trim()) names.push(customServiceName.trim());
@@ -269,15 +273,15 @@ export function NewRequestPage() {
   };
 
   const handleSubmit = async (isDraft: boolean) => {
-    if (!selectedCarId) { toast.error('اختر سيارة'); return; }
-    if (!description.trim()) { toast.error('اكتب وصف المشكلة'); return; }
-    if (!city) { toast.error('اختر المدينة'); return; }
+    if (!selectedCarId) { toast.error(tr('اختر سيارة', 'Select a car')); return; }
+    if (!description.trim()) { toast.error(tr('اكتب وصف المشكلة', 'Describe the problem')); return; }
+    if (!city) { toast.error(tr('اختر المدينة', 'Select a city')); return; }
 
     setSaving(true);
     try {
       const serviceTypeIds = selectedTemplateIds.length > 0 ? selectedTemplateIds.map(String) : undefined;
       const finalDescription = customServiceName.trim()
-        ? `${description}\n\nالخدمة المطلوبة: ${customServiceName.trim()}`
+        ? `${description}\n\n${tr('الخدمة المطلوبة', 'Requested service')}: ${customServiceName.trim()}`
         : description;
       const res: any = await requestsApi.create({
         carIdInput: selectedCarId,
@@ -302,18 +306,18 @@ export function NewRequestPage() {
       }
 
       if (isDraft) {
-        toast.success('تم حفظ المسودة');
+        toast.success(tr('تم حفظ المسودة', 'Draft saved'));
         navigate('/orders');
       } else {
         if (failedUploads > 0) {
-          toast.error(`تم إنشاء الطلب، لكن فشل رفع ${failedUploads} من المرفقات`);
+          toast.error(tr(`تم إنشاء الطلب، لكن فشل رفع ${failedUploads} من المرفقات`, `Request created, but ${failedUploads} attachment(s) failed to upload`));
         } else {
-          toast.success('تم إنشاء الطلب');
+          toast.success(tr('تم إنشاء الطلب', 'Request created'));
         }
         navigate(`/orders/${requestId}`);
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'فشل إنشاء الطلب');
+      toast.error(err.response?.data?.message || tr('فشل إنشاء الطلب', 'Failed to create request'));
     } finally {
       setSaving(false);
     }
@@ -360,7 +364,7 @@ export function NewRequestPage() {
         <button onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)} className="p-2 hover:bg-surface-800 rounded-lg">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h2 className="text-xl font-bold">طلب جديد</h2>
+        <h2 className="text-xl font-bold">{tr('طلب جديد', 'New Request')}</h2>
       </div>
 
       {/* Steps indicator */}
@@ -370,7 +374,7 @@ export function NewRequestPage() {
         ))}
       </div>
       <div className="grid grid-cols-4 gap-1 text-center text-[10px] font-bold text-surface-400">
-        {['السيارة', 'الخدمة', 'التنفيذ والموقع', 'المراجعة'].map((label, index) => (
+        {[tr('السيارة', 'Car'), tr('الخدمة', 'Service'), tr('التنفيذ والموقع', 'Method & Location'), tr('المراجعة', 'Review')].map((label, index) => (
           <span key={label} className={index + 1 === step ? 'text-accent-500' : ''}>{label}</span>
         ))}
       </div>
@@ -380,17 +384,17 @@ export function NewRequestPage() {
         <div className="space-y-4">
           <h3 className="font-bold text-lg flex items-center gap-2 text-surface-900 dark:text-white">
             <CarIcon className="h-5 w-5 text-accent-400" />
-            اختر السيارة
+            {tr('اختر السيارة', 'Select a Car')}
           </h3>
           {cars.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-accent-500/40 bg-accent-500/5 p-7 text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-500/10 text-accent-500">
                 <CarIcon className="h-8 w-8" />
               </div>
-              <h4 className="font-extrabold text-surface-900 dark:text-white">أضف سيارتك للبدء</h4>
-              <p className="mx-auto mt-2 max-w-sm text-sm text-surface-500 dark:text-surface-400">نحتاج بيانات السيارة مرة واحدة فقط لنربط بها طلباتك وسجل الصيانة.</p>
+              <h4 className="font-extrabold text-surface-900 dark:text-white">{tr('أضف سيارتك للبدء', 'Add your car to begin')}</h4>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-surface-500 dark:text-surface-400">{tr('نحتاج بيانات السيارة مرة واحدة فقط لنربط بها طلباتك وسجل الصيانة.', 'We only need your car details once to link requests and maintenance history.')}</p>
               <button onClick={goToAddCar} className="btn-primary mt-5 inline-flex items-center justify-center gap-2 px-7">
-                <Plus className="h-5 w-5" /> إضافة السيارة
+                <Plus className="h-5 w-5" /> {tr('إضافة السيارة', 'Add Car')}
               </button>
             </div>
           ) : <div className="space-y-2">
@@ -410,9 +414,9 @@ export function NewRequestPage() {
                 {selectedCarId === car.id && <CheckCircle className="h-5 w-5 text-accent-400 shrink-0" />}
               </button>
             ))}
-            <button onClick={goToAddCar} className="btn-secondary mt-3 flex w-full items-center justify-center gap-2"><Plus className="h-5 w-5" /> إضافة سيارة أخرى</button>
+            <button onClick={goToAddCar} className="btn-secondary mt-3 flex w-full items-center justify-center gap-2"><Plus className="h-5 w-5" /> {tr('إضافة سيارة أخرى', 'Add Another Car')}</button>
           </div>}
-          <button onClick={() => selectedCarId && setStep(2)} disabled={!selectedCarId} className="btn-primary w-full py-4 disabled:opacity-40">التالي</button>
+          <button onClick={() => selectedCarId && setStep(2)} disabled={!selectedCarId} className="btn-primary w-full py-4 disabled:opacity-40">{t('common.next')}</button>
         </div>
       )}
 
@@ -421,12 +425,12 @@ export function NewRequestPage() {
         <div className="space-y-4">
           <h3 className="font-bold text-lg flex items-center gap-2 text-surface-900 dark:text-white">
             <Wrench className="h-5 w-5 text-accent-400" />
-            {quickMode ? 'صف المشكلة باختصار' : 'وش مشكلة سيارتك؟'}
+            {quickMode ? tr('صف المشكلة باختصار', 'Briefly describe the problem') : tr('وش مشكلة سيارتك؟', 'What is wrong with your car?')}
           </h3>
 
           {quickMode && (
             <div className="rounded-2xl border border-accent-500/20 bg-accent-500/10 p-4 text-sm text-surface-700 dark:text-surface-200">
-              لا تحتاج لاختيار الخدمة أو الورشة؛ اكتب المشكلة وسنرسلها للورش المناسبة لتستقبل عروض الأسعار.
+              {tr('لا تحتاج لاختيار الخدمة أو الورشة؛ اكتب المشكلة وسنرسلها للورش المناسبة لتستقبل عروض الأسعار.', 'Describe the problem and we will send it to suitable workshops to receive quotes.')}
             </div>
           )}
 
@@ -438,7 +442,7 @@ export function NewRequestPage() {
               type="text"
               value={serviceSearch}
               onChange={e => setServiceSearch(e.target.value)}
-              placeholder="ابحث عن خدمة ..."
+              placeholder={tr('ابحث عن خدمة ...', 'Search for a service...')}
               className="input-field pr-10"
             />
           </div>
@@ -453,12 +457,12 @@ export function NewRequestPage() {
             <div className="space-y-1">
               {searchResults.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-accent-500/30 bg-accent-500/5 p-5 text-center">
-                  <p className="text-surface-700 dark:text-surface-300 text-sm">لم نجد خدمة باسم «{serviceSearch}»</p>
+                  <p className="text-surface-700 dark:text-surface-300 text-sm">{tr(`لم نجد خدمة باسم «${serviceSearch}»`, `No service found for “${serviceSearch}”`)}</p>
                   <button
                     onClick={() => { setCustomServiceName(serviceSearch.trim()); setServiceSearch(''); }}
                     className="mt-3 rounded-xl bg-accent-500 px-4 py-2 text-sm font-bold text-white transition active:scale-95"
                   >
-                    اطلبها كخدمة أخرى
+                    {tr('اطلبها كخدمة أخرى', 'Request as another service')}
                   </button>
                 </div>
               ) : (
@@ -469,8 +473,8 @@ export function NewRequestPage() {
                     className={`card text-right p-3 transition-all flex items-center justify-between ${selectedTemplateIds.includes(s.id) ? 'border-accent-500 bg-accent-500/10' : 'hover:bg-surface-700/80'}`}
                   >
                     <div>
-                      <p className="text-sm font-bold text-surface-900 dark:text-white">{s.name}</p>
-                      <p className="text-[10px] text-surface-600 dark:text-surface-400 mt-0.5">{s.categoryIcon} {s.categoryName}</p>
+                      <p className="text-sm font-bold text-surface-900 dark:text-white">{isEnglish && s.nameEn ? s.nameEn : s.name}</p>
+                      <p className="text-[10px] text-surface-600 dark:text-surface-400 mt-0.5">{s.categoryIcon} {isEnglish && s.categoryNameEn ? s.categoryNameEn : s.categoryName}</p>
                     </div>
                     {selectedTemplateIds.includes(s.id) && <CheckCircle className="h-4 w-4 text-accent-400 shrink-0" />}
                   </button>
@@ -486,8 +490,8 @@ export function NewRequestPage() {
                   className={`rounded-2xl p-4 text-center transition-all border ${selectedCategoryId === cat.categoryId ? 'border-accent-500 bg-accent-500/10 ring-1 ring-accent-500' : 'border-surface-300 dark:border-surface-600 bg-surface-50 dark:bg-surface-800 hover:bg-surface-100 dark:hover:bg-surface-700/80'}`}
                 >
                   <div className="text-2xl mb-1">{cat.categoryIcon || '🔧'}</div>
-                  <p className="text-xs font-bold text-surface-900 dark:text-white">{cat.categoryName}</p>
-                  <p className="text-[10px] text-surface-500 dark:text-surface-400 mt-0.5">{cat.templates.length} خدمة</p>
+                  <p className="text-xs font-bold text-surface-900 dark:text-white">{isEnglish && cat.categoryNameEn ? cat.categoryNameEn : cat.categoryName}</p>
+                  <p className="text-[10px] text-surface-500 dark:text-surface-400 mt-0.5">{cat.templates.length} {tr('خدمة', 'services')}</p>
                 </button>
               ))}
             </div>
@@ -495,7 +499,7 @@ export function NewRequestPage() {
             <>
               <div className="flex items-center gap-2">
                 <button onClick={() => { setSelectedCategoryId(null); setServiceSearch(''); }} className="flex items-center gap-1 text-sm text-accent-400 hover:underline p-1 rounded-lg hover:bg-accent-500/10 transition">
-                  <ArrowLeft className="h-4 w-4" /> رجوع للأقسام
+                  <ArrowLeft className="h-4 w-4" /> {tr('رجوع للأقسام', 'Back to categories')}
                 </button>
                 <span className="text-xs text-surface-500">|</span>
                 <span className="text-xs font-medium text-surface-600 dark:text-surface-300">{catalog.find(c => c.categoryId === selectedCategoryId)?.categoryName}</span>
@@ -508,7 +512,7 @@ export function NewRequestPage() {
                     className={`card text-right p-3 transition-all flex items-center justify-between ${selectedTemplateIds.includes(tpl.id) ? 'border-accent-500 bg-accent-500/10' : 'hover:bg-surface-700/80'}`}
                   >
                     <div>
-                      <p className="text-sm font-bold text-surface-900 dark:text-white">{tpl.name}</p>
+                      <p className="text-sm font-bold text-surface-900 dark:text-white">{isEnglish && tpl.nameEn ? tpl.nameEn : tpl.name}</p>
                       {tpl.defaultDuration && (
                         <p className="text-xs text-surface-600 dark:text-surface-400 flex items-center gap-1 mt-0.5">
                           <Clock className="h-3 w-3" /> {tpl.defaultDuration}
@@ -522,7 +526,7 @@ export function NewRequestPage() {
               <div className="border-t border-surface-700/30 pt-3 mt-3">
                 {!showCustomService ? (
                   <button onClick={() => setShowCustomService(true)} className="w-full flex items-center justify-center gap-2 text-sm font-medium text-surface-600 dark:text-surface-300 hover:text-accent-600 dark:hover:text-accent-400 py-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/50 transition">
-                    <Plus className="h-4 w-4" /> خدمة غير موجودة؟ أضفها يدوياً
+                    <Plus className="h-4 w-4" /> {tr('خدمة غير موجودة؟ أضفها يدوياً', 'Service not listed? Add it manually')}
                   </button>
                 ) : (
                   <div className="flex gap-2">
@@ -530,11 +534,11 @@ export function NewRequestPage() {
                       type="text"
                       value={customServiceName}
                       onChange={e => setCustomServiceName(e.target.value)}
-                      placeholder="اسم الخدمة المطلوبة"
+                      placeholder={tr('اسم الخدمة المطلوبة', 'Requested service name')}
                       className="input-field flex-1"
                       autoFocus
                     />
-                    <button onClick={() => { setShowCustomService(false); setCustomServiceName(''); }} className="px-3 py-2 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white">إلغاء</button>
+                    <button onClick={() => { setShowCustomService(false); setCustomServiceName(''); }} className="px-3 py-2 text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white">{t('common.cancel')}</button>
                   </div>
                 )}
               </div>
@@ -546,9 +550,9 @@ export function NewRequestPage() {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-bold text-accent-700 dark:text-accent-300">
                   <CheckCircle className="h-4 w-4" />
-                  <span>الخدمات المحددة</span>
+                  <span>{tr('الخدمات المحددة', 'Selected Services')}</span>
                 </div>
-                <button onClick={() => { setSelectedTemplateIds([]); setCustomServiceName(''); }} className="text-xs font-medium text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition">مسح الكل</button>
+                <button onClick={() => { setSelectedTemplateIds([]); setCustomServiceName(''); }} className="text-xs font-medium text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white transition">{tr('مسح الكل', 'Clear All')}</button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {selectedServiceNames.map((name, index) => (
@@ -556,7 +560,7 @@ export function NewRequestPage() {
                     {name}
                     <button
                       type="button"
-                      aria-label={`إزالة ${name}`}
+                      aria-label={tr(`إزالة ${name}`, `Remove ${name}`)}
                       onClick={() => index < selectedTemplateIds.length
                         ? toggleTemplate(selectedTemplateIds[index])
                         : setCustomServiceName('')}
@@ -571,18 +575,18 @@ export function NewRequestPage() {
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
-            placeholder={quickMode ? 'مثال: السيارة تصدر صوتًا عند الفرملة وأحتاج فحصها...' : 'صف مشكلة السيارة بطريقتك، حتى لو لم تجد اسم الخدمة...'}
+            placeholder={quickMode ? tr('مثال: السيارة تصدر صوتًا عند الفرملة وأحتاج فحصها...', 'Example: The car makes a noise when braking and needs inspection...') : tr('صف مشكلة السيارة بطريقتك، حتى لو لم تجد اسم الخدمة...', 'Describe the car problem, even if the service is not listed...')}
             rows={5}
             className="input-field resize-none"
           />
           {selectedTemplateIds.length === 0 && !customServiceName.trim() && description.trim() && (
             <div className="flex items-start gap-2 rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-300">
               <Wrench className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>سيُرسل طلبك كطلب صيانة عام، وستحدد الورشة الخدمة المناسبة بعد التشخيص.</span>
+              <span>{tr('سيُرسل طلبك كطلب صيانة عام، وستحدد الورشة الخدمة المناسبة بعد التشخيص.', 'Your request will be sent as general maintenance and the workshop will determine the service after diagnosis.')}</span>
             </div>
           )}
           <MediaUploader files={mediaFiles} onAdd={f => setMediaFiles(prev => [...prev, f])} onRemove={i => setMediaFiles(prev => prev.filter((_, idx) => idx !== i))} />
-          <button onClick={() => description.trim() && setStep(3)} disabled={!description.trim()} className="btn-primary w-full py-4 disabled:opacity-40">التالي</button>
+          <button onClick={() => description.trim() && setStep(3)} disabled={!description.trim()} className="btn-primary w-full py-4 disabled:opacity-40">{t('common.next')}</button>
         </div>
       )}
 
@@ -591,21 +595,21 @@ export function NewRequestPage() {
         <div className="space-y-4">
           <h3 className="font-bold text-lg flex items-center gap-2 text-surface-900 dark:text-white">
             <MapPin className="h-5 w-5 text-accent-400" />
-            الموقع
+            {tr('الموقع', 'Location')}
           </h3>
           <button onClick={handleDetectLocation} disabled={locating} className="btn-primary w-full flex items-center justify-center gap-2 py-4">
             {locating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Navigation className="h-5 w-5" />}
-            {locating ? 'جاري التحديد...' : 'حدد موقعي تلقائياً'}
+            {locating ? tr('جاري التحديد...', 'Detecting...') : tr('حدد موقعي تلقائياً', 'Use My Location')}
           </button>
-          <div className="text-center text-surface-500 text-sm">أو</div>
+          <div className="text-center text-surface-500 text-sm">{t('common.or')}</div>
           <select value={city} onChange={e => setCity(e.target.value)} className="input-field">
-            <option value="">اختر المدينة</option>
-            {SAUDI_CITIES.map(c => <option key={c.value} value={c.value}>{c.value}</option>)}
+            <option value="">{tr('اختر المدينة', 'Select City')}</option>
+            {SAUDI_CITIES.map(c => <option key={c.value} value={c.value}>{isEnglish ? t(`constants.cities.${c.key}`, c.value) : c.value}</option>)}
           </select>
-          <input type="text" value={district} onChange={e => setDistrict(e.target.value)} placeholder="الحي (اختياري)" className="input-field" />
+          <input type="text" value={district} onChange={e => setDistrict(e.target.value)} placeholder={tr('الحي (اختياري)', 'District (optional)')} className="input-field" />
           {city && (
             <div className="mt-2">
-              <p className="text-xs text-surface-400 mb-2">حدد موقعك على الخريطة</p>
+              <p className="text-xs text-surface-400 mb-2">{tr('حدد موقعك على الخريطة', 'Select your location on the map')}</p>
               <MapPicker position={position} onPositionChange={(lat, lng) => setPosition([lat, lng])} />
             </div>
           )}
@@ -617,7 +621,7 @@ export function NewRequestPage() {
         <div className="space-y-4">
           <h3 className="font-bold text-lg flex items-center gap-2">
             <Wrench className="h-5 w-5 text-accent-400" />
-            طريقة التنفيذ
+            {tr('طريقة التنفيذ', 'Execution Method')}
           </h3>
           <div className="space-y-3">
             {EXECUTION_METHODS.map(m => (
@@ -637,7 +641,7 @@ export function NewRequestPage() {
               </button>
             ))}
           </div>
-          <button onClick={() => city && executionMethod && setStep(4)} disabled={!city || !executionMethod} className="btn-primary w-full py-4 disabled:opacity-40">التالي</button>
+          <button onClick={() => city && executionMethod && setStep(4)} disabled={!city || !executionMethod} className="btn-primary w-full py-4 disabled:opacity-40">{t('common.next')}</button>
         </div>
       )}
 
@@ -646,15 +650,15 @@ export function NewRequestPage() {
         <div className="space-y-4">
           <h3 className="font-bold text-lg flex items-center gap-2">
             <Star className="h-5 w-5 text-accent-400" />
-            {presetWorkshopId ? 'الورشة المختارة' : 'اختر الورشة'}
+            {presetWorkshopId ? tr('الورشة المختارة', 'Selected Workshop') : tr('اختر الورشة', 'Select a Workshop')}
             <span className="text-xs text-surface-400 font-normal mr-2">({getExecutionMethodLabel(executionMethod)})</span>
           </h3>
           <div className="space-y-2">
             {topWorkshops.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/5 p-5 text-center">
                 <Wrench className="mx-auto mb-2 h-7 w-7 text-amber-500" />
-                <p className="font-bold text-surface-900 dark:text-white">لا توجد ورشة متاحة حالياً</p>
-                <p className="mt-1 text-sm text-surface-600 dark:text-surface-400">يمكنك إرسال الطلب الآن بدون اختيار ورشة، وسنبحث عن ورشة مناسبة.</p>
+                <p className="font-bold text-surface-900 dark:text-white">{tr('لا توجد ورشة متاحة حالياً', 'No workshop is currently available')}</p>
+                <p className="mt-1 text-sm text-surface-600 dark:text-surface-400">{tr('يمكنك إرسال الطلب الآن بدون اختيار ورشة، وسنبحث عن ورشة مناسبة.', 'You can submit without selecting a workshop and we will find a suitable one.')}</p>
               </div>
             ) : (
               topWorkshops.map(w => {
@@ -677,7 +681,7 @@ export function NewRequestPage() {
                           {w.distanceKm !== null && (
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
-                              {w.distanceKm < 1 ? `${Math.round(w.distanceKm * 1000)} م` : `${w.distanceKm} كم`}
+                              {w.distanceKm < 1 ? `${Math.round(w.distanceKm * 1000)} ${t('common.m')}` : `${w.distanceKm} ${t('common.km')}`}
                             </span>
                           )}
                           {w.completedJobs ? (
@@ -698,11 +702,11 @@ export function NewRequestPage() {
 
 
 
-          <button onClick={() => setStep(3)} className="btn-secondary w-full py-3">تغيير الطريقة أو الموقع</button>
+          <button onClick={() => setStep(3)} className="btn-secondary w-full py-3">{tr('تغيير الطريقة أو الموقع', 'Change Method or Location')}</button>
 
           {workshopsWithDist.length > 5 && (
             <p className="text-xs text-surface-500 text-center">
-              عرض {topWorkshops.length} من {workshopsWithDist.length} ورشة
+              {tr(`عرض ${topWorkshops.length} من ${workshopsWithDist.length} ورشة`, `Showing ${topWorkshops.length} of ${workshopsWithDist.length} workshops`)}
             </p>
           )}
         </div>
@@ -713,15 +717,15 @@ export function NewRequestPage() {
         <div className="space-y-4">
           <h3 className="font-bold text-lg flex items-center gap-2 text-surface-900 dark:text-white">
             <CheckCircle2 className="h-5 w-5 text-accent-400" />
-            مراجعة الطلب
+            {tr('مراجعة الطلب', 'Review Request')}
           </h3>
           <div className="card bg-white dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/40 p-5 space-y-3">
-            <h4 className="font-bold text-sm text-surface-900 dark:text-surface-100 flex items-center gap-2">ملخص الطلب</h4>
+            <h4 className="font-bold text-sm text-surface-900 dark:text-surface-100 flex items-center gap-2">{tr('ملخص الطلب', 'Request Summary')}</h4>
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2">
                 <CarIcon className="h-4 w-4 text-accent-400 shrink-0" />
                 <div>
-                  <p className="text-surface-500 dark:text-surface-400 text-xs">السيارة</p>
+                  <p className="text-surface-500 dark:text-surface-400 text-xs">{tr('السيارة', 'Car')}</p>
                   <p className="font-medium text-surface-900 dark:text-white">{selectedCar?.make} {selectedCar?.model} {selectedCar?.year}</p>
                 </div>
               </div>
@@ -729,7 +733,7 @@ export function NewRequestPage() {
                 <div className="flex items-start gap-2">
                   <Wrench className="h-4 w-4 text-accent-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-surface-500 dark:text-surface-400 text-xs">الخدمات</p>
+                    <p className="text-surface-500 dark:text-surface-400 text-xs">{tr('الخدمات', 'Services')}</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {selectedServiceNames.map((name, i) => (
                         <span key={i} className="text-xs bg-accent-50 dark:bg-accent-500/20 text-accent-700 dark:text-accent-300 px-2 py-0.5 rounded-full">{name}</span>
@@ -742,8 +746,8 @@ export function NewRequestPage() {
                 <div className="flex items-center gap-2">
                   <Wrench className="h-4 w-4 text-accent-400 shrink-0" />
                   <div>
-                    <p className="text-surface-500 dark:text-surface-400 text-xs">الخدمة</p>
-                    <p className="font-medium text-surface-900 dark:text-white">طلب صيانة عام — تحدد بعد التشخيص</p>
+                    <p className="text-surface-500 dark:text-surface-400 text-xs">{tr('الخدمة', 'Service')}</p>
+                    <p className="font-medium text-surface-900 dark:text-white">{tr('طلب صيانة عام — تحدد بعد التشخيص', 'General maintenance — determined after diagnosis')}</p>
                   </div>
                 </div>
               )}
@@ -751,7 +755,7 @@ export function NewRequestPage() {
                 <div className="flex items-center gap-2">
                   <Wrench className="h-4 w-4 text-accent-400 shrink-0" />
                   <div>
-                    <p className="text-surface-500 dark:text-surface-400 text-xs">طريقة التنفيذ</p>
+                    <p className="text-surface-500 dark:text-surface-400 text-xs">{tr('طريقة التنفيذ', 'Execution Method')}</p>
                     <p className="font-medium text-surface-900 dark:text-white">{getExecutionMethodLabel(executionMethod)}</p>
                   </div>
                 </div>
@@ -759,7 +763,7 @@ export function NewRequestPage() {
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-accent-400 shrink-0" />
                 <div>
-                  <p className="text-surface-500 dark:text-surface-400 text-xs">الموقع</p>
+                  <p className="text-surface-500 dark:text-surface-400 text-xs">{tr('الموقع', 'Location')}</p>
                   <p className="font-medium text-surface-900 dark:text-white">{city}{district ? ` - ${district}` : ''}</p>
                 </div>
               </div>
@@ -767,7 +771,7 @@ export function NewRequestPage() {
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 text-accent-400 shrink-0" />
                   <div>
-                    <p className="text-surface-500 dark:text-surface-400 text-xs">الورشة</p>
+                    <p className="text-surface-500 dark:text-surface-400 text-xs">{tr('الورشة', 'Workshop')}</p>
                     <p className="font-medium text-surface-900 dark:text-white">{workshopsWithDist.find(w => w.id === selectedWorkshopId)?.name || ''}</p>
                   </div>
                 </div>
@@ -775,28 +779,28 @@ export function NewRequestPage() {
               <div className="flex items-center gap-2">
                 <Wrench className="h-4 w-4 text-accent-400 shrink-0" />
                 <div>
-                    <p className="text-surface-500 dark:text-surface-400 text-xs">الوصف</p>
+                    <p className="text-surface-500 dark:text-surface-400 text-xs">{tr('الوصف', 'Description')}</p>
                   <p className="text-surface-900 dark:text-white text-sm leading-relaxed">{description}</p>
                 </div>
               </div>
             </div>
             <div className="pt-3 border-t border-surface-200 dark:border-surface-700/30">
-              <p className="text-xs text-surface-600 dark:text-surface-400">السعر المتوقع يتم تحديده من الورشة</p>
+              <p className="text-xs text-surface-600 dark:text-surface-400">{tr('السعر المتوقع يتم تحديده من الورشة', 'The workshop will determine the expected price')}</p>
               <p className="text-[11px] text-surface-500 dark:text-surface-400 mt-1 leading-relaxed">
                 {presetWorkshopId
-                  ? 'سيتم إرسال طلبك مباشرة إلى الورشة المختارة لتراجع الطلب وترسل عرضها.'
-                  : 'سيتم إرسال طلبك للورش المناسبة وستتلقى عروض أسعار للمقارنة.'}
+                  ? tr('سيتم إرسال طلبك مباشرة إلى الورشة المختارة لتراجع الطلب وترسل عرضها.', 'Your request will be sent directly to the selected workshop for review and quotation.')
+                  : tr('سيتم إرسال طلبك للورش المناسبة وستتلقى عروض أسعار للمقارنة.', 'Your request will be sent to suitable workshops and you will receive quotes to compare.')}
               </p>
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setStep(3)} className="btn-secondary flex-1 py-3">تعديل</button>
+            <button onClick={() => setStep(3)} className="btn-secondary flex-1 py-3">{t('common.edit')}</button>
             <button onClick={() => handleSubmit(true)} disabled={saving} className="btn-secondary flex-1 flex items-center justify-center gap-2 py-3">
-              <Save className="h-5 w-5" /> حفظ كمسودة
+              <Save className="h-5 w-5" /> {tr('حفظ كمسودة', 'Save Draft')}
             </button>
             <button onClick={() => handleSubmit(false)} disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-2 py-3">
               {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-              إرسال الطلب
+              {tr('إرسال الطلب', 'Submit Request')}
             </button>
           </div>
         </div>

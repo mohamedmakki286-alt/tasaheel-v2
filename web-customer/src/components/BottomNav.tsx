@@ -4,16 +4,19 @@ import { motion } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { useState } from 'react';
 import LoginBottomSheet from './LoginBottomSheet';
+import { useTranslation } from 'react-i18next';
 
 const tabs = [
-  { path: '/', icon: Home, label: 'الرئيسية', auth: false },
-  { path: '/services', icon: LayoutGrid, label: 'الخدمات', auth: false },
-  { path: '/vehicles', icon: Car, label: 'سياراتي', auth: true },
-  { path: '/orders', icon: ClipboardList, label: 'طلباتي', auth: true },
-  { path: '/account', icon: User, label: 'حسابي', auth: true },
+  { path: '/', icon: Home, labelKey: 'layout.sidebar.home', auth: false },
+  { path: '/services', icon: LayoutGrid, labelKey: 'layout.sidebar.browseServices', auth: false },
+  { path: '/vehicles', icon: Car, labelKey: 'layout.sidebar.cars', auth: true },
+  { path: '/orders', icon: ClipboardList, labelKey: 'layout.sidebar.requests', auth: true },
+  { path: '/account', icon: User, labelKey: 'pages.settings.title', auth: true },
 ];
 
 export default function BottomNav() {
+  const { t, i18n } = useTranslation();
+  const tr = (ar: string, en: string) => i18n.language.startsWith('en') ? en : ar;
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -23,11 +26,11 @@ export default function BottomNav() {
   const handleTab = (tab: typeof tabs[0]) => {
     if (tab.auth && !isAuthenticated) {
       const messages: Record<string, string> = {
-        '/vehicles': 'سجل دخولك لإدارة سياراتك',
-        '/orders': 'سجل دخولك لعرض طلباتك',
-        '/account': 'سجل دخولك لإدارة حسابك',
+        '/vehicles': tr('سجل دخولك لإدارة سياراتك', 'Sign in to manage your cars'),
+        '/orders': tr('سجل دخولك لعرض طلباتك', 'Sign in to view your requests'),
+        '/account': tr('سجل دخولك لإدارة حسابك', 'Sign in to manage your account'),
       };
-      setSheetMessage(messages[tab.path] || 'سجل دخولك لإكمال الطلب');
+      setSheetMessage(messages[tab.path] || tr('سجل دخولك لإكمال الطلب', 'Sign in to continue'));
       setShowSheet(true);
       return;
     }
@@ -72,7 +75,7 @@ export default function BottomNav() {
                 <span className={`text-[10px] font-medium transition-colors duration-200 ${
                   active ? 'text-brand' : 'text-surface-400 dark:text-surface-500'
                 }`}>
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
               </button>
             );

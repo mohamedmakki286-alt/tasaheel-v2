@@ -101,7 +101,8 @@ function SaudiPlatePreview({ value, onChange }: { value: string; onChange: (valu
 }
 
 export function CarsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const tr = (ar: string, en: string) => i18n.language.startsWith('en') ? en : ar;
   const navigate = useNavigate();
   const location = useLocation();
   const routeState = location.state as { openAdd?: boolean; editId?: string; returnTo?: string; requestState?: Record<string, unknown> } | null;
@@ -214,8 +215,8 @@ export function CarsPage() {
             <ArrowRight className="h-5 w-5" />
           </button>
           <div className="text-center">
-            <p className="text-[11px] font-bold text-brand">تساهيل</p>
-            <h2 className="text-xl font-extrabold text-primary-500 dark:text-white">{editingId ? 'تعديل السيارة' : 'إضافة سيارة'}</h2>
+            <p className="text-[11px] font-bold text-brand">{t('common.appName')}</p>
+            <h2 className="text-xl font-extrabold text-primary-500 dark:text-white">{editingId ? tr('تعديل السيارة', 'Edit Car') : tr('إضافة سيارة', 'Add Car')}</h2>
           </div>
           <button type="button" onClick={closeForm} className="flex h-10 w-10 items-center justify-center rounded-[12px] text-surface-400 transition-colors hover:bg-surface-50 dark:hover:bg-surface-800" aria-label="إغلاق">
             <X className="h-5 w-5" />
@@ -224,24 +225,24 @@ export function CarsPage() {
 
         <div>
           <SaudiPlatePreview value={form.plateNumber} onChange={(plateNumber) => setForm({ ...form, plateNumber: formatPlateInput(plateNumber) })} />
-          <p className="mt-3 text-center text-xs text-surface-400">أدخل الحروف والأرقام داخل اللوحة، وستظهر الترجمة الإنجليزية تلقائيًا</p>
+          <p className="mt-3 text-center text-xs text-surface-400">{tr('أدخل الحروف والأرقام داخل اللوحة، وستظهر الترجمة الإنجليزية تلقائيًا', 'Enter the plate letters and numbers; the English equivalent appears automatically.')}</p>
         </div>
 
         <div className="space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">ماركة السيارة</label>
+              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">{tr('ماركة السيارة', 'Car Make')}</label>
               <BrandPicker value={form.make} onChange={(make) => setForm({ ...form, make })} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">موديل السيارة</label>
-              <input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required className="input-field h-14 font-semibold" placeholder="مثال: كامري" />
+              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">{tr('موديل السيارة', 'Car Model')}</label>
+              <input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} required className="input-field h-14 font-semibold" placeholder={tr('مثال: كامري', 'Example: Camry')} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">سنة الصنع</label>
+              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">{tr('سنة الصنع', 'Model Year')}</label>
               <div className="relative">
                 <select value={form.year} onChange={(e) => setForm({ ...form, year: Number(e.target.value) })} required className="input-field h-14 appearance-none pl-10 text-center text-lg font-bold">
                   {years.map((year) => <option key={year} value={year}>{year}</option>)}
@@ -250,25 +251,25 @@ export function CarsPage() {
               </div>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">لون السيارة</label>
-              <input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="input-field h-14 font-semibold" placeholder="مثال: أبيض لؤلؤي" />
+              <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">{tr('لون السيارة', 'Car Color')}</label>
+              <input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="input-field h-14 font-semibold" placeholder={tr('مثال: أبيض لؤلؤي', 'Example: Pearl White')} />
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">ممشى السيارة</label>
+            <label className="mb-2 block text-sm font-bold text-primary-500 dark:text-surface-100">{tr('ممشى السيارة', 'Mileage')}</label>
             <NumberInput
               value={String(form.mileage || '')}
               onValueChange={(v) => setForm({ ...form, mileage: Number(v) || 0 })}
               mode="integer"
-              placeholder="مثال: 150000"
-              suffix="كم"
+              placeholder={tr('مثال: 150000', 'Example: 150000')}
+              suffix={t('common.km')}
             />
           </div>
         </div>
 
         <div className="fixed inset-x-0 bottom-[72px] z-30 mx-auto max-w-2xl px-4 lg:bottom-4">
           <button type="submit" disabled={saving || !form.make || !form.model} className="btn-primary flex h-14 w-full items-center justify-center gap-2 rounded-[16px] text-base font-extrabold shadow-lg shadow-brand/20">
-            {saving ? 'جارٍ الحفظ...' : <><Check className="h-5 w-5" />{editingId ? 'حفظ التعديلات' : 'إضافة السيارة'}</>}
+            {saving ? tr('جارٍ الحفظ...', 'Saving...') : <><Check className="h-5 w-5" />{editingId ? tr('حفظ التعديلات', 'Save Changes') : tr('إضافة السيارة', 'Add Car')}</>}
           </button>
         </div>
       </form>
@@ -287,7 +288,7 @@ export function CarsPage() {
           aria-label="إضافة سيارة جديدة"
         >
           <Plus className="h-5 w-5" strokeWidth={2.6} />
-          <span className="text-sm font-extrabold">إضافة سيارة</span>
+          <span className="text-sm font-extrabold">{tr('إضافة سيارة', 'Add Car')}</span>
         </button>
       </div>
 
